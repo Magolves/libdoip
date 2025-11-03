@@ -55,20 +55,6 @@ jobs:
               cxx: "g++-9",
               build_type: "Release"
             }
-          - {
-              name: "macOS 12 Clang",
-              os: macos-12,
-              cc: "clang",
-              cxx: "clang++",
-              build_type: "Release"
-            }
-          - {
-              name: "Windows 2019 MSVC",
-              os: windows-2022,
-              cc: "cl",
-              cxx: "cl",
-              build_type: "Release"
-            }
 
     steps:
     - name: Checkout repository
