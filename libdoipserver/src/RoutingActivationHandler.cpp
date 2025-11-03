@@ -8,8 +8,8 @@
 uint8_t parseRoutingActivation(uint8_t *data) {
 
     // Check if source address is known
-    Address address(data);
-    if (address.isValidSourceAddress()) {
+    Address address(data, 8);
+    if (!address.isValidSourceAddress()) {
         // send routing activation negative response code --> close socket
         return _UnknownSourceAddressCode;
     }

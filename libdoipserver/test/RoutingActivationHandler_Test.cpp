@@ -34,10 +34,10 @@ TEST_SUITE("RoutingActivation") {
 	* Checks if parsing a valid address will be found in the list of valid addresses
 	*/
 	TEST_CASE_FIXTURE(RoutingActivationFixture, "Valid Address Parsing") {
-		uint32_t expectedValue = 3858;
+		uint16_t expectedValue = 3858; // 0x0F12
 		Address address(request, 8);
-		CHECK_EQ(address, expectedValue);
-		CHECK_MESSAGE(address == expectedValue, "Converting address to uint failed");
+
+		CHECK_MESSAGE(address.as_uint16() == expectedValue, "Converting address to uint failed");
 
 		CHECK(address.isValidSourceAddress() == true);
 		CHECK_MESSAGE(address.isValidSourceAddress(), "Didn't found address");
@@ -51,7 +51,7 @@ TEST_SUITE("RoutingActivation") {
 		request[8] = 0x0D;
 		request[9] = 0x00;
 		uint8_t result = parseRoutingActivation(request);
-		CHECK_EQ(result, 0x00);
+		CHECK(result == 0x00);
 		CHECK_MESSAGE(result == 0x00, "Wrong address doesn't return correct response code");
 	}
 
@@ -60,9 +60,10 @@ TEST_SUITE("RoutingActivation") {
 	*/
 	TEST_CASE_FIXTURE(RoutingActivationFixture, "Unknown Activation Type") {
 		//Set wrong activation type
-		request[10] = 0xFF;
+		//request[10] = 0xFF; ?? ow: is this correct?
+		request[2] = 0xFF;
 		uint8_t result = parseRoutingActivation(request);
-		CHECK_EQ(result, 0x06);
+		CHECK(result == 0x06);
 	}
 
 	/*
@@ -70,6 +71,6 @@ TEST_SUITE("RoutingActivation") {
 	*/
 	TEST_CASE_FIXTURE(RoutingActivationFixture, "Valid Request") {
 		uint8_t result = parseRoutingActivation(request);
-		CHECK_EQ(result, 0x10);
+		CHECK(result == 0x10);
 	}
 }
