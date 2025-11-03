@@ -1,0 +1,188 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
+        type: string
+
+env:
+  CMAKE_VERSION: 3.20.0
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-22.04
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Get version
+      id: get_version
+      run: |
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+        else
+          echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.get_version.outputs.VERSION }}
+        release_name: libdoip ${{ steps.get_version.outputs.VERSION }}
+        body: |
+          ## libdoip ${{ steps.get_version.outputs.VERSION }}
+
+          ### Features
+          - DoIP (Diagnostic over Internet Protocol) implementation
+          - Client and Server libraries
+          - Comprehensive unit tests with doctest
+          - Cross-platform support (Linux, macOS, Windows)
+
+          ### Downloads
+          - Source code (zip/tar.gz)
+          - Pre-built libraries for major platforms
+
+          ### Documentation
+          - [API Documentation](https://magolves.github.io/libdoip/)
+
+          ### Build Requirements
+          - CMake 3.15+
+          - C++17 compatible compiler
+          - doctest (automatically downloaded)
+
+          ### Quick Start
+          ```bash
+          mkdir build && cd build
+          cmake -DWITH_UNIT_TEST=ON ..
+          cmake --build .
+          ctest
+          ```
+        draft: false
+        prerelease: false
+
+  build-release-artifacts:
+    name: Build ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    needs: create-release
+    strategy:
+      matrix:
+        config:
+          - {
+              name: "Linux x64",
+              os: ubuntu-22.04,
+              cc: "gcc-11",
+              cxx: "g++-11",
+              archive_name: "libdoip-linux-x64"
+            }
+          - {
+              name: "macOS x64",
+              os: macos-12,
+              cc: "clang",
+              cxx: "clang++",
+              archive_name: "libdoip-macos-x64"
+            }
+          - {
+              name: "Windows x64",
+              os: windows-2022,
+              cc: "cl",
+              cxx: "cl",
+              archive_name: "libdoip-windows-x64"
+            }
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup Linux dependencies
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ninja-build gcc-11 g++-11
+
+    - name: Setup macOS dependencies
+      if: runner.os == 'macOS'
+      run: |
+        brew install ninja
+
+    - name: Setup Windows dependencies
+      if: runner.os == 'Windows'
+      run: |
+        choco install ninja
+
+    - name: Set up CMake
+      uses: jwlawson/actions-setup-cmake@v1.14
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Configure CMake (Linux/macOS)
+      if: runner.os != 'Windows'
+      run: |
+        cmake -B build \
+          -G Ninja \
+          -DCMAKE_C_COMPILER=${{ matrix.config.cc }} \
+          -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DWITH_UNIT_TEST=OFF \
+          -DWARNINGS_AS_ERRORS=OFF
+
+    - name: Configure CMake (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        cmake -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DWITH_UNIT_TEST=OFF -DWARNINGS_AS_ERRORS=OFF
+
+    - name: Build Release
+      run: cmake --build build --config Release --parallel 4
+
+    - name: Install
+      run: cmake --install build --prefix install --config Release
+
+    - name: Create archive (Linux/macOS)
+      if: runner.os != 'Windows'
+      run: |
+        cd install
+        tar -czf ../${{ matrix.config.archive_name }}.tar.gz .
+        cd ..
+
+    - name: Create archive (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        cd install
+        7z a ../${{ matrix.config.archive_name }}.zip .
+        cd ..
+
+    - name: Upload Linux/macOS Release Asset
+      if: runner.os != 'Windows'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./${{ matrix.config.archive_name }}.tar.gz
+        asset_name: ${{ matrix.config.archive_name }}.tar.gz
+        asset_content_type: application/gzip
+
+    - name: Upload Windows Release Asset
+      if: runner.os == 'Windows'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./${{ matrix.config.archive_name }}.zip
+        asset_name: ${{ matrix.config.archive_name }}.zip
+        asset_content_type: application/zip

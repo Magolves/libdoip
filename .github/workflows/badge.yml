@@ -1,0 +1,43 @@
+name: Badge Status
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+  schedule:
+    # Run daily at 02:00 UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  status:
+    name: Update Status
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ninja-build gcc-11 g++-11
+
+    - name: Set up CMake
+      uses: jwlawson/actions-setup-cmake@v1.14
+      with:
+        cmake-version: 3.20.0
+
+    - name: Quick build test
+      run: |
+        cmake -B build -G Ninja -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11 -DCMAKE_BUILD_TYPE=Release -DWITH_UNIT_TEST=ON
+        cmake --build build --parallel 4
+
+    - name: Quick test run
+      working-directory: build
+      run: ctest --output-on-failure
+
+    - name: Generate badge data
+      run: |
+        echo "BUILD_STATUS=passing" >> $GITHUB_ENV
+        echo "TESTS_COUNT=$(ctest --test-dir build --show-only=json-v1 | jq '.tests | length')" >> $GITHUB_ENV

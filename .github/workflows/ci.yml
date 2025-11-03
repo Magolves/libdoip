@@ -1,0 +1,296 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, dev, develop ]
+  pull_request:
+    branches: [ main, dev, develop ]
+  workflow_dispatch:
+
+env:
+  CMAKE_VERSION: 3.20.0
+  BUILD_TYPE: Release
+
+jobs:
+  # Build and test on multiple platforms and compilers
+  build-and-test:
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {
+              name: "Ubuntu 22.04 GCC 11",
+              os: ubuntu-22.04,
+              cc: "gcc-11",
+              cxx: "g++-11",
+              build_type: "Release"
+            }
+          - {
+              name: "Ubuntu 22.04 GCC 11 Debug",
+              os: ubuntu-22.04,
+              cc: "gcc-11",
+              cxx: "g++-11",
+              build_type: "Debug"
+            }
+          - {
+              name: "Ubuntu 22.04 Clang 14",
+              os: ubuntu-22.04,
+              cc: "clang-14",
+              cxx: "clang++-14",
+              build_type: "Release"
+            }
+          - {
+              name: "Ubuntu 22.04 Clang 14 Debug",
+              os: ubuntu-22.04,
+              cc: "clang-14",
+              cxx: "clang++-14",
+              build_type: "Debug"
+            }
+          - {
+              name: "Ubuntu 20.04 GCC 9",
+              os: ubuntu-20.04,
+              cc: "gcc-9",
+              cxx: "g++-9",
+              build_type: "Release"
+            }
+          - {
+              name: "macOS 12 Clang",
+              os: macos-12,
+              cc: "clang",
+              cxx: "clang++",
+              build_type: "Release"
+            }
+          - {
+              name: "Windows 2022 MSVC",
+              os: windows-2022,
+              cc: "cl",
+              cxx: "cl",
+              build_type: "Release"
+            }
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup Linux dependencies
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ninja-build
+        if [[ "${{ matrix.config.cxx }}" == "g++-11" ]]; then
+          sudo apt-get install -y gcc-11 g++-11
+        elif [[ "${{ matrix.config.cxx }}" == "g++-9" ]]; then
+          sudo apt-get install -y gcc-9 g++-9
+        elif [[ "${{ matrix.config.cxx }}" == "clang++-14" ]]; then
+          sudo apt-get install -y clang-14
+        fi
+
+    - name: Setup macOS dependencies
+      if: runner.os == 'macOS'
+      run: |
+        brew install ninja
+
+    - name: Setup Windows dependencies
+      if: runner.os == 'Windows'
+      run: |
+        choco install ninja
+
+    - name: Set up CMake
+      uses: jwlawson/actions-setup-cmake@v1.14
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Configure CMake (Linux/macOS)
+      if: runner.os != 'Windows'
+      run: |
+        cmake -B build \
+          -G Ninja \
+          -DCMAKE_C_COMPILER=${{ matrix.config.cc }} \
+          -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} \
+          -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} \
+          -DWITH_UNIT_TEST=ON \
+          -DWARNINGS_AS_ERRORS=ON
+
+    - name: Configure CMake (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        cmake -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} -DWITH_UNIT_TEST=ON -DWARNINGS_AS_ERRORS=OFF
+
+    - name: Build
+      run: cmake --build build --config ${{ matrix.config.build_type }} --parallel 4
+
+    - name: Run tests
+      working-directory: build
+      run: ctest --output-on-failure --parallel 4 -C ${{ matrix.config.build_type }}
+
+    - name: Install
+      run: cmake --install build --prefix install
+
+  # Static analysis job
+  static-analysis:
+    name: Static Analysis
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install static analysis tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang-tidy cppcheck ninja-build gcc-11 g++-11
+
+    - name: Set up CMake
+      uses: jwlawson/actions-setup-cmake@v1.14
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Configure with static analysis
+      run: |
+        cmake -B build \
+          -G Ninja \
+          -DCMAKE_C_COMPILER=gcc-11 \
+          -DCMAKE_CXX_COMPILER=g++-11 \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DWITH_UNIT_TEST=ON \
+          -DENABLE_STATIC_ANALYSIS=ON \
+          -DWARNINGS_AS_ERRORS=OFF
+
+    - name: Build with static analysis
+      run: cmake --build build --parallel 4
+
+  # Sanitizers job (Debug builds only)
+  sanitizers:
+    name: Address & UB Sanitizers
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ninja-build gcc-11 g++-11
+
+    - name: Set up CMake
+      uses: jwlawson/actions-setup-cmake@v1.14
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Configure with sanitizers
+      run: |
+        cmake -B build \
+          -G Ninja \
+          -DCMAKE_C_COMPILER=gcc-11 \
+          -DCMAKE_CXX_COMPILER=g++-11 \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DWITH_UNIT_TEST=ON \
+          -DENABLE_SANITIZERS=ON \
+          -DWARNINGS_AS_ERRORS=ON
+
+    - name: Build with sanitizers
+      run: cmake --build build --parallel 4
+
+    - name: Run tests with sanitizers
+      working-directory: build
+      run: ctest --output-on-failure --parallel 2
+      env:
+        ASAN_OPTIONS: detect_leaks=1:abort_on_error=1
+        UBSAN_OPTIONS: halt_on_error=1
+
+  # Documentation generation
+  documentation:
+    name: Generate Documentation
+    runs-on: ubuntu-22.04
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Doxygen
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y doxygen graphviz
+
+    - name: Generate documentation
+      run: |
+        mkdir -p docs
+        doxygen --version
+        # Add Doxyfile generation or use existing one
+        echo "PROJECT_NAME = libdoip" > Doxyfile
+        echo "INPUT = libdoipcommon/include libdoipserver/include libdoipclient/include" >> Doxyfile
+        echo "OUTPUT_DIRECTORY = docs" >> Doxyfile
+        echo "GENERATE_HTML = YES" >> Doxyfile
+        echo "GENERATE_LATEX = NO" >> Doxyfile
+        echo "RECURSIVE = YES" >> Doxyfile
+        echo "EXTRACT_ALL = YES" >> Doxyfile
+        echo "HAVE_DOT = YES" >> Doxyfile
+        doxygen Doxyfile
+
+    - name: Deploy to GitHub Pages
+      if: github.ref == 'refs/heads/main'
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./docs/html
+
+  # Code coverage (only on main branch)
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-22.04
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ninja-build gcc-11 g++-11 lcov
+
+    - name: Set up CMake
+      uses: jwlawson/actions-setup-cmake@v1.14
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Configure with coverage
+      run: |
+        cmake -B build \
+          -G Ninja \
+          -DCMAKE_C_COMPILER=gcc-11 \
+          -DCMAKE_CXX_COMPILER=g++-11 \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DWITH_UNIT_TEST=ON \
+          -DCMAKE_CXX_FLAGS="--coverage" \
+          -DCMAKE_C_FLAGS="--coverage" \
+          -DWARNINGS_AS_ERRORS=OFF
+
+    - name: Build with coverage
+      run: cmake --build build --parallel 4
+
+    - name: Run tests for coverage
+      working-directory: build
+      run: ctest --output-on-failure
+
+    - name: Generate coverage report
+      run: |
+        lcov --capture --directory build --output-file coverage.info
+        lcov --remove coverage.info '/usr/*' --output-file coverage.info
+        lcov --remove coverage.info '*/test/*' --output-file coverage.info
+        lcov --remove coverage.info '*/build/*' --output-file coverage.info
+        lcov --list coverage.info
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.info
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
