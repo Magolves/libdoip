@@ -13,34 +13,43 @@ Despite the excellent work I saw some shortcomings in the design and refactored 
 
 The C++ standard is set to C++ 17. However, so far the code does not use C++ 17 features and could compile also with older standards like C++ 11 or 14.
 
-Changes in particular
+Changes in particular are
 
 - Introduced cmake build and test env
 - Replace `gtest`with `doctest` (just a personal preference - IMHO `gtest` sucks)
 - Introduced `Address` struct, since the addresses had many different representations
 - Introduced value semantics (WIP)
+- ...
 
 ### Installing library for Diagnostics over IP
 
 1. To install the library on the system, first get the source files with:
-```
+
+```bash
 git clone https://github.com/Magolves/libdoip.git
-[git clone https://github.com/GerritRiesch94/libdoip](https://github.com/Magolves/libdoip.git)
 ```
 
 2. Enter the directory 'libdoip' and build the library with:
-```
+
+```bash
+cmake . -Bbuild
+cd build
 make
 ```
 
-3. To install the builded library into `/usr/lib/libdoip` use:
+1. To install the builded library into `/usr/lib/libdoip` use:
 
-```
+```bash
 sudo make install
 ```
 
 ### Installing doctest
 
-```
+```bash
 sudo apt install doctest
 ```
+
+## References
+
+- [Specification of Diagnostic over IP](<https://www.autosar.org/fileadmin/standards/R20-11/CP/AUTOSAR_SWS_DiagnosticOverIP.pdf>)
+- [Diagnostics over Internet Protocol (DoIP)](<https://cdn.vector.com/cms/content/know-how/_application-notes/AN-IND-1-026_DoIP_in_CANoe.pdf>)
