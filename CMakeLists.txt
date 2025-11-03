@@ -40,6 +40,21 @@ find_package(Threads REQUIRED)
 if (WITH_UNIT_TEST)
     # Enable testing
     enable_testing()
+
+    # Find or download doctest
+    find_package(doctest QUIET)
+    if(NOT doctest_FOUND)
+        include(FetchContent)
+        FetchContent_Declare(
+            doctest
+            GIT_REPOSITORY https://github.com/doctest/doctest.git
+            GIT_TAG        v2.4.11
+        )
+        FetchContent_MakeAvailable(doctest)
+    endif()
+
+    # Include doctest CMake module for test discovery
+    include(cmake/doctest.cmake)
 endif()
 
 # Add subdirectories for libraries
@@ -49,16 +64,6 @@ add_subdirectory(libdoipclient)
 
 # Add examples subdirectory
 add_subdirectory(examples)
-
-# Create main test runner executable
-add_executable(TestRunner TestRunner.cpp)
-target_link_libraries(TestRunner
-    PRIVATE
-    doipcommon
-    doipserver
-    doipclient
-    Threads::Threads
-)
 
 # Set output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)

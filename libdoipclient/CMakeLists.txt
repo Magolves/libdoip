@@ -44,7 +44,14 @@ if(WITH_UNIT_TEST)
         PRIVATE
             doipclient
             doipcommon
+            doctest::doctest
     )
 
-    add_test(NAME DoIPClientTests COMMAND doipclient_tests)
+    # Use automatic test discovery instead of manual add_test
+    doctest_discover_tests(doipclient_tests
+        TEST_PREFIX "DoIPClient::"
+        PROPERTIES
+            LABELS "doipclient"
+            TIMEOUT 30
+    )
 endif()

@@ -39,16 +39,42 @@ add_library(libdoip::doipserver ALIAS doipserver)
 
 # Tests
 if(WITH_UNIT_TEST)
-    add_executable(doipserver_tests
+    # Routing Activation Handler Tests
+    add_executable(routing_activation_tests
         test/RoutingActivationHandler_Test.cpp
-        test/VehicleIdentificationHandler_Test.cpp
     )
 
-    target_link_libraries(doipserver_tests
+    target_link_libraries(routing_activation_tests
         PRIVATE
             doipserver
             doipcommon
+            doctest::doctest
     )
 
-    add_test(NAME DoIPServerTests COMMAND doipserver_tests)
+    # Vehicle Identification Handler Tests
+    add_executable(vehicle_identification_tests
+        test/VehicleIdentificationHandler_Test.cpp
+    )
+
+    target_link_libraries(vehicle_identification_tests
+        PRIVATE
+            doipserver
+            doipcommon
+            doctest::doctest
+    )
+
+    # Use automatic test discovery for both test executables
+    doctest_discover_tests(routing_activation_tests
+        TEST_PREFIX "DoIPServer::RoutingActivation::"
+        PROPERTIES
+            LABELS "doipserver;routing"
+            TIMEOUT 30
+    )
+
+    doctest_discover_tests(vehicle_identification_tests
+        TEST_PREFIX "DoIPServer::VehicleIdentification::"
+        PROPERTIES
+            LABELS "doipserver;vehicle_identification"
+            TIMEOUT 30
+    )
 endif()

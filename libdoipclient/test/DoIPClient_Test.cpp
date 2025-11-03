@@ -1,11 +1,23 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include <doctest/doctest.h>
 #include "DoIPClient_h.h"
-#include <gtest/gtest.h>
 
-class DoIPClient_Test : public ::testing::Test{
-   
-    protected:
-        void SetUp() override {
+TEST_SUITE("DoIPClient") {
+    struct DoIPClientFixture {
+        DoIPClient client1;
+
+        DoIPClientFixture() {
+            // Setup code here if needed
         }
-    
-    DoIPClient client1;   
-};
+
+        ~DoIPClientFixture() {
+            // Cleanup code here if needed
+        }
+    };
+
+    // Add actual test cases here as needed
+    // Example:
+    // TEST_CASE_FIXTURE(DoIPClientFixture, "Basic client test") {
+    //     // Test implementation
+    // }
+}

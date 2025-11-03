@@ -1,12 +1,12 @@
-#include <gtest/gtest.h>
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include <doctest/doctest.h>
 #include "DoIPGenericHeaderHandler.h"
 
-class GenericHeaderTest : public ::testing::Test {
-	public:
+TEST_SUITE("GenericHeader") {
+	struct GenericHeaderFixture {
 		unsigned char* request;
 
-	protected:
-		void SetUp() override {
+		GenericHeaderFixture() {
 			request = new unsigned char[15];
 			request[0] = 0x01;
 			request[1] = 0xFE;
@@ -25,90 +25,95 @@ class GenericHeaderTest : public ::testing::Test {
 			request[14] = 0x00;
 		}
 
-		void TearDown() override {
+		~GenericHeaderFixture() {
 			delete[] request;
 		}
-};
+	};
 
-/*
-* Checks if a wrong synchronization pattern leads to the correct response type and NACK code (0x00)
-*/
-TEST_F(GenericHeaderTest, WrongSynchronizationPattern) {
-	//Set wrong inverse protocol version
-	request[1] = 0x33;
-	GenericHeaderAction action = parseGenericHeader(request, 15);
-	ASSERT_EQ(action.type, PayloadType::NEGATIVEACK) << "returned payload type is wrong";
-	ASSERT_EQ(action.value, 0x00) << "returned NACK code is wrong";
+	/*
+	* Checks if a wrong synchronization pattern leads to the correct response type and NACK code (0x00)
+	*/
+	TEST_CASE_FIXTURE(GenericHeaderFixture, "Wrong Synchronization Pattern") {
+		//Set wrong inverse protocol version
+		request[1] = 0x33;
+		GenericHeaderAction action = parseGenericHeader(request, 15);
+		CHECK_EQ(action.type, PayloadType::NEGATIVEACK);
+		CHECK_MESSAGE(action.type == PayloadType::NEGATIVEACK, "returned payload type is wrong");
+		CHECK_EQ(action.value, 0x00);
+		CHECK_MESSAGE(action.value == 0x00, "returned NACK code is wrong");
 
-	//Set currently not supported protocol version
-	request[1] = 0xFE;
-	request[0] = 0x04;
-	action = parseGenericHeader(request, 15);
-	ASSERT_EQ(action.type, PayloadType::NEGATIVEACK) << "returned payload type is wrong";
-	ASSERT_EQ(action.value, 0x00) << "returned NACK code is wrong";
-}
+		//Set currently not supported protocol version
+		request[1] = 0xFE;
+		request[0] = 0x04;
+		action = parseGenericHeader(request, 15);
+		CHECK_EQ(action.type, PayloadType::NEGATIVEACK);
+		CHECK_MESSAGE(action.type == PayloadType::NEGATIVEACK, "returned payload type is wrong");
+		CHECK_EQ(action.value, 0x00);
+		CHECK_MESSAGE(action.value == 0x00, "returned NACK code is wrong");
+	}
 
-/*
-* Checks if a unknown payload type leads to the correct response type and NACK code (0x01)
-*/
-TEST_F(GenericHeaderTest, UnknownPayloadType) {
-	//Set unknown payload type (0x0010)
-	request[3] = 0x10;
-	GenericHeaderAction action = parseGenericHeader(request, 15);
-	ASSERT_EQ(action.type, PayloadType::NEGATIVEACK);
-	ASSERT_EQ(action.value, 0x01);
-}
+	/*
+	* Checks if a unknown payload type leads to the correct response type and NACK code (0x01)
+	*/
+	TEST_CASE_FIXTURE(GenericHeaderFixture, "Unknown Payload Type") {
+		//Set unknown payload type (0x0010)
+		request[3] = 0x10;
+		GenericHeaderAction action = parseGenericHeader(request, 15);
+		CHECK_EQ(action.type, PayloadType::NEGATIVEACK);
+		CHECK_EQ(action.value, 0x01);
+	}
 
-/*
-* Checks if a known payload type in the request leads to the correct payload type in action
-* Checks Routing Activation Request type
-*/
-TEST_F(GenericHeaderTest, KnownPayloadType_RoutingActivationRequest) {
-	GenericHeaderAction action = parseGenericHeader(request, 15);
-	ASSERT_EQ(action.type, PayloadType::ROUTINGACTIVATIONREQUEST);
-}
+	/*
+	* Checks if a known payload type in the request leads to the correct payload type in action
+	* Checks Routing Activation Request type
+	*/
+	TEST_CASE_FIXTURE(GenericHeaderFixture, "Known Payload Type - Routing Activation Request") {
+		GenericHeaderAction action = parseGenericHeader(request, 15);
+		CHECK_EQ(action.type, PayloadType::ROUTINGACTIVATIONREQUEST);
+	}
 
-/*
-* Checks if a known payload type in the request leads to the correct payload type in action
-* Checks Vehicle Identification Request type
-*/
-TEST_F(GenericHeaderTest, KnownPayloadType_VehicleIdentificationRequest) {
-	//change payload type
-	request[2] = 0x00;
-	request[3] = 0x01;
-	
-	//change payload length
-	request[7] = 0x00;
-	
-	GenericHeaderAction action = parseGenericHeader(request, 8);	//VehidleIdentificationRequest length only 8
-	ASSERT_EQ(action.type, PayloadType::VEHICLEIDENTREQUEST);
-}
+	/*
+	* Checks if a known payload type in the request leads to the correct payload type in action
+	* Checks Vehicle Identification Request type
+	*/
+	TEST_CASE_FIXTURE(GenericHeaderFixture, "Known Payload Type - Vehicle Identification Request") {
+		//change payload type
+		request[2] = 0x00;
+		request[3] = 0x01;
 
-/*
-* Checks if a known payload type in the request leads to the correct payload type in action
-* Checks Diagnostic Message type
-*/
-TEST_F(GenericHeaderTest, KnownPayloadType_DiagnosticMessage) {
-	request[2] = 0x80;
-	request[3] = 0x01;
-	GenericHeaderAction action = parseGenericHeader(request, 15);
-	ASSERT_EQ(action.type, PayloadType::DIAGNOSTICMESSAGE);
-}
+		//change payload length
+		request[7] = 0x00;
 
-/*
-* Checks if a wrong routing activation payload length return the correct response type and NACK code (0x04)
-*/
-TEST_F(GenericHeaderTest, WrongRoutingActivationLength) {
-	request[7] = 0x08; // Use invalid routing activation payload length 8
-	GenericHeaderAction action = parseGenericHeader(request, 20);
-	ASSERT_EQ(action.type, PayloadType::NEGATIVEACK);
-	ASSERT_EQ(action.value, 0x04);
-}
+		GenericHeaderAction action = parseGenericHeader(request, 8);	//VehidleIdentificationRequest length only 8
+		CHECK_EQ(action.type, PayloadType::VEHICLEIDENTREQUEST);
+	}
 
-/*
-* Checks if a valid generic header leads to the correct response type
-*/
-TEST_F(GenericHeaderTest, ValidGenericHeader) {
-	GenericHeaderAction action = parseGenericHeader(request, 15);
-	ASSERT_NE(action.type, PayloadType::NEGATIVEACK);
+	/*
+	* Checks if a known payload type in the request leads to the correct payload type in action
+	* Checks Diagnostic Message type
+	*/
+	TEST_CASE_FIXTURE(GenericHeaderFixture, "Known Payload Type - Diagnostic Message") {
+		request[2] = 0x80;
+		request[3] = 0x01;
+		GenericHeaderAction action = parseGenericHeader(request, 15);
+		CHECK_EQ(action.type, PayloadType::DIAGNOSTICMESSAGE);
+	}
+
+	/*
+	* Checks if a wrong routing activation payload length return the correct response type and NACK code (0x04)
+	*/
+	TEST_CASE_FIXTURE(GenericHeaderFixture, "Wrong Routing Activation Length") {
+		request[7] = 0x08; // Use invalid routing activation payload length 8
+		GenericHeaderAction action = parseGenericHeader(request, 20);
+		CHECK_EQ(action.type, PayloadType::NEGATIVEACK);
+		CHECK_EQ(action.value, 0x04);
+	}
+
+	/*
+	* Checks if a valid generic header leads to the correct response type
+	*/
+	TEST_CASE_FIXTURE(GenericHeaderFixture, "Valid Generic Header") {
+		GenericHeaderAction action = parseGenericHeader(request, 15);
+		CHECK_NE(action.type, PayloadType::NEGATIVEACK);
+	}
 }

@@ -44,7 +44,14 @@ if(WITH_UNIT_TEST)
     target_link_libraries(doipcommon_tests
         PRIVATE
             doipcommon
+            doctest::doctest
     )
 
-    add_test(NAME DoIPCommonTests COMMAND doipcommon_tests)
+    # Use automatic test discovery instead of manual add_test
+    doctest_discover_tests(doipcommon_tests
+        TEST_PREFIX "DoIPCommon::"
+        PROPERTIES
+            LABELS "doipcommon"
+            TIMEOUT 30
+    )
 endif()
