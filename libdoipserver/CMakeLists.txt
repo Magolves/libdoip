@@ -38,7 +38,7 @@ target_link_libraries(doipserver
 add_library(libdoip::doipserver ALIAS doipserver)
 
 # Tests
-if(BUILD_TESTING)
+if(WITH_UNIT_TEST)
     add_executable(doipserver_tests
         test/RoutingActivationHandler_Test.cpp
         test/VehicleIdentificationHandler_Test.cpp

@@ -35,7 +35,7 @@ target_link_libraries(doipclient
 add_library(libdoip::doipclient ALIAS doipclient)
 
 # Tests
-if(BUILD_TESTING)
+if(WITH_UNIT_TEST)
     add_executable(doipclient_tests
         test/DoIPClient_Test.cpp
     )

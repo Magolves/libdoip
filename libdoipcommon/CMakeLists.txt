@@ -36,7 +36,7 @@ target_link_libraries(doipcommon
 add_library(libdoip::doipcommon ALIAS doipcommon)
 
 # Tests
-if(BUILD_TESTING)
+if(WITH_UNIT_TEST)
     add_executable(doipcommon_tests
         test/DoIPGenericHeaderHandler_Test.cpp
     )

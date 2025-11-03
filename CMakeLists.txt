@@ -10,6 +10,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+option (WITH_UNIT_TEST "Build unit tests" Off)
+
 # Set default build type if not specified
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
@@ -35,8 +37,10 @@ endif()
 # Find required packages
 find_package(Threads REQUIRED)
 
-# Enable testing
-enable_testing()
+if (WITH_UNIT_TEST)
+    # Enable testing
+    enable_testing()
+endif()
 
 # Add subdirectories for libraries
 add_subdirectory(libdoipcommon)
