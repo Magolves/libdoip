@@ -16,19 +16,21 @@ const int _serverPortNr=13400;
 const int _maxDataSize=64;
 
 
+using DoIPRequest = std::pair<size_t, const uint8_t*>;
+
 class DoIPClient{
 
 public:
     void startTcpConnection();
     void startUdpConnection();
-    void sendRoutingActivationRequest();
-    void sendVehicleIdentificationRequest(const char* address);
+    ssize_t sendRoutingActivationRequest();
+    ssize_t sendVehicleIdentificationRequest(const char* inet_address);
     void receiveRoutingActivationResponse();
     void receiveUdpMessage();
     void receiveMessage();
-    void sendDiagnosticMessage(uint8_t* targetAddress, uint8_t* userData, int userDataLength);
-    void sendAliveCheckResponse();
-    void setSourceAddress(uint8_t* address);
+    ssize_t sendDiagnosticMessage(const Address& targetAddress, uint8_t* userData, size_t userDataLength);
+    ssize_t sendAliveCheckResponse();
+    void setSourceAddress(const Address& address);
     void displayVIResponseInformation();
     void closeTcpConnection();
     void closeUdpConnection();
@@ -42,16 +44,16 @@ private:
     int _sockFd, _sockFd_udp, _connected;
     int broadcast = 1;
     struct sockaddr_in _serverAddr, _clientAddr;
-    uint8_t sourceAddress [2];
+    Address m_sourceAddress;
 
     uint8_t VINResult [17];
-    uint8_t LogicalAddressResult [2];
+    Address LogicalAddressResult;
     uint8_t EIDResult [6];
     uint8_t GIDResult [6];
     uint8_t FurtherActionReqResult;
 
-    const std::pair<int, uint8_t*>* buildRoutingActivationRequest();
-    const std::pair<int, uint8_t*>* buildVehicleIdentificationRequest();
+    const DoIPRequest buildRoutingActivationRequest();
+    const DoIPRequest buildVehicleIdentificationRequest();
     void parseVIResponseInformation(uint8_t* data);
 
     int emptyMessageCounter = 0;

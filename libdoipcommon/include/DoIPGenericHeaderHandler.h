@@ -99,6 +99,25 @@ struct Address {
     }
 
     /**
+     * @brief Updates the address from a byte array starting at the specified offset.
+     *
+     * This method reads two consecutive bytes from the provided data array,
+     * starting at the given offset. The first byte becomes the HSB and the second
+     * byte becomes the LSB, overwriting the current address values.
+     *
+     * @param data Pointer to the byte array containing new address data
+     * @param offset Starting offset in the data array (default: 0)
+     *
+     * @warning No bounds checking is performed on the data array. Ensure that
+     *          data[offset] and data[offset+1] are valid memory locations.
+     * @warning No null pointer checking is performed. Ensure data is not nullptr.
+     */
+    void update(const uint8_t* data, size_t offset = 0) {
+        m_bytes[HSB] = data[offset];
+        m_bytes[LSB] = data[offset + 1];
+    }
+
+    /**
      * @brief Compares two Address objects for equality.
      *
      * Two addresses are considered equal if both their high significant bytes

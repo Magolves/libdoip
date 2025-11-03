@@ -5,23 +5,20 @@
  */
 void DoIPClient::startTcpConnection() {
 
-    const char* ipAddr = "127.0.0.1";
+    const char *ipAddr = "127.0.0.1";
     bool connectedFlag = false;
-    _sockFd = socket(AF_INET,SOCK_STREAM,0);
+    _sockFd = socket(AF_INET, SOCK_STREAM, 0);
 
-    if(_sockFd>=0)
-    {
+    if (_sockFd >= 0) {
         std::cout << "Client TCP-Socket created successfully" << '\n';
 
         _serverAddr.sin_family = AF_INET;
         _serverAddr.sin_port = htons(_serverPortNr);
-        inet_aton(ipAddr,&(_serverAddr.sin_addr));
+        inet_aton(ipAddr, &(_serverAddr.sin_addr));
 
-        while(!connectedFlag)
-        {
-            _connected = connect(_sockFd,(struct sockaddr *) &_serverAddr,sizeof(_serverAddr));
-            if(_connected!=-1)
-            {
+        while (!connectedFlag) {
+            _connected = connect(_sockFd, reinterpret_cast<struct sockaddr *>(&_serverAddr), sizeof(_serverAddr));
+            if (_connected != -1) {
                 connectedFlag = true;
                 std::cout << "Connection to server established" << '\n';
             }
@@ -29,12 +26,11 @@ void DoIPClient::startTcpConnection() {
     }
 }
 
-void DoIPClient::startUdpConnection(){
+void DoIPClient::startUdpConnection() {
 
-    _sockFd_udp = socket(AF_INET,SOCK_DGRAM, 0);
+    _sockFd_udp = socket(AF_INET, SOCK_DGRAM, 0);
 
-    if(_sockFd_udp >= 0)
-    {
+    if (_sockFd_udp >= 0) {
         std::cout << "Client-UDP-Socket created successfully" << '\n';
 
         _serverAddr.sin_family = AF_INET;
@@ -45,23 +41,23 @@ void DoIPClient::startUdpConnection(){
         _clientAddr.sin_port = htons(_serverPortNr);
         _clientAddr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-        //binds the socket to any IP Address and the Port Number 13400
-        bind(_sockFd_udp, (struct sockaddr *)&_clientAddr, sizeof(_clientAddr));
+        // binds the socket to any IP Address and the Port Number 13400
+        bind(_sockFd_udp, reinterpret_cast<struct sockaddr *>(&_clientAddr), sizeof(_clientAddr));
     }
 }
 
 /*
  * closes the client-socket
  */
-void DoIPClient::closeTcpConnection(){
+void DoIPClient::closeTcpConnection() {
     close(_sockFd);
 }
 
-void DoIPClient::closeUdpConnection(){
+void DoIPClient::closeUdpConnection() {
     close(_sockFd_udp);
 }
 
-void DoIPClient::reconnectServer(){
+void DoIPClient::reconnectServer() {
     closeTcpConnection();
     startTcpConnection();
 }
@@ -69,44 +65,44 @@ void DoIPClient::reconnectServer(){
 /*
  *Build the Routing-Activation-Request for server
  */
-const std::pair<int,uint8_t*>* DoIPClient::buildRoutingActivationRequest() {
+const DoIPRequest DoIPClient::buildRoutingActivationRequest() {
 
-   std::pair <int,uint8_t*>* rareqWithLength= new std::pair<int,uint8_t*>();
-   int rareqLength=15;
-   uint8_t * rareq= new uint8_t[rareqLength];
+    //std::pair<int, uint8_t *> *rareqWithLength = new std::pair<int, uint8_t *>();
+    size_t rareqLength = 15;
+    uint8_t *rareq = new uint8_t[rareqLength];
 
-   //Generic Header
-   rareq[0]=0x02;  //Protocol Version
-   rareq[1]=0xFD;  //Inverse Protocol Version
-   rareq[2]=0x00;  //Payload-Type
-   rareq[3]=0x05;
-   rareq[4]=0x00;  //Payload-Length
-   rareq[5]=0x00;
-   rareq[6]=0x00;
-   rareq[7]=0x07;
+    // Generic Header
+    rareq[0] = 0x02; // Protocol Version
+    rareq[1] = 0xFD; // Inverse Protocol Version
+    rareq[2] = 0x00; // Payload-Type
+    rareq[3] = 0x05;
+    rareq[4] = 0x00; // Payload-Length
+    rareq[5] = 0x00;
+    rareq[6] = 0x00;
+    rareq[7] = 0x07;
 
-   //Payload-Type specific message-content
-   rareq[8]=0x0E;  //Source Address
-   rareq[9]=0x00;
-   rareq[10]=0x00; //Activation-Type
-   rareq[11]=0x00; //Reserved ISO(default)
-   rareq[12]=0x00;
-   rareq[13]=0x00;
-   rareq[14]=0x00;
+    // Payload-Type specific message-content
+    rareq[8] = 0x0E; // Source Address
+    rareq[9] = 0x00;
+    rareq[10] = 0x00; // Activation-Type
+    rareq[11] = 0x00; // Reserved ISO(default)
+    rareq[12] = 0x00;
+    rareq[13] = 0x00;
+    rareq[14] = 0x00;
 
-   rareqWithLength->first=rareqLength;
-   rareqWithLength->second=rareq;
+    // rareqWithLength->first = rareqLength;
+    // rareqWithLength->second = rareq;
 
-   return rareqWithLength;
+    return std::make_pair(rareqLength, rareq);
 }
 
 /*
  * Send the builded request over the tcp-connection to server
  */
-void DoIPClient::sendRoutingActivationRequest() {
+ssize_t DoIPClient::sendRoutingActivationRequest() {
 
-    const std::pair <int,uint8_t*>* rareqWithLength=buildRoutingActivationRequest();
-    write(_sockFd,rareqWithLength->second,rareqWithLength->first);
+    const DoIPRequest rareqWithLength = buildRoutingActivationRequest();
+    return write(_sockFd, rareqWithLength.second, rareqWithLength.first);
 }
 
 /**
@@ -115,22 +111,22 @@ void DoIPClient::sendRoutingActivationRequest() {
  * @param userData          data that will be given to the ecu
  * @param userDataLength    length of userData
  */
-void DoIPClient::sendDiagnosticMessage(uint8_t* targetAddress, uint8_t* userData, int userDataLength) {
-    unsigned short sourceAddress = 0x0E00;
-    uint8_t* message = createDiagnosticMessage(sourceAddress, targetAddress, userData, userDataLength);
+ssize_t DoIPClient::sendDiagnosticMessage(const Address &targetAddress, uint8_t *userData, size_t userDataLength) {
+    Address sourceAddress(0x0E, 0x00);
+    uint8_t *message = createDiagnosticMessage(sourceAddress, targetAddress, userData, userDataLength);
 
-    write(_sockFd, message, _GenericHeaderLength + _DiagnosticMessageMinimumLength + userDataLength);
+    return write(_sockFd, message, _GenericHeaderLength + _DiagnosticMessageMinimumLength + userDataLength);
 }
 
 /**
  * Sends a alive check response containing the clients source address to the server
  */
-void DoIPClient::sendAliveCheckResponse() {
-    int responseLength = 2;
-    uint8_t* message = createGenericHeader(PayloadType::ALIVECHECKRESPONSE, responseLength);
-    message[8] = sourceAddress[0];
-    message[9] = sourceAddress[1];
-    write(_sockFd, message, _GenericHeaderLength + responseLength);
+ssize_t DoIPClient::sendAliveCheckResponse() {
+    size_t responseLength = 2;
+    uint8_t *message = createGenericHeader(PayloadType::ALIVECHECKRESPONSE, responseLength);
+    message[8] = m_sourceAddress.hsb();
+    message[9] = m_sourceAddress.lsb();
+    return write(_sockFd, message, _GenericHeaderLength + responseLength);
 }
 
 /*
@@ -138,14 +134,13 @@ void DoIPClient::sendAliveCheckResponse() {
  */
 void DoIPClient::receiveMessage() {
 
-    int bytesRead = recv(_sockFd,_receivedData,_maxDataSize, 0);
+    int bytesRead = recv(_sockFd, _receivedData, _maxDataSize, 0);
 
-    if(!bytesRead) //if server is disconnected from client; client gets empty messages
+    if (!bytesRead) // if server is disconnected from client; client gets empty messages
     {
         emptyMessageCounter++;
 
-        if(emptyMessageCounter == 5)
-        {
+        if (emptyMessageCounter == 5) {
             std::cout << "Received to many empty messages. Reconnect TCP connection" << '\n';
             emptyMessageCounter = 0;
             reconnectServer();
@@ -154,34 +149,32 @@ void DoIPClient::receiveMessage() {
     }
 
     printf("Client received: ");
-    for(int i = 0; i < bytesRead; i++)
-    {
+    for (int i = 0; i < bytesRead; i++) {
         printf("0x%02X ", _receivedData[i]);
     }
     printf("\n ");
 
     GenericHeaderAction action = parseGenericHeader(_receivedData, bytesRead);
 
-    if(action.type == PayloadType::DIAGNOSTICPOSITIVEACK || action.type == PayloadType::DIAGNOSTICNEGATIVEACK) {
-        switch(action.type) {
-            case PayloadType::DIAGNOSTICPOSITIVEACK: {
-                std::cout << "Client received diagnostic message positive ack with code: ";
-                printf("0x%02X ", _receivedData[12]);
-                break;
-            }
-            case PayloadType::DIAGNOSTICNEGATIVEACK: {
-                std::cout << "Client received diagnostic message negative ack with code: ";
-                printf("0x%02X ", _receivedData[12]);
-                break;
-            }
-            default: {
-                std::cerr << "not handled payload type occured in receiveMessage()" << '\n';
-                break;
-            }
+    if (action.type == PayloadType::DIAGNOSTICPOSITIVEACK || action.type == PayloadType::DIAGNOSTICNEGATIVEACK) {
+        switch (action.type) {
+        case PayloadType::DIAGNOSTICPOSITIVEACK: {
+            std::cout << "Client received diagnostic message positive ack with code: ";
+            printf("0x%02X ", _receivedData[12]);
+            break;
+        }
+        case PayloadType::DIAGNOSTICNEGATIVEACK: {
+            std::cout << "Client received diagnostic message negative ack with code: ";
+            printf("0x%02X ", _receivedData[12]);
+            break;
+        }
+        default: {
+            std::cerr << "not handled payload type occured in receiveMessage()" << '\n';
+            break;
+        }
         }
         std::cout << '\n';
     }
-
 }
 
 void DoIPClient::receiveUdpMessage() {
@@ -189,167 +182,144 @@ void DoIPClient::receiveUdpMessage() {
     unsigned int length = sizeof(_clientAddr);
 
     int bytesRead;
-    bytesRead = recvfrom(_sockFd_udp, _receivedData, _maxDataSize, 0, (struct sockaddr*)&_clientAddr, &length);
+    bytesRead = recvfrom(_sockFd_udp, _receivedData, _maxDataSize, 0, reinterpret_cast<struct sockaddr *>(&_clientAddr), &length);
 
-    if(PayloadType::VEHICLEIDENTRESPONSE == parseGenericHeader(_receivedData, bytesRead).type)
-    {
+    if (PayloadType::VEHICLEIDENTRESPONSE == parseGenericHeader(_receivedData, bytesRead).type) {
         parseVIResponseInformation(_receivedData);
     }
-
 }
 
-const std::pair<int,uint8_t*>* DoIPClient::buildVehicleIdentificationRequest(){
+const DoIPRequest DoIPClient::buildVehicleIdentificationRequest() {
 
-    std::pair <int,uint8_t*>* rareqWithLength= new std::pair<int,uint8_t*>();
-    int rareqLength= 8;
-    uint8_t * rareq= new uint8_t[rareqLength];
+    //std::pair<int, uint8_t *> *rareqWithLength = new std::pair<int, uint8_t *>();
+    size_t rareqLength = 8;
+    uint8_t *rareq = new uint8_t[rareqLength];
 
-    //Generic Header
-    rareq[0]=0x02;  //Protocol Version
-    rareq[1]=0xFD;  //Inverse Protocol Version
-    rareq[2]=0x00;  //Payload-Type
-    rareq[3]=0x01;
-    rareq[4]=0x00;  //Payload-Length
-    rareq[5]=0x00;
-    rareq[6]=0x00;
-    rareq[7]=0x00;
+    // Generic Header
+    rareq[0] = 0x02; // Protocol Version
+    rareq[1] = 0xFD; // Inverse Protocol Version
+    rareq[2] = 0x00; // Payload-Type
+    rareq[3] = 0x01;
+    rareq[4] = 0x00; // Payload-Length
+    rareq[5] = 0x00;
+    rareq[6] = 0x00;
+    rareq[7] = 0x00;
 
-    rareqWithLength->first=rareqLength;
-    rareqWithLength->second=rareq;
+    // rareqWithLength->first = rareqLength;
+    // rareqWithLength->second = rareq;
 
-    return rareqWithLength;
-
+    return std::make_pair(rareqLength, rareq);
 }
 
-void DoIPClient::sendVehicleIdentificationRequest(const char* address){
+ssize_t DoIPClient::sendVehicleIdentificationRequest(const char *inet_address) {
 
-    int setAddressError = inet_aton(address,&(_serverAddr.sin_addr));
+    int setAddressError = inet_aton(inet_address, &(_serverAddr.sin_addr));
 
-    if(setAddressError != 0)
-    {
-        std::cout <<"Address set succesfully"<<'\n';
-    }
-    else
-    {
+    if (setAddressError != 0) {
+        std::cout << "Address set succesfully" << '\n';
+    } else {
         std::cout << "Could not set Address. Try again" << '\n';
     }
 
-    int socketError = setsockopt(_sockFd_udp, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast) );
+    int socketError = setsockopt(_sockFd_udp, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast));
 
-    if(socketError == 0)
-    {
+    if (socketError == 0) {
         std::cout << "Broadcast Option set successfully" << '\n';
     }
 
-    const std::pair <int,uint8_t*>* rareqWithLength=buildVehicleIdentificationRequest();
+    const DoIPRequest rareqWithLength = buildVehicleIdentificationRequest();
 
-    int sendError = sendto(_sockFd_udp, rareqWithLength->second,rareqWithLength->first, 0, (struct sockaddr *) &_serverAddr, sizeof(_serverAddr));
+    ssize_t bytesSent = sendto(_sockFd_udp, rareqWithLength.second, rareqWithLength.first, 0, reinterpret_cast<struct sockaddr *>(&_serverAddr), sizeof(_serverAddr));
 
-    if(sendError > 0)
-    {
+    if (bytesSent > 0) {
         std::cout << "Sending Vehicle Identification Request" << '\n';
     }
+
+    return bytesSent;
 }
 
 /**
  * Sets the source address for this client
  * @param address   source address for the client
  */
-void DoIPClient::setSourceAddress(uint8_t* address) {
-    sourceAddress[0] = address[0];
-    sourceAddress[1] = address[1];
+void DoIPClient::setSourceAddress(const Address &address) {
+    m_sourceAddress = address;
 }
 
 /*
-* Getter for _sockFD
-*/
+ * Getter for _sockFD
+ */
 int DoIPClient::getSockFd() {
     return _sockFd;
 }
 
 /*
-* Getter for _connected
-*/
+ * Getter for _connected
+ */
 int DoIPClient::getConnected() {
     return _connected;
 }
 
-void DoIPClient::parseVIResponseInformation(uint8_t* data){
+void DoIPClient::parseVIResponseInformation(uint8_t *data) {
 
-    //VIN
+    // VIN
     int j = 0;
-    for(int i = 8; i <= 24; i++)
-    {
+    for (int i = 8; i <= 24; i++) {
         VINResult[j] = data[i];
         j++;
     }
 
-    //Logical Adress
-    j = 0;
-    for(int i = 25; i <= 26; i++)
-    {
-        LogicalAddressResult[j] = data[i];
-        j++;
-    }
+    // Logical Adress
+    LogicalAddressResult.update(data, 25);
 
-    //EID
+    // EID
     j = 0;
-    for(int i = 27; i <= 32; i++)
-    {
+    for (int i = 27; i <= 32; i++) {
         EIDResult[j] = data[i];
         j++;
     }
 
-    //GID
+    // GID
     j = 0;
-    for(int i = 33; i <= 38; i++)
-    {
+    for (int i = 33; i <= 38; i++) {
         GIDResult[j] = data[i];
         j++;
     }
 
-    //FurtherActionRequest
+    // FurtherActionRequest
     FurtherActionReqResult = data[39];
-
 }
 
-void DoIPClient::displayVIResponseInformation()
-{
-    //output VIN
+void DoIPClient::displayVIResponseInformation() {
+    // output VIN
     std::cout << "VIN: ";
-    for(int i = 0; i < 17 ;i++)
-    {
-        std::cout << (uint8_t)(int)VINResult[i];
+    for (int i = 0; i < 17; i++) {
+        std::cout << +VINResult[i];
     }
     std::cout << '\n';
 
-    //output LogicalAddress
+    // output LogicalAddress
     std::cout << "LogicalAddress: ";
-    for(int i = 0; i < 2; i++)
-    {
-        printf("%02X", (int)LogicalAddressResult[i]);
-    }
+    std::cout << LogicalAddressResult;
     std::cout << '\n';
 
-    //output EID
+    // output EID
     std::cout << "EID: ";
-    for(int i = 0; i < 6; i++)
-    {
-        printf("%02X", EIDResult[i]);
+    for (int i = 0; i < 6; i++) {
+        std::cout << std::hex << std::setfill('0') << std::setw(2) << EIDResult[i] << std::dec;
     }
     std::cout << '\n';
 
-     //output GID
+    // output GID
     std::cout << "GID: ";
-    for(int i = 0; i < 6; i++)
-    {
-        printf("%02X", (int)GIDResult[i]);
+    for (int i = 0; i < 6; i++) {
+        std::cout << std::hex << std::setfill('0') << std::setw(2) << GIDResult[i] << std::dec;
     }
     std::cout << '\n';
 
-    //output FurtherActionRequest
+    // output FurtherActionRequest
     std::cout << "FurtherActionRequest: ";
-    printf("%02X", (int)FurtherActionReqResult);
+    std::cout << std::hex << std::setfill('0') << std::setw(2) << FurtherActionReqResult << std::dec;
 
     std::cout << '\n';
 }
