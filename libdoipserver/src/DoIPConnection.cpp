@@ -151,7 +151,7 @@ int DoIPConnection::reactOnReceivedTcpMessage(GenericHeaderAction action, unsign
         }
 
         default: {
-            std::cerr << "Received message with unhandled payload type: " << action.type << '\n';
+            std::cerr << "Received message with unhandled payload type: " << +static_cast<uint8_t>(action.type) << '\n';
             return -1;
         }
     }
