@@ -41,6 +41,7 @@ add_library(libdoip::doipserver ALIAS doipserver)
 if(WITH_UNIT_TEST)
     # Routing Activation Handler Tests
     add_executable(routing_activation_tests
+        test/Main_Test.cpp
         test/RoutingActivationHandler_Test.cpp
     )
 
@@ -53,6 +54,7 @@ if(WITH_UNIT_TEST)
 
     # Vehicle Identification Handler Tests
     add_executable(vehicle_identification_tests
+        test/Main_Test.cpp
         test/VehicleIdentificationHandler_Test.cpp
     )
 
