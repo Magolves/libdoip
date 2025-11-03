@@ -146,7 +146,6 @@ struct Address {
     /**
      * @brief Check if source address is valid
      *
-     * @param other the address to check
      * @return true the source address is valid
      * @return false the source address is NOT valid
      */
