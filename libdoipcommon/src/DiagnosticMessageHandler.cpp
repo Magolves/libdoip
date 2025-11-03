@@ -9,26 +9,24 @@
  * @param data			message which was received
  * @param diagMessageLength     length of the diagnostic message
  */
-unsigned char parseDiagnosticMessage(DiagnosticCallback callback, unsigned char sourceAddress [2],
-                                    unsigned char* data, int diagMessageLength) {
-    std::cout << "parse Diagnostic Message" << std::endl;
+uint8_t parseDiagnosticMessage(DiagnosticCallback callback, const Address& sourceAddress ,
+                                    const uint8_t* data, size_t diagMessageLength) {
+    std::cout << "parse Diagnostic Message" << '\n';
     if(diagMessageLength >= _DiagnosticMessageMinimumLength) {
         //Check if the received SA is registered on the socket
-        if(data[0] != sourceAddress[0] || data[1] != sourceAddress[1]) {
+        if(data[0] != sourceAddress.hsb() || data[1] != sourceAddress.lsb()) {
             //SA of received message is not registered on this TCP_DATA socket
             return _InvalidSourceAddressCode;
         }
 
-        std::cout << "source address valid" << std::endl;
+        std::cout << "source address valid" << '\n';
         //Pass the diagnostic message to the target network/transport layer
-        unsigned short target_address = 0;
-        target_address |= ((unsigned short)data[2]) << 8U;
-        target_address |= (unsigned short)data[3];
+        Address target_address(data[2], data[3]);
 
-        int cb_message_length = diagMessageLength - _DiagnosticMessageMinimumLength;
-        unsigned char* cb_message = new unsigned char[cb_message_length];
+        size_t cb_message_length = diagMessageLength - _DiagnosticMessageMinimumLength;
+        uint8_t* cb_message = new uint8_t[cb_message_length];
 
-        for(int i = _DiagnosticMessageMinimumLength; i < diagMessageLength; i++) {
+        for(size_t i = _DiagnosticMessageMinimumLength; i < diagMessageLength; i++) {
             cb_message[i - _DiagnosticMessageMinimumLength] = data[i];
         }
 
@@ -48,24 +46,24 @@ unsigned char parseDiagnosticMessage(DiagnosticCallback callback, unsigned char 
  * @param responseCode		positive or negative acknowledge code
  * @return pointer to the created diagnostic message acknowledge
  */
-unsigned char* createDiagnosticACK(bool ackType, unsigned short sourceAddress, 
-                                    unsigned char targetAddress [2], unsigned char responseCode) {
-    
+uint8_t* createDiagnosticACK(bool ackType, const Address& sourceAddress,
+                                    const Address& targetAddress, uint8_t responseCode) {
+
     PayloadType type;
     if(ackType)
         type = PayloadType::DIAGNOSTICPOSITIVEACK;
     else
         type = PayloadType::DIAGNOSTICNEGATIVEACK;
-    
-    unsigned char* message = createGenericHeader(type, _DiagnosticPositiveACKLength);
+
+    uint8_t* message = createGenericHeader(type, _DiagnosticPositiveACKLength);
 
     //add source address to the message
-    message[8] = (unsigned char)((sourceAddress >> 8) & 0xFF);
-    message[9] = (unsigned char)(sourceAddress & 0xFF);
+    message[8] = sourceAddress.lsb();
+    message[9] = sourceAddress.hsb();
 
     //add target address to the message
-    message[10] = targetAddress[0];
-    message[11] = targetAddress[1];
+    message[10] = targetAddress.lsb();
+    message[11] = targetAddress.hsb();
 
     //add positive or negative acknowledge code to the message
     message[12] = responseCode;
@@ -80,22 +78,22 @@ unsigned char* createDiagnosticACK(bool ackType, unsigned short sourceAddress,
  * @param userData		actual diagnostic data
  * @param userDataLength	length of diagnostic data
  */
-unsigned char* createDiagnosticMessage(unsigned short sourceAddress, unsigned char targetAddress [2],
-                                        unsigned char* userData, int userDataLength) {
-    
-    unsigned char* message = createGenericHeader(PayloadType::DIAGNOSTICMESSAGE, _DiagnosticMessageMinimumLength + userDataLength);
+uint8_t* createDiagnosticMessage(const Address& sourceAddress, const Address& targetAddress,
+                                        uint8_t* userData, size_t userDataLength) {
+
+    uint8_t* message = createGenericHeader(PayloadType::DIAGNOSTICMESSAGE, _DiagnosticMessageMinimumLength + userDataLength);
 
     //add source address to the message
-    message[8] = (unsigned char)((sourceAddress >> 8) & 0xFF);
-    message[9] = (unsigned char)(sourceAddress & 0xFF);
+    message[8] = sourceAddress.lsb();
+    message[9] = sourceAddress.hsb();
 
     //add target address to the message
-    message[10] = targetAddress[0];
-    message[11] = targetAddress[1];
+    message[10] = targetAddress.lsb();
+    message[11] = targetAddress.hsb();
 
     //add userdata to the message
-    for(int i = 0; i < userDataLength; i++) {
-        message[12 + i] = userData[i];	
+    for(size_t i = 0; i < userDataLength; i++) {
+        message[12 + i] = userData[i];
     }
 
     return message;

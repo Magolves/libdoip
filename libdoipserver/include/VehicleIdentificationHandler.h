@@ -5,7 +5,7 @@
 #include <string>
 
 
-unsigned char* createVehicleIdentificationResponse(std::string VIN,unsigned short LogicalAdress,unsigned char* EID,unsigned char* GID,unsigned char FurtherActionReq);
+uint8_t* createVehicleIdentificationResponse(std::string VIN,unsigned short LogicalAdress,uint8_t* EID,uint8_t* GID,uint8_t FurtherActionReq);
 
 const int _VIResponseLength = 32;
 

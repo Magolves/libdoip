@@ -4,19 +4,18 @@
 #include "DoIPGenericHeaderHandler.h"
 #include <functional>
 
-using DiagnosticCallback = std::function<void(unsigned short, unsigned char*, int)>;
-using DiagnosticMessageNotification = std::function<bool(unsigned short)>;
+using DiagnosticCallback = std::function<void(const Address&, uint8_t *, int)>;
+using DiagnosticMessageNotification = std::function<bool(const Address&)>;
 
-const int _DiagnosticPositiveACKLength = 5;
-const int _DiagnosticMessageMinimumLength = 4;
+const size_t _DiagnosticPositiveACKLength = 5;
+const size_t _DiagnosticMessageMinimumLength = 4;
 
-const unsigned char _ValidDiagnosticMessageCode = 0x00;
-const unsigned char _InvalidSourceAddressCode = 0x02;
-const unsigned char _UnknownTargetAddressCode = 0x03;
+const uint8_t _ValidDiagnosticMessageCode = 0x00;
+const uint8_t _InvalidSourceAddressCode = 0x02;
+const uint8_t _UnknownTargetAddressCode = 0x03;
 
-unsigned char parseDiagnosticMessage(DiagnosticCallback callback, unsigned char sourceAddress [2], unsigned char* data, int diagMessageLength);
-unsigned char* createDiagnosticACK(bool ackType, unsigned short sourceAddress, unsigned char targetAddress [2], unsigned char responseCode);
-unsigned char* createDiagnosticMessage(unsigned short sourceAddress, unsigned char targetAddress [2], unsigned char* userData, int userDataLength);
-
+uint8_t parseDiagnosticMessage(DiagnosticCallback callback, const Address& sourceAddress, const uint8_t *data, size_t diagMessageLength);
+uint8_t *createDiagnosticACK(bool ackType, const Address& sourceAddress, const Address&  targetAddress, uint8_t responseCode);
+uint8_t *createDiagnosticMessage(const Address& sourceAddress, const Address&  targetAddress, uint8_t *userData, size_t userDataLength);
 
 #endif /* DIAGNOSTICMESSAGEHANDLER_H */

@@ -7,78 +7,79 @@
  * Closes the connection by closing the sockets
  */
 void DoIPConnection::aliveCheckTimeout() {
-    std::cout << "Alive Check Timeout. Close Connection" << std::endl;
+    std::cout << "Alive Check Timeout. Close Connection" << '\n';
     closeSocket();
-    close_connection();
+    m_close_connection();
 }
 
 /*
  * Closes the socket for this server
  */
 void DoIPConnection::closeSocket() {
-    close(tcpSocket);
-    tcpSocket = 0;
+    close(m_tcpSocket);
+    m_tcpSocket = 0;
 }
 
 /*
  * Receives a message from the client and calls reactToReceivedTcpMessage method
  * @return      amount of bytes which were send back to client
- *              or -1 if error occurred     
+ *              or -1 if error occurred
  */
 int DoIPConnection::receiveTcpMessage() {
-    std::cout << "Waiting for DoIP Header..." << std::endl;
-    unsigned char genericHeader[_GenericHeaderLength];
+    std::cout << "Waiting for DoIP Header..." << '\n';
+    uint8_t genericHeader[_GenericHeaderLength];
     unsigned int readBytes = receiveFixedNumberOfBytesFromTCP(_GenericHeaderLength, genericHeader);
-    if(readBytes == _GenericHeaderLength && !aliveCheckTimer.timeout) {
-        std::cout << "Received DoIP Header." << std::endl;
+    if(readBytes == _GenericHeaderLength && !m_aliveCheckTimer.timeout) {
+        std::cout << "Received DoIP Header." << '\n';
         GenericHeaderAction doipHeaderAction = parseGenericHeader(genericHeader, _GenericHeaderLength);
 
-        unsigned char *payload = nullptr;
+        uint8_t *payload = nullptr;
         if(doipHeaderAction.payloadLength > 0) {
-            std::cout << "Waiting for " << doipHeaderAction.payloadLength << " bytes of payload..." << std::endl;
-            payload = new unsigned char[doipHeaderAction.payloadLength];
+            std::cout << "Waiting for " << doipHeaderAction.payloadLength << " bytes of payload..." << '\n';
+            payload = new uint8_t[doipHeaderAction.payloadLength];
             unsigned int receivedPayloadBytes = receiveFixedNumberOfBytesFromTCP(doipHeaderAction.payloadLength, payload);
             if(receivedPayloadBytes != doipHeaderAction.payloadLength) {
                 closeSocket();
                 return 0;
             }
-            std::cout << "DoIP message completely received" << std::endl;
+            std::cout << "DoIP message completely received" << '\n';
         }
 
         //if alive check timouts should be possible, reset timer when message received
-        if(aliveCheckTimer.active) {
-            aliveCheckTimer.resetTimer();
+        if(m_aliveCheckTimer.active) {
+            m_aliveCheckTimer.resetTimer();
         }
 
         int sentBytes = reactOnReceivedTcpMessage(doipHeaderAction, doipHeaderAction.payloadLength, payload);
-        
+
         return sentBytes;
     } else {
         closeSocket();
         return 0;
     }
     return -1;
-      
+
 }
 
 /**
  * Receive exactly payloadLength bytes from the TCP stream and put them into receivedData.
  * The method blocks until receivedData bytes are received or the socket is closed.
- * 
+ *
  * The parameter receivedData needs to point to a readily allocated array with
  * at least payloadLength items.
- * 
+ *
  * @return number of bytes received
 */
-unsigned long DoIPConnection::receiveFixedNumberOfBytesFromTCP(unsigned long payloadLength, unsigned char *receivedData) {
-    unsigned long payloadPos = 0;
-    unsigned long remainingPayload = payloadLength;
+size_t DoIPConnection::receiveFixedNumberOfBytesFromTCP(size_t payloadLength, uint8_t *receivedData) {
+    size_t payloadPos = 0;
+    size_t remainingPayload = payloadLength;
 
     while(remainingPayload > 0) {
-        int readBytes = recv(tcpSocket, &receivedData[payloadPos], remainingPayload, 0);
-        if(readBytes <= 0) {
+        ssize_t result = recv(m_tcpSocket, &receivedData[payloadPos], remainingPayload, 0);
+        if(result <= 0) {
             return payloadPos;
         }
+        size_t readBytes = static_cast<size_t>(result);
         payloadPos += readBytes;
         remainingPayload -= readBytes;
     }
@@ -89,18 +90,18 @@ unsigned long DoIPConnection::receiveFixedNumberOfBytesFromTCP(unsigned long pay
 /*
  * Receives a message from the client and determine how to process the message
  * @return      amount of bytes which were send back to client
- *              or -1 if error occurred     
+ *              or -1 if error occurred
  */
-int DoIPConnection::reactOnReceivedTcpMessage(GenericHeaderAction action, unsigned long payloadLength, unsigned char *payload) {
+int DoIPConnection::reactOnReceivedTcpMessage(GenericHeaderAction action, unsigned long payloadLength, uint8_t *payload) {
 
-    std::cout << "processing DoIP message..." << std::endl;
+    std::cout << "processing DoIP message..." << '\n';
     int sentBytes;
     switch(action.type) {
         case PayloadType::NEGATIVEACK: {
             //send NACK
             sentBytes = sendNegativeAck(action.value);
 
-            if(action.value == _IncorrectPatternFormatCode || 
+            if(action.value == _IncorrectPatternFormatCode ||
                     action.value == _InvalidPayloadLengthCode) {
                 closeSocket();
                 return -1;
@@ -111,10 +112,10 @@ int DoIPConnection::reactOnReceivedTcpMessage(GenericHeaderAction action, unsign
 
         case PayloadType::ROUTINGACTIVATIONREQUEST: {
             //start routing activation handler with the received message
-            unsigned char result = parseRoutingActivation(payload);
-            unsigned char clientAddress [2] = {payload[0], payload[1]};
+            uint8_t result = parseRoutingActivation(payload);
+            Address clientAddress(payload[0], payload[1]);
 
-            unsigned char* message = createRoutingActivationResponse(logicalGatewayAddress, clientAddress, result);
+            uint8_t* message = createRoutingActivationResponse(m_logicalGatewayAddress, clientAddress, result);
             sentBytes = sendMessage(message, _GenericHeaderLength + _ActivationResponseLength);
 
             if(result == _UnknownSourceAddressCode || result == _UnsupportedRoutingTypeCode) {
@@ -122,14 +123,12 @@ int DoIPConnection::reactOnReceivedTcpMessage(GenericHeaderAction action, unsign
                 return -1;
             } else {
                 //Routing Activation Request was successfull, save address of the client
-                routedClientAddress = new unsigned char[2];
-                routedClientAddress[0] = payload[0];
-                routedClientAddress[1] = payload[1];
+                m_routedClientAddress.update(payload[0], payload[1]);
 
                 //start alive check timer
-                if(!aliveCheckTimer.active) {
-                    aliveCheckTimer.cb = std::bind(&DoIPConnection::aliveCheckTimeout,this);
-                    aliveCheckTimer.startTimer();
+                if(!m_aliveCheckTimer.active) {
+                    m_aliveCheckTimer.cb = std::bind(&DoIPConnection::aliveCheckTimeout,this);
+                    m_aliveCheckTimer.startTimer();
                 }
             }
 
@@ -142,27 +141,25 @@ int DoIPConnection::reactOnReceivedTcpMessage(GenericHeaderAction action, unsign
 
         case PayloadType::DIAGNOSTICMESSAGE: {
 
-            unsigned short target_address = 0;
-            target_address |= ((unsigned short)payload[2]) << 8U;
-            target_address |= (unsigned short)payload[3];
-            bool ack = notify_application(target_address);
+            Address target_address(payload[2], payload[3]);
+            bool ack = m_notify_application(target_address);
 
             if(ack)
-                parseDiagnosticMessage(diag_callback, routedClientAddress, payload, payloadLength);
+                parseDiagnosticMessage(m_diag_callback, m_routedClientAddress, payload, payloadLength);
 
             break;
         }
 
         default: {
-            std::cerr << "Received message with unhandled payload type: " << action.type << std::endl;
+            std::cerr << "Received message with unhandled payload type: " << action.type << '\n';
             return -1;
         }
-    }  
+    }
     return -1;
 }
 
 void DoIPConnection::triggerDisconnection() {
-    std::cout << "Application requested to disconnect Client from Server" << std::endl;
+    std::cout << "Application requested to disconnect Client from Server" << '\n';
     closeSocket();
 }
 
@@ -173,8 +170,8 @@ void DoIPConnection::triggerDisconnection() {
  * @return                  number of bytes written is returned,
  *                          or -1 if error occurred
  */
-int DoIPConnection::sendMessage(unsigned char* message, int messageLength) {
-    int result = write(tcpSocket, message, messageLength);
+int DoIPConnection::sendMessage(uint8_t* message, size_t messageLength) {
+    int result = write(m_tcpSocket, message, messageLength);
     return result;
 }
 
@@ -185,9 +182,9 @@ int DoIPConnection::sendMessage(unsigned char* message, int messageLength) {
  */
 void DoIPConnection::setGeneralInactivityTime(uint16_t seconds) {
     if(seconds > 0) {
-        aliveCheckTimer.setTimer(seconds);
+        m_aliveCheckTimer.setTimer(seconds);
     } else {
-        aliveCheckTimer.disabled = true;
+        m_aliveCheckTimer.disabled = true;
     }
 }
 
@@ -197,15 +194,15 @@ void DoIPConnection::setGeneralInactivityTime(uint16_t seconds) {
  * @param value     received payload
  * @param length    length of received payload
  */
-void DoIPConnection::sendDiagnosticPayload(unsigned short sourceAddress, unsigned char* data, int length) {
+void DoIPConnection::sendDiagnosticPayload(const Address& sourceAddress, uint8_t* data, size_t length) {
 
     std::cout << "Sending diagnostic data: ";
-    for(int i = 0; i < length; i++) {
-        std::cout << std::hex << std::setw(2) << (unsigned int)data[i] << " ";
+    for(size_t i = 0; i < length; i++) {
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << data[i] << " ";
     }
-    std::cout << std::endl;
-    
-    unsigned char* message = createDiagnosticMessage(sourceAddress, routedClientAddress, data, length);  
+    std::cout << '\n';
+
+    uint8_t* message = createDiagnosticMessage(sourceAddress, m_routedClientAddress, data, length);
     sendMessage(message, _GenericHeaderLength + _DiagnosticMessageMinimumLength + length);
 }
 
@@ -216,15 +213,15 @@ void DoIPConnection::sendDiagnosticPayload(unsigned short sourceAddress, unsigne
  * @ccb     Callback for application function when the library closes the connection
  */
 void DoIPConnection::setCallback(DiagnosticCallback dc, DiagnosticMessageNotification dmn, CloseConnectionCallback ccb) {
-    diag_callback = dc;
-    notify_application = dmn;
-    close_connection = ccb;
+    m_diag_callback = dc;
+    m_notify_application = dmn;
+    m_close_connection = ccb;
 }
 
-void DoIPConnection::sendDiagnosticAck(unsigned short sourceAddress, bool ackType, unsigned char ackCode) {
-    unsigned char data_TA [2] = { routedClientAddress[0], routedClientAddress[1] };
-    
-    unsigned char* message = createDiagnosticACK(ackType, sourceAddress, data_TA, ackCode);
+void DoIPConnection::sendDiagnosticAck(const Address& sourceAddress, bool ackType, uint8_t ackCode) {
+    Address data_TA(m_routedClientAddress.hsb(), m_routedClientAddress.lsb());
+
+    uint8_t* message = createDiagnosticACK(ackType, sourceAddress, data_TA, ackCode);
     sendMessage(message, _GenericHeaderLength + _DiagnosticPositiveACKLength);
 }
 
@@ -233,8 +230,8 @@ void DoIPConnection::sendDiagnosticAck(unsigned short sourceAddress, bool ackTyp
  * @param ackCode       NACK-Code which will be included in the message
  * @return              amount of bytes sended to the client
  */
-int DoIPConnection::sendNegativeAck(unsigned char ackCode) {
-    unsigned char* message = createGenericHeader(PayloadType::NEGATIVEACK, _NACKLength);
+int DoIPConnection::sendNegativeAck(uint8_t ackCode) {
+    uint8_t* message = createGenericHeader(PayloadType::NEGATIVEACK, _NACKLength);
     message[8] = ackCode;
     int sendedBytes = sendMessage(message, _GenericHeaderLength + _NACKLength);
     return sendedBytes;

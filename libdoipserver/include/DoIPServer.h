@@ -29,7 +29,7 @@ class DoIPServer {
 
 public:
     DoIPServer() = default;
-    
+
     void setupTcpSocket();
     std::unique_ptr<DoIPConnection> waitForTcpConnection();
     void setupUdpSocket();
@@ -37,7 +37,7 @@ public:
 
     void closeTcpSocket();
     void closeUdpSocket();
-    
+
     int sendVehicleAnnouncement();
 
     void setEIDdefault();
@@ -47,29 +47,29 @@ public:
     void setGID(const uint64_t inputGID);
     void setFAR(const unsigned int inputFAR);
     void setA_DoIP_Announce_Num(int Num);
-    void setA_DoIP_Announce_Interval(int Interval); 
+    void setA_DoIP_Announce_Interval(unsigned int Interval);
 
 private:
 
     int server_socket_tcp, server_socket_udp;
     struct sockaddr_in serverAddress, clientAddress;
-    unsigned char data[_MaxDataSize];
+    uint8_t data[_MaxDataSize];
 
     std::string VIN = "00000000000000000";
     unsigned short LogicalGatewayAddress = 0x0000;
-    unsigned char EID [6];
-    unsigned char GID [6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    unsigned char FurtherActionReq = 0x00;
-    
+    uint8_t EID [6];
+    uint8_t GID [6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t FurtherActionReq = 0x00;
+
     int A_DoIP_Announce_Num = 3;    //Default Value = 3
-    int A_DoIP_Announce_Interval = 500; //Default Value = 500ms
-    
+    unsigned int A_DoIP_Announce_Interval = 500; //Default Value = 500ms
+
     int broadcast = 1;
-    
-    int reactToReceivedUdpMessage(int readedBytes);
-    
-    int sendUdpMessage(unsigned char* message, int messageLength);
-    
+
+    int reactToReceivedUdpMessage(int bytesRead);
+
+    int sendUdpMessage(uint8_t* message, size_t messageLength);
+
     void setMulticastGroup(const char* address);
 };
 

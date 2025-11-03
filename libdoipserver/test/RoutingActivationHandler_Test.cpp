@@ -4,10 +4,10 @@
 
 TEST_SUITE("RoutingActivation") {
 	struct RoutingActivationFixture {
-		unsigned char* request;
+		uint8_t* request;
 
 		RoutingActivationFixture() {
-			request = new unsigned char[15];
+			request = new uint8_t[15];
 			request[0] = 0x01;
 			request[1] = 0xFE;
 			request[2] = 0x00;
@@ -35,15 +35,12 @@ TEST_SUITE("RoutingActivation") {
 	*/
 	TEST_CASE_FIXTURE(RoutingActivationFixture, "Valid Address Parsing") {
 		uint32_t expectedValue = 3858;
-		uint32_t address = 0;
-		address |= (uint32_t)request[8] << 8;
-		address |= (uint32_t)request[9];
+		Address address(request, 8);
 		CHECK_EQ(address, expectedValue);
 		CHECK_MESSAGE(address == expectedValue, "Converting address to uint failed");
 
-		bool result = checkSourceAddress(address);
-		CHECK(result);
-		CHECK_MESSAGE(result, "Didnt found address");
+		CHECK(address.isValidSourceAddress() == true);
+		CHECK_MESSAGE(address.isValidSourceAddress(), "Didn't found address");
 	}
 
 	/*
@@ -53,7 +50,7 @@ TEST_SUITE("RoutingActivation") {
 		//Set wrong address in received message
 		request[8] = 0x0D;
 		request[9] = 0x00;
-		unsigned char result = parseRoutingActivation(request);
+		uint8_t result = parseRoutingActivation(request);
 		CHECK_EQ(result, 0x00);
 		CHECK_MESSAGE(result == 0x00, "Wrong address doesn't return correct response code");
 	}
@@ -64,7 +61,7 @@ TEST_SUITE("RoutingActivation") {
 	TEST_CASE_FIXTURE(RoutingActivationFixture, "Unknown Activation Type") {
 		//Set wrong activation type
 		request[10] = 0xFF;
-		unsigned char result = parseRoutingActivation(request);
+		uint8_t result = parseRoutingActivation(request);
 		CHECK_EQ(result, 0x06);
 	}
 
@@ -72,7 +69,7 @@ TEST_SUITE("RoutingActivation") {
 	* Checks if a valid routing activation request leads to the correct routing activation code (0x10);
 	*/
 	TEST_CASE_FIXTURE(RoutingActivationFixture, "Valid Request") {
-		unsigned char result = parseRoutingActivation(request);
+		uint8_t result = parseRoutingActivation(request);
 		CHECK_EQ(result, 0x10);
 	}
 }

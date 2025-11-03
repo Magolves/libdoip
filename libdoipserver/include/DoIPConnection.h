@@ -24,41 +24,41 @@ const unsigned long _MaxDataSize = 0xFFFFFF;
 class DoIPConnection {
 
 public:
-    DoIPConnection(int tcpSocket, unsigned short logicalGatewayAddress): 
-        tcpSocket(tcpSocket), logicalGatewayAddress(logicalGatewayAddress) { };
-    
-    int receiveTcpMessage();
-    unsigned long receiveFixedNumberOfBytesFromTCP(unsigned long payloadLength, unsigned char *receivedData);
+    DoIPConnection(int tcpSocket, Address logicalGatewayAddress):
+        m_tcpSocket(tcpSocket), m_logicalGatewayAddress(logicalGatewayAddress) { };
 
-    void sendDiagnosticPayload(unsigned short sourceAddress, unsigned char* data, int length);
-    bool isSocketActive() { return tcpSocket != 0; };
+    int receiveTcpMessage();
+    size_t receiveFixedNumberOfBytesFromTCP(size_t payloadLength, uint8_t *receivedData);
+
+    void sendDiagnosticPayload(const Address& sourceAddress, uint8_t* data, size_t length);
+    bool isSocketActive() { return m_tcpSocket != 0; };
 
     void triggerDisconnection();
-    
-    void sendDiagnosticAck(unsigned short sourceAddress, bool ackType, unsigned char ackCode);
-    int sendNegativeAck(unsigned char ackCode);
 
-    void setCallback(DiagnosticCallback dc, DiagnosticMessageNotification dmn, CloseConnectionCallback ccb);                       
-    void setGeneralInactivityTime(const uint16_t seconds);   
+    void sendDiagnosticAck(const Address& sourceAddress, bool ackType, uint8_t ackCode);
+    int sendNegativeAck(uint8_t ackCode);
+
+    void setCallback(DiagnosticCallback dc, DiagnosticMessageNotification dmn, CloseConnectionCallback ccb);
+    void setGeneralInactivityTime(const uint16_t seconds);
 
 private:
 
-    int tcpSocket;
+    int m_tcpSocket;
 
-    AliveCheckTimer aliveCheckTimer;
-    DiagnosticCallback diag_callback;
-    CloseConnectionCallback close_connection;
-    DiagnosticMessageNotification notify_application;
+    AliveCheckTimer m_aliveCheckTimer;
+    DiagnosticCallback m_diag_callback;
+    CloseConnectionCallback m_close_connection;
+    DiagnosticMessageNotification m_notify_application;
 
-    unsigned char* routedClientAddress;
-    unsigned short logicalGatewayAddress = 0x0000;
-        
+    Address m_routedClientAddress;
+    Address m_logicalGatewayAddress;
+
     void closeSocket();
 
-    int reactOnReceivedTcpMessage(GenericHeaderAction action, unsigned long payloadLength, unsigned char *payload);
-    
-    int sendMessage(unsigned char* message, int messageLenght);
-    
+    int reactOnReceivedTcpMessage(GenericHeaderAction action, size_t payloadLength, uint8_t *payload);
+
+    int sendMessage(uint8_t* message, size_t messageLength);
+
     void aliveCheckTimeout();
 };
 

@@ -11,9 +11,9 @@ TEST_SUITE("VehicleIdentificationHandler") {
         string matchingVIN = "MatchingVin_12345";
         string shortVIN = "shortVin";
         string shortVINPadded = "shortVin000000000";
-        unsigned char EID[6] = {0, 0, 0, 0, 0, 0};
-        unsigned char GID[6] = {0, 0, 0, 0, 0, 0};
-        unsigned char far = 0;
+        uint8_t EID[6] = {0, 0, 0, 0, 0, 0};
+        uint8_t GID[6] = {0, 0, 0, 0, 0, 0};
+        uint8_t far = 0;
 
         VehicleIdentificationHandlerFixture() {
             // Setup code here if needed
@@ -29,14 +29,14 @@ TEST_SUITE("VehicleIdentificationHandler") {
      */
     TEST_CASE_FIXTURE(VehicleIdentificationHandlerFixture, "VIN 17 Bytes") {
         // Call function under test to create message
-        unsigned char *message =
+        uint8_t *message =
             createVehicleIdentificationResponse(matchingVIN, 0, EID, GID, far);
 
         // Extract VIN from created test message
         char tempvin[18]; // Need 1 byte more for \0 at the end for parsing via
                           // string()
         for (int i = 0; i <= 16; i++) {
-            tempvin[i] = message[i + 8];
+            tempvin[i] = static_cast<char>(message[i + 8]);
         }
         tempvin[17] = 0; // Mark end of string
 
@@ -54,13 +54,13 @@ TEST_SUITE("VehicleIdentificationHandler") {
     TEST_CASE_FIXTURE(VehicleIdentificationHandlerFixture,
                       "VIN Less Than 17 Bytes") {
         // Call function under test to create message
-        unsigned char *message =
+        uint8_t *message =
             createVehicleIdentificationResponse(shortVIN, 0, EID, GID, far);
 
         // Extract VIN from created test message
         char c_tempvin[18];
         for (int i = 0; i <= 16; i++) {
-            c_tempvin[i] = message[i + 8];
+            c_tempvin[i] = static_cast<char>(message[i + 8]);
         }
         c_tempvin[17] = 0; // Mark end of string
 

@@ -17,18 +17,18 @@ const int _maxDataSize=64;
 
 
 class DoIPClient{
-    
+
 public:
-    void startTcpConnection();   
+    void startTcpConnection();
     void startUdpConnection();
     void sendRoutingActivationRequest();
     void sendVehicleIdentificationRequest(const char* address);
     void receiveRoutingActivationResponse();
     void receiveUdpMessage();
     void receiveMessage();
-    void sendDiagnosticMessage(unsigned char* targetAddress, unsigned char* userData, int userDataLength);
+    void sendDiagnosticMessage(uint8_t* targetAddress, uint8_t* userData, int userDataLength);
     void sendAliveCheckResponse();
-    void setSourceAddress(unsigned char* address);
+    void setSourceAddress(uint8_t* address);
     void displayVIResponseInformation();
     void closeTcpConnection();
     void closeUdpConnection();
@@ -36,24 +36,24 @@ public:
 
     int getSockFd();
     int getConnected();
-    
+
 private:
-    unsigned char _receivedData[_maxDataSize];
+    uint8_t _receivedData[_maxDataSize];
     int _sockFd, _sockFd_udp, _connected;
     int broadcast = 1;
-    struct sockaddr_in _serverAddr, _clientAddr; 
-    unsigned char sourceAddress [2];
-    
-    unsigned char VINResult [17];
-    unsigned char LogicalAddressResult [2];
-    unsigned char EIDResult [6];
-    unsigned char GIDResult [6];
-    unsigned char FurtherActionReqResult;
-    
-    const std::pair<int, unsigned char*>* buildRoutingActivationRequest();
-    const std::pair<int, unsigned char*>* buildVehicleIdentificationRequest();
-    void parseVIResponseInformation(unsigned char* data);
-    
+    struct sockaddr_in _serverAddr, _clientAddr;
+    uint8_t sourceAddress [2];
+
+    uint8_t VINResult [17];
+    uint8_t LogicalAddressResult [2];
+    uint8_t EIDResult [6];
+    uint8_t GIDResult [6];
+    uint8_t FurtherActionReqResult;
+
+    const std::pair<int, uint8_t*>* buildRoutingActivationRequest();
+    const std::pair<int, uint8_t*>* buildVehicleIdentificationRequest();
+    void parseVIResponseInformation(uint8_t* data);
+
     int emptyMessageCounter = 0;
 };
 

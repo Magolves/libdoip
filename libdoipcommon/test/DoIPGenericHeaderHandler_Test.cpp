@@ -3,10 +3,10 @@
 
 TEST_SUITE("GenericHeader") {
 	struct GenericHeaderFixture {
-		unsigned char* request;
+		uint8_t* request;
 
 		GenericHeaderFixture() {
-			request = new unsigned char[15];
+			request = new uint8_t[15];
 			request[0] = 0x01;
 			request[1] = 0xFE;
 			request[2] = 0x00;
