@@ -48,13 +48,6 @@ jobs:
               cxx: "clang++-14",
               build_type: "Debug"
             }
-          - {
-              name: "Ubuntu 20.04 GCC 9",
-              os: ubuntu-20.04,
-              cc: "gcc-9",
-              cxx: "g++-9",
-              build_type: "Release"
-            }
 
     steps:
     - name: Checkout repository
@@ -74,16 +67,6 @@ jobs:
         elif [[ "${{ matrix.config.cxx }}" == "clang++-14" ]]; then
           sudo apt-get install -y clang-14
         fi
-
-    - name: Setup macOS dependencies
-      if: runner.os == 'macOS'
-      run: |
-        brew install ninja
-
-    - name: Setup Windows dependencies
-      if: runner.os == 'Windows'
-      run: |
-        choco install ninja
 
     - name: Set up CMake
       uses: jwlawson/actions-setup-cmake@v1.14
