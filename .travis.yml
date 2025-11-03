@@ -16,18 +16,8 @@ install:
     #install cmake
     - sudo apt-get install cmake
 
-    #install gtest
-    - sudo apt-get install libgtest-dev
-    - cd /usr/src/gtest
-    - sudo cmake CMakeLists.txt
-    - sudo make
-    - sudo cp libgtest.a /usr/lib
-    - sudo cp libgtest_main.a /usr/lib
-
-    # install newer compiler and set symlink to g++ version 8
-    - if [ "$CXX" = "g++" ]; then sudo apt-get install -qq g++-8; fi
-    - if [ "$CXX" = "g++" ]; then export CXX="g++-8"; fi
-    - sudo ln -sf /usr/bin/g++-8 /usr/bin/g++
+    #install doctest
+    - sudo apt-get install doctest-dev
 
     # check g++ version
     - $CXX --version
@@ -36,7 +26,9 @@ install:
 before_script:
     #change to root
     - cd $PROJECT_DIR
-    
+
 script:
-    - make
-    - ./runTest --gtest_output="xml:./testOutput.xml"
+    - cmake . -Bbuild
+    - cd build
+    - make -j
+    - ctest
