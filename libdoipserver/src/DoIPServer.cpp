@@ -21,7 +21,7 @@ void DoIPServer::setupTcpSocket() {
 std::unique_ptr<DoIPConnection> DoIPServer::waitForTcpConnection() {
     // waits till client approach to make connection
     listen(server_socket_tcp, 5);
-    int tcpSocket = accept(server_socket_tcp, (struct sockaddr *)NULL, NULL);
+    int tcpSocket = accept(server_socket_tcp, nullptr, nullptr);
     return std::unique_ptr<DoIPConnection>(new DoIPConnection(tcpSocket, LogicalGatewayAddress));
 }
 
@@ -136,7 +136,7 @@ void DoIPServer::setEIDdefault() {
 
     ifr.ifr_addr.sa_family = AF_INET;
 
-    strncpy((char *)ifr.ifr_name, iface, IFNAMSIZ - 1);
+    strncpy(ifr.ifr_name, iface, IFNAMSIZ - 1);
 
     ioctl(fd, SIOCGIFHWADDR, &ifr);
 

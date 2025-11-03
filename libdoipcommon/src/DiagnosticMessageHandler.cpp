@@ -4,7 +4,7 @@
 
 /**
  * Checks if a received Diagnostic Message is valid
- * @param cb                    callback which will be called with the user data
+ * @param callback                   callback which will be called with the user data
  * @param sourceAddress		currently registered source address on the socket
  * @param data			message which was received
  * @param diagMessageLength     length of the diagnostic message
@@ -40,7 +40,7 @@ uint8_t parseDiagnosticMessage(DiagnosticCallback callback, const Address& sourc
 
 /**
  * Creates a diagnostic message positive/negative acknowledgment message
- * @param type                  defines positive/negative acknowledge type
+ * @param ackType                  defines positive/negative acknowledge type
  * @param sourceAddress		logical address of the receiver of the previous diagnostic message
  * @param targetAddress		logical address of the sender of the previous diagnostic message
  * @param responseCode		positive or negative acknowledge code
