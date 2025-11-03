@@ -34,17 +34,14 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang
         -Wdisabled-optimization # Warn when optimizations are disabled
         -Wformat=2              # Extra format string checking
         -Winit-self             # Warn about uninitialized variables which are initialized with themselves
-        -Wlogical-op            # Warn about suspicious uses of logical operators
         -Wmissing-declarations  # Warn if a global function is defined without a declaration
         -Wmissing-include-dirs  # Warn if a user-supplied include directory does not exist
-        -Wnoexcept              # Warn when a noexcept expression evaluates to false
         -Wold-style-cast        # Warn about old-style casts
         -Woverloaded-virtual    # Warn about overloaded virtual function names
         -Wredundant-decls       # Warn about redundant declarations
         -Wshadow                # Warn about variable shadowing
         -Wsign-conversion       # Warn about sign conversions
         -Wsign-promo            # Warn about promotions from signed to unsigned
-        -Wstrict-null-sentinel  # Warn about uncasted NULL used as sentinel
         -Wstrict-overflow=5     # Warn about optimizations based on strict overflow rules
         -Wswitch-default        # Warn about switch statements without default
         -Wundef                 # Warn about undefined macros
@@ -68,6 +65,8 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang
             -Wnull-dereference      # Warn about potential null pointer dereferences
             -Wuseless-cast          # Warn about useless casts
             -Wlogical-op            # Warn about suspicious uses of logical operators
+            -Wnoexcept              # Warn when a noexcept expression evaluates to false
+            -Wstrict-null-sentinel  # Warn about uncasted NULL used as sentinel
         )
     endif()
 
