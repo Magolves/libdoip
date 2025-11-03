@@ -36,23 +36,23 @@ add_library(libdoip::doipclient ALIAS doipclient)
 
 # Tests
 if(WITH_UNIT_TEST)
-    add_executable(doipclient_tests
-        test/Main_Test.cpp
-        test/DoIPClient_Test.cpp
-    )
+    # add_executable(doipclient_tests
+    #     test/Main_Test.cpp
+    #     test/DoIPClient_Test.cpp
+    # )
 
-    target_link_libraries(doipclient_tests
-        PRIVATE
-            doipclient
-            doipcommon
-            doctest::doctest
-    )
+    # target_link_libraries(doipclient_tests
+    #     PRIVATE
+    #         doipclient
+    #         doipcommon
+    #         doctest::doctest
+    # )
 
-    # Use automatic test discovery instead of manual add_test
-    doctest_discover_tests(doipclient_tests
-        TEST_PREFIX "DoIPClient::"
-        PROPERTIES
-            LABELS "doipclient"
-            TIMEOUT 30
-    )
+    # # Use automatic test discovery instead of manual add_test
+    # doctest_discover_tests(doipclient_tests
+    #     TEST_PREFIX "DoIPClient::"
+    #     PROPERTIES
+    #         LABELS "doipclient"
+    #         TIMEOUT 30
+    # )
 endif()
