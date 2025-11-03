@@ -63,7 +63,7 @@ jobs:
               build_type: "Release"
             }
           - {
-              name: "Windows 2022 MSVC",
+              name: "Windows 2019 MSVC",
               os: windows-2022,
               cc: "cl",
               cxx: "cl",
