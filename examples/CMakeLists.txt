@@ -16,6 +16,22 @@ set_target_properties(exampleDoIPServer PROPERTIES
     CXX_EXTENSIONS OFF
 )
 
+# DoIP Client Example
+add_executable(exampleDoIPClient exampleDoIPClient.cpp)
+target_link_libraries(exampleDoIPClient
+    PRIVATE
+    doipclient
+    doipcommon
+)
+
+
+# Set properties for the example
+set_target_properties(exampleDoIPClient PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+    CXX_EXTENSIONS OFF
+)
+
 # Install example (optional)
 install(TARGETS exampleDoIPServer
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/examples
