@@ -1,5 +1,7 @@
 #include "RoutingActivationHandler.h"
 
+namespace doip {
+
 /**
  * Checks if the Routing Activation Request is valid
  * @param data  contains the request
@@ -67,3 +69,5 @@ uint8_t *createRoutingActivationResponse(const DoIPAddress &sourceAddress, const
 
     return message;
 }
+
+}  // namespace doip

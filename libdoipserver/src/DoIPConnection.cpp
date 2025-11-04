@@ -3,6 +3,8 @@
 #include <iostream>
 #include <iomanip>
 
+using namespace doip;
+
 /**
  * Closes the connection by closing the sockets
  */

@@ -4,6 +4,8 @@
 
 using namespace std;
 
+namespace doip {
+
 /**
  * Checks if the received Generic Header is valid
  * @param data          message which was received
@@ -201,3 +203,5 @@ uint8_t* createGenericHeader(PayloadType type, uint32_t length) {
 
     return header;
 }
+
+} // namespace

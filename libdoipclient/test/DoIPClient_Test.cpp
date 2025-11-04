@@ -1,6 +1,8 @@
 #include <doctest/doctest.h>
 #include "DoIPClient_h.h"
 
+using namespace doip;
+
 TEST_SUITE("DoIPClient") {
     struct DoIPClientFixture {
         DoIPClient client1;

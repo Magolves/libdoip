@@ -1,5 +1,7 @@
 #include "DoIPServer.h"
 
+using namespace doip;
+
 /*
  * Set up a tcp socket, so the socket is ready to accept a connection
  */

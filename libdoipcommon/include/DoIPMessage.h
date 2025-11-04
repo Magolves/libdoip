@@ -6,6 +6,8 @@
 
 #include "DoIPPayloadType.h"
 
+namespace doip {
+
 /**
  * @brief ISO/DIS 13400-2:2010
  */
@@ -181,5 +183,6 @@ private:
     }
 };
 
+} // namespace doip
 
 #endif  /* DOIPMESSAGE_H */

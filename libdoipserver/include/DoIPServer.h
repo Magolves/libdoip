@@ -19,6 +19,8 @@
 #include "AliveCheckTimer.h"
 #include "DoIPConnection.h"
 
+namespace doip {
+
 using CloseConnectionCallback = std::function<void()>;
 
 const int _ServerPort = 13400;
@@ -72,5 +74,7 @@ private:
 
     void setMulticastGroup(const char* address);
 };
+
+} // namespace doip
 
 #endif /* DOIPSERVER_H */

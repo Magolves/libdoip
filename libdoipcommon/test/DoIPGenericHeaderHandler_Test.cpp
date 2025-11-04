@@ -1,6 +1,8 @@
 #include <doctest/doctest.h>
 #include "DoIPGenericHeaderHandler.h"
 
+using namespace doip;
+
 TEST_SUITE("GenericHeader") {
 	struct GenericHeaderFixture {
 		uint8_t* request;

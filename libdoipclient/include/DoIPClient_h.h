@@ -12,6 +12,8 @@
 #include "DiagnosticMessageHandler.h"
 #include "DoIPGenericHeaderHandler.h"
 
+namespace doip {
+
 const int _serverPortNr = 13400;
 const int _maxDataSize = 64;
 
@@ -57,5 +59,7 @@ class DoIPClient {
 
     int emptyMessageCounter = 0;
 };
+
+} // namespace doip
 
 #endif /* DOIPCLIENT_H */

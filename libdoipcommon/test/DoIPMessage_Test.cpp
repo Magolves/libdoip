@@ -2,6 +2,8 @@
 
 #include "DoIPMessage.h"
 
+using namespace doip;
+
 TEST_SUITE("DoIPMessage") {
     TEST_CASE("Message assembly") {
         DoIPMessage msg(DoIPPayloadType::AliveCheckRequest, {0x01, 0x02} );

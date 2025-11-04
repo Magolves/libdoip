@@ -2,6 +2,8 @@
 #include <cstring>
 #include <iostream>
 
+namespace doip {
+
 /**
  * Checks if a received Diagnostic Message is valid
  * @param callback                   callback which will be called with the user data
@@ -98,3 +100,5 @@ uint8_t *createDiagnosticMessage(const DoIPAddress &sourceAddress, const DoIPAdd
 
     return message;
 }
+
+} // namespace doip

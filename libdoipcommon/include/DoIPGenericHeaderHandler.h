@@ -8,6 +8,8 @@
 const int _GenericHeaderLength = 8;
 const int _NACKLength = 1;
 
+namespace doip {
+
 const uint8_t _IncorrectPatternFormatCode = 0x00;
 const uint8_t _UnknownPayloadTypeCode = 0x01;
 const uint8_t _InvalidPayloadLengthCode = 0x04;
@@ -33,5 +35,7 @@ struct GenericHeaderAction {
 
 GenericHeaderAction parseGenericHeader(uint8_t *data, int dataLenght);
 uint8_t *createGenericHeader(PayloadType type, uint32_t length);
+
+} // namespace doip
 
 #endif /* DOIPGENERICHEADERHANDLER_H */

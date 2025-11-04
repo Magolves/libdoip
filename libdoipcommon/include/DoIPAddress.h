@@ -8,6 +8,8 @@
 #include <iostream>
 #include <iomanip>
 
+namespace doip {
+
 /**
  * @brief Represents a 16-bit DoIP address consisting of high and low significant bytes.
  *
@@ -181,5 +183,6 @@ inline std::ostream& operator<<(std::ostream& os, const DoIPAddress& addr) {
     return os;
 }
 
+} // namespace doip
 
 #endif  /* DOIPADDRESS_H */

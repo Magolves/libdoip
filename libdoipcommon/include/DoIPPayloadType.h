@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <iostream>
 
+namespace doip {
+
 enum class DoIPPayloadType : uint16_t  {
     GenericHeaderNack = 0x0000,
     VehicleIdentificationRequest = 0x0001,
@@ -26,5 +28,6 @@ enum class DoIPPayloadType : uint16_t  {
     PeriodicDiagnosticMessage = 0x8004
 };
 
+} // namespace doip
 
 #endif  /* DOIPPAYLOADTYPE_H */

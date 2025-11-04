@@ -5,6 +5,8 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
+namespace doip {
+
 const int _ActivationResponseLength = 9;
 
 const uint8_t _UnknownSourceAddressCode = 0x00;
@@ -15,5 +17,7 @@ uint8_t parseRoutingActivation(uint8_t *data);
 uint8_t *createRoutingActivationResponse(const DoIPAddress &sourceAddress,
                                          const DoIPAddress &clientAddress,
                                          uint8_t responseCode);
+
+} // namespace doip
 
 #endif /* ROUTINGACTIVATIONHANDLER_H */

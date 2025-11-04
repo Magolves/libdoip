@@ -17,6 +17,8 @@
 #include "DiagnosticMessageHandler.h"
 #include "AliveCheckTimer.h"
 
+namespace doip {
+
 using CloseConnectionCallback = std::function<void()>;
 
 const unsigned long _MaxDataSize = 0xFFFFFF;
@@ -61,5 +63,7 @@ private:
 
     void aliveCheckTimeout();
 };
+
+} // namespace doip
 
 #endif /* DOIPCONNECTION_H */

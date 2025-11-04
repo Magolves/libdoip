@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string>
 
+using namespace doip;
 using namespace std;
 
 TEST_SUITE("VehicleIdentificationHandler") {

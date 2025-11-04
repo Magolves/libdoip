@@ -1,5 +1,7 @@
 #include "AliveCheckTimer.h"
 
+using namespace doip;
+
 /**
  * Initialize and starts the alive check timer
  */

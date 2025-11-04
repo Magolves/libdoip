@@ -4,6 +4,7 @@
 #include<iomanip>
 #include<thread>
 
+using namespace doip;
 using namespace std;
 
 

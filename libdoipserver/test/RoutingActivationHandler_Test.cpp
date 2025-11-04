@@ -2,6 +2,8 @@
 #include <stdint.h>
 #include <doctest/doctest.h>
 
+using namespace doip;
+
 TEST_SUITE("RoutingActivation") {
 	struct RoutingActivationFixture {
 		uint8_t* request;

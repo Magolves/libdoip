@@ -1,6 +1,8 @@
 #include "VehicleIdentificationHandler.h"
 #include <iostream>
 
+namespace doip {
+
 uint8_t* createVehicleIdentificationResponse(std::string VIN, const DoIPAddress& LogicalAddress,
                                                     uint8_t* EID, uint8_t* GID,
                                                     uint8_t FurtherActionReq) //also used für the Vehicle Announcement
@@ -45,3 +47,4 @@ uint8_t* createVehicleIdentificationResponse(std::string VIN, const DoIPAddress&
     return message;
 }
 
+}

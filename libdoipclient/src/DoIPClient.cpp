@@ -1,5 +1,7 @@
 #include "DoIPClient_h.h"
 
+using namespace doip;
+
 /*
  *Set up the connection between client and server
  */
