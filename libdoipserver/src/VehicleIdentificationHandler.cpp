@@ -1,7 +1,7 @@
 #include "VehicleIdentificationHandler.h"
 #include <iostream>
 
-uint8_t* createVehicleIdentificationResponse(std::string VIN,unsigned short LogicalAddress,
+uint8_t* createVehicleIdentificationResponse(std::string VIN, const DoIPAddress& LogicalAddress,
                                                     uint8_t* EID, uint8_t* GID,
                                                     uint8_t FurtherActionReq) //also used für the Vehicle Announcement
 {
@@ -21,8 +21,8 @@ uint8_t* createVehicleIdentificationResponse(std::string VIN,unsigned short Logi
     }
 
     //Logical Adress
-    message[25] = (LogicalAddress >> 8) & 0xFF;
-    message[26] = LogicalAddress & 0xFF;
+    message[25] = LogicalAddress.hsb();
+    message[26] = LogicalAddress.lsb();
 
     //EID
     j = 0;

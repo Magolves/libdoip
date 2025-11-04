@@ -30,7 +30,7 @@ TEST_SUITE("VehicleIdentificationHandler") {
     TEST_CASE_FIXTURE(VehicleIdentificationHandlerFixture, "VIN 17 Bytes") {
         // Call function under test to create message
         uint8_t *message =
-            createVehicleIdentificationResponse(matchingVIN, 0, EID, GID, far);
+            createVehicleIdentificationResponse(matchingVIN, ZeroAddress, EID, GID, far);
 
         // Extract VIN from created test message
         char tempvin[18]; // Need 1 byte more for \0 at the end for parsing via
@@ -55,7 +55,7 @@ TEST_SUITE("VehicleIdentificationHandler") {
                       "VIN Less Than 17 Bytes") {
         // Call function under test to create message
         uint8_t *message =
-            createVehicleIdentificationResponse(shortVIN, 0, EID, GID, far);
+            createVehicleIdentificationResponse(shortVIN, ZeroAddress, EID, GID, far);
 
         // Extract VIN from created test message
         char c_tempvin[18];
