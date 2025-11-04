@@ -6,7 +6,6 @@
 
 using namespace std;
 
-static const unsigned short LOGICAL_ADDRESS = 0x28;
 
 DoIPClient client;
 
