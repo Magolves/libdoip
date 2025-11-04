@@ -39,6 +39,7 @@ add_library(libdoip::doipcommon ALIAS doipcommon)
 if(WITH_UNIT_TEST)
     add_executable(doipcommon_tests
         test/Main_Test.cpp
+        test/DoIPMessage_Test.cpp
         test/DoIPGenericHeaderHandler_Test.cpp
     )
 
