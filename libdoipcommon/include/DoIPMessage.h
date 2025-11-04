@@ -2,8 +2,11 @@
 #define DOIPMESSAGE_H
 
 #include <stdint.h>
-#include <vector>
 
+#include "ByteArray.h"
+#include "DoIPAddress.h"
+#include "DoIPNegativeAck.h"
+#include "DoIPNegativeDiagnosticAck.h"
 #include "DoIPPayloadType.h"
 
 namespace doip {
@@ -28,11 +31,17 @@ constexpr uint8_t ISO_13400_2019 = 3;
  */
 constexpr uint8_t ISO_13400_2025 = 4;
 
-
+/**
+ * @brief Current protocol version (table 16)
+ */
 constexpr uint8_t PROTOCOL_VERSION = ISO_13400_2025;
 constexpr uint8_t PROTOCOL_VERSION_INV = static_cast<uint8_t>(~ISO_13400_2025);
 
-using ByteArray = std::vector<uint8_t>;
+/**
+ * @brief Positive ack for diagnostic message (table 24)
+ *
+ */
+constexpr uint8_t DIAGNOSTIC_MESSAGE_ACK = 0;
 
 using DoIPPayload = ByteArray;
 
@@ -67,7 +76,7 @@ struct DoIPMessage {
      * @param pl_type The payload type for this message
      * @param payload The payload data as a vector of bytes
      */
-    DoIPMessage(DoIPPayloadType pl_type, const DoIPPayload& payload)
+    DoIPMessage(DoIPPayloadType pl_type, const DoIPPayload &payload)
         : m_payload_type(pl_type), m_payload(payload) {}
 
     /**
@@ -76,7 +85,7 @@ struct DoIPMessage {
      * @param pl_type The payload type for this message
      * @param payload The payload data as a vector of bytes (moved)
      */
-    DoIPMessage(DoIPPayloadType pl_type, DoIPPayload&& payload)
+    DoIPMessage(DoIPPayloadType pl_type, DoIPPayload &&payload)
         : m_payload_type(pl_type), m_payload(std::move(payload)) {}
 
     /**
@@ -100,7 +109,7 @@ struct DoIPMessage {
      *
      * @warning No bounds checking is performed. Ensure data points to at least size bytes.
      */
-    DoIPMessage(DoIPPayloadType pl_type, const uint8_t* data, size_t size)
+    DoIPMessage(DoIPPayloadType pl_type, const uint8_t *data, size_t size)
         : m_payload_type(pl_type), m_payload(data, data + size) {}
 
     /**
@@ -111,7 +120,7 @@ struct DoIPMessage {
      * @param first Iterator to the beginning of the data range
      * @param last Iterator to the end of the data range
      */
-    template<typename Iterator>
+    template <typename Iterator>
     DoIPMessage(DoIPPayloadType pl_type, Iterator first, Iterator last)
         : m_payload_type(pl_type), m_payload(first, last) {}
 
@@ -127,7 +136,7 @@ struct DoIPMessage {
      *
      * @return Const reference to the payload vector
      */
-    const DoIPPayload& getPayload() const { return m_payload; }
+    const DoIPPayload &getPayload() const { return m_payload; }
 
     /**
      * @brief Gets the payload size in bytes.
@@ -143,6 +152,110 @@ struct DoIPMessage {
      */
     size_t getMessageSize() const { return getPayloadSize() + DOIP_HEADER_SIZE; }
 
+    void appendPayloadType(ByteArray &bytes) {
+        uint16_t plt = static_cast<uint16_t>(m_payload_type);
+        bytes.emplace_back(plt >> 8 & 0xff);
+        bytes.emplace_back(plt & 0xff);
+    }
+
+    /**
+     * @brief Creates a generic DoIP negative response (NACK).
+     *
+     * @param nack the negative response code,
+     * @return DoIPMessage the DoIP message
+     */
+    static DoIPMessage makeNegativeAckMessage(DoIPNegativeAck nack) {
+        return DoIPMessage(DoIPPayloadType::NegativeAck, {static_cast<uint8_t>(nack)});
+    }
+
+    /**
+     * @brief Creates a diagnostic message.
+     * @note Table 21
+     *
+     * @param sa the source address
+     * @param ta the target address
+     * @param msg_payload the original diagnostic messages (e. g. UDS message)
+     * @return DoIPMessage the DoIP message
+     */
+    static DoIPMessage makeDiagnosticMessage(const DoIPAddress &sa, const DoIPAddress &ta, const ByteArray &msg_payload) {
+        ByteArray payload;
+        payload.reserve(sa.size() + ta.size() + msg_payload.size());
+
+        sa.appendTo(payload);
+        ta.appendTo(payload);
+
+        payload.insert(payload.end(), msg_payload.begin(), msg_payload.end());
+
+        return DoIPMessage(DoIPPayloadType::DiagnosticMessage, payload);
+    }
+
+    /**
+     * @brief Creates a diagnostic positive ACK message.
+     * @note Table 23
+     * @param sa the source address
+     * @param ta the target address
+     * @param msg_payload the original diagnostic messages (e. g. UDS message)
+     * @return DoIPMessage the DoIP message
+     */
+    static DoIPMessage makeDiagnosticPositiveResponse(const DoIPAddress &sa, const DoIPAddress &ta, const ByteArray &msg_payload) {
+        ByteArray payload;
+        payload.reserve(sa.size() + ta.size() + msg_payload.size() + 1);
+
+        sa.appendTo(payload);
+        ta.appendTo(payload);
+
+        payload.emplace_back(DIAGNOSTIC_MESSAGE_ACK);
+
+        payload.insert(payload.end(), msg_payload.begin(), msg_payload.end());
+
+        return DoIPMessage(DoIPPayloadType::DiagnosticMessageAck, payload);
+    }
+
+    /**
+     * @brief Creates a diagnostic negative ACK message (NACK).
+     * @note Table 23
+     * @param sa the source address
+     * @param ta the target address
+     * @param msg_payload the original diagnostic messages (e. g. UDS message)
+     * @return DoIPMessage the DoIP message
+     */
+    static DoIPMessage makeDiagnosticNegativeResponse(const DoIPAddress &sa, const DoIPAddress &ta, DoIPNegativeDiagnosticAck nack, const ByteArray &msg_payload) {
+        ByteArray payload;
+        payload.reserve(sa.size() + ta.size() + msg_payload.size() + 1);
+
+        sa.appendTo(payload);
+        ta.appendTo(payload);
+
+        payload.emplace_back(static_cast<uint8_t>(nack));
+
+        payload.insert(payload.end(), msg_payload.begin(), msg_payload.end());
+
+        return DoIPMessage(DoIPPayloadType::DiagnosticMessageNegativeAck, payload);
+    }
+
+    /**
+     * @brief Create a 'alive check' request
+     * @note Table 27
+     * @return DoIPMessage
+     */
+    static DoIPMessage makeAliveCheckRequest() {
+        return DoIPMessage(DoIPPayloadType::AliveCheckRequest, {});
+    }
+
+    /**
+     * @brief Create a 'alive check' request
+     * @note Table 28
+     * @param sa the source address
+     * @return DoIPMessage
+     */
+    static DoIPMessage makeAliveCheckResponse(const DoIPAddress &sa) {
+        ByteArray payload;
+        payload.reserve(sa.size());
+        sa.appendTo(payload);
+
+        return DoIPMessage(DoIPPayloadType::AliveCheckResponse, payload);
+    }
+
     /**
      * @brief Gets the complete DoIP messages as byte array.
      *
@@ -150,7 +263,7 @@ struct DoIPMessage {
      */
     ByteArray toBytes() {
         ByteArray bytes;
-        bytes.reserve(getMessageSize());  // Pre-allocate memory but keep size = 0
+        bytes.reserve(getMessageSize()); // Pre-allocate memory but keep size = 0
 
         bytes.emplace_back(PROTOCOL_VERSION);
         bytes.emplace_back(PROTOCOL_VERSION_INV);
@@ -162,12 +275,24 @@ struct DoIPMessage {
         return bytes;
     }
 
-private:
+    // TODO: Periodic message, p. 49
+    // TODO: Entity status request/response, p. 25
+
+  private:
     DoIPPayloadType m_payload_type; ///< The type of DoIP payload
     DoIPPayload m_payload;          ///< The payload data as byte vector
 
+    /**
+     * @brief Appends the address to the payload.
+     *
+     * @param address the address to append
+     */
+    void appendAddress(const DoIPAddress &address) {
+        m_payload.emplace_back(address.hsb());
+        m_payload.emplace_back(address.lsb());
+    }
 
-    inline void appendSize(ByteArray& bytes) {
+    void appendSize(ByteArray &bytes) {
         uint32_t size = static_cast<uint32_t>(m_payload.size());
 
         bytes.emplace_back(size >> 24 & 0xff);
@@ -175,14 +300,8 @@ private:
         bytes.emplace_back(size >> 8 & 0xff);
         bytes.emplace_back(size & 0xff);
     }
-
-    inline void appendPayloadType(ByteArray& bytes) {
-        uint16_t plt = static_cast<uint16_t>(m_payload_type);
-        bytes.emplace_back(plt >> 8 & 0xff);
-        bytes.emplace_back(plt & 0xff);
-    }
 };
 
 } // namespace doip
 
-#endif  /* DOIPMESSAGE_H */
+#endif /* DOIPMESSAGE_H */

@@ -6,8 +6,9 @@
 
 namespace doip {
 
+// Table 17
 enum class DoIPPayloadType : uint16_t  {
-    GenericHeaderNack = 0x0000,
+    NegativeAck = 0x0000,
     VehicleIdentificationRequest = 0x0001,
     VehicleIdentificationRequestWithEid = 0x0002,
     VehicleIdentificationRequestWithVin = 0x0003,
@@ -23,8 +24,8 @@ enum class DoIPPayloadType : uint16_t  {
     DiagnosticPowerModeResponse = 0x4004,
     // 0x4005 - 0x8000: reserved
     DiagnosticMessage = 0x8001,
-    DiagnosticMessageAck = 0x8001, // positive response
-    DiagnosticMessageNack = 0x8003, // negative response
+    DiagnosticMessageAck = 0x8002, // positive response
+    DiagnosticMessageNegativeAck = 0x8003, // negative response
     PeriodicDiagnosticMessage = 0x8004
 };
 

@@ -8,7 +8,11 @@
 #include <iostream>
 #include <iomanip>
 
+#include "ByteArray.h"
+
 namespace doip {
+
+    constexpr size_t DOIP_ADDRESS_SIZE = 2;
 
 /**
  * @brief Represents a 16-bit DoIP address consisting of high and low significant bytes.
@@ -57,7 +61,7 @@ struct DoIPAddress {
     uint8_t lsb() const { return m_bytes[LSB]; }
 
     /**
-     * @brief Gets the high significant byte of the address.
+     * @brief Gets the high significant byteconst DoIPAddress& sa of the address.
      *
      * @return The high significant byte (HSB) as uint8_t
      */
@@ -84,6 +88,13 @@ struct DoIPAddress {
      * @return Const pointer to the internal 2-byte array
      */
     const uint8_t *data() const { return m_bytes.data(); }
+
+    /**
+     * @brief Size of the address in bytes.
+     *
+     * @return constexpr size_t the address size
+     */
+    constexpr size_t size() const {return DOIP_ADDRESS_SIZE;}
 
     /**
      * @brief Updates the address with new high and low significant bytes.
@@ -113,6 +124,18 @@ struct DoIPAddress {
     void update(const uint8_t* data, size_t offset = 0) {
         m_bytes[HSB] = data[offset];
         m_bytes[LSB] = data[offset + 1];
+    }
+
+    /**
+     * @brief Appends this address to the given byte array.
+     *
+     * @param bytes the byte array to append to
+     * @return ByteArray& the modified byte array
+     */
+    ByteArray& appendTo(ByteArray& bytes) const {
+        bytes.emplace_back(hsb());
+        bytes.emplace_back(lsb());
+        return bytes;
     }
 
     /**
@@ -158,7 +181,7 @@ struct DoIPAddress {
     static constexpr uint8_t HSB = 0; ///< Index for High Significant Byte in the byte array
     static constexpr uint8_t LSB = 1; ///< Index for Low Significant Byte in the byte array
 
-    std::array<uint8_t, 2> m_bytes; ///< Internal storage for the 2-byte address
+    std::array<uint8_t, DOIP_ADDRESS_SIZE> m_bytes; ///< Internal storage for the 2-byte address
 };
 
 /**
