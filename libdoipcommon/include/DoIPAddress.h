@@ -25,7 +25,7 @@ struct DoIPAddress {
      * @param hsb High significant byte (default: 0)
      * @param lsb Low significant byte (default: 0)#include <stdint.h>
      */
-    DoIPAddress(uint8_t hsb = 0, uint8_t lsb = 0) : m_bytes{{hsb, lsb}} {}
+    constexpr DoIPAddress(uint8_t hsb = 0, uint8_t lsb = 0) : m_bytes{{hsb, lsb}} {}
 
     /**
      * @brief Constructs an DoIPAddress from a byte array starting at the specified offset.
@@ -40,7 +40,7 @@ struct DoIPAddress {
      * @note If data is nullptr, the address is initialized to {0, 0}
      * @warning No bounds checking is performed on the data array
      */
-    DoIPAddress(const uint8_t *data, size_t offset = 0) : m_bytes{0, 0} {
+    constexpr DoIPAddress(const uint8_t *data, size_t offset = 0) : m_bytes{0, 0} {
         if (data != nullptr) {
             m_bytes[HSB] = data[offset];
             m_bytes[LSB] = data[offset + 1];
@@ -158,6 +158,12 @@ struct DoIPAddress {
 
     std::array<uint8_t, 2> m_bytes; ///< Internal storage for the 2-byte address
 };
+
+/**
+ * @brief Constant for a DoIP zero address (0x0000).
+ *
+ */
+constexpr DoIPAddress ZeroAddress;
 
 /**
  * @brief Stream output operator for DoIPAddress objects.
