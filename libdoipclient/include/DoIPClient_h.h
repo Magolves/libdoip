@@ -28,9 +28,9 @@ public:
     void receiveRoutingActivationResponse();
     void receiveUdpMessage();
     void receiveMessage();
-    ssize_t sendDiagnosticMessage(const Address& targetAddress, uint8_t* userData, size_t userDataLength);
+    ssize_t sendDiagnosticMessage(const DoIPAddress& targetAddress, uint8_t* userData, size_t userDataLength);
     ssize_t sendAliveCheckResponse();
-    void setSourceAddress(const Address& address);
+    void setSourceAddress(const DoIPAddress& address);
     void displayVIResponseInformation();
     void closeTcpConnection();
     void closeUdpConnection();
@@ -44,10 +44,10 @@ private:
     int _sockFd, _sockFd_udp, _connected;
     int broadcast = 1;
     struct sockaddr_in _serverAddr, _clientAddr;
-    Address m_sourceAddress;
+    DoIPAddress m_sourceAddress;
 
     uint8_t VINResult [17];
-    Address LogicalAddressResult;
+    DoIPAddress LogicalAddressResult;
     uint8_t EIDResult [6];
     uint8_t GIDResult [6];
     uint8_t FurtherActionReqResult;

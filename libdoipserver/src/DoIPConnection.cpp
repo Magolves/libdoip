@@ -113,7 +113,7 @@ int DoIPConnection::reactOnReceivedTcpMessage(GenericHeaderAction action, unsign
         case PayloadType::ROUTINGACTIVATIONREQUEST: {
             //start routing activation handler with the received message
             uint8_t result = parseRoutingActivation(payload);
-            Address clientAddress(payload[0], payload[1]);
+            DoIPAddress clientAddress(payload[0], payload[1]);
 
             uint8_t* message = createRoutingActivationResponse(m_logicalGatewayAddress, clientAddress, result);
             sentBytes = sendMessage(message, _GenericHeaderLength + _ActivationResponseLength);
@@ -141,7 +141,7 @@ int DoIPConnection::reactOnReceivedTcpMessage(GenericHeaderAction action, unsign
 
         case PayloadType::DIAGNOSTICMESSAGE: {
 
-            Address target_address(payload[2], payload[3]);
+            DoIPAddress target_address(payload[2], payload[3]);
             bool ack = m_notify_application(target_address);
 
             if(ack)
@@ -194,7 +194,7 @@ void DoIPConnection::setGeneralInactivityTime(uint16_t seconds) {
  * @param value     received payload
  * @param length    length of received payload
  */
-void DoIPConnection::sendDiagnosticPayload(const Address& sourceAddress, uint8_t* data, size_t length) {
+void DoIPConnection::sendDiagnosticPayload(const DoIPAddress& sourceAddress, uint8_t* data, size_t length) {
 
     std::cout << "Sending diagnostic data: ";
     for(size_t i = 0; i < length; i++) {
@@ -218,8 +218,8 @@ void DoIPConnection::setCallback(DiagnosticCallback dc, DiagnosticMessageNotific
     m_close_connection = ccb;
 }
 
-void DoIPConnection::sendDiagnosticAck(const Address& sourceAddress, bool ackType, uint8_t ackCode) {
-    Address data_TA(m_routedClientAddress.hsb(), m_routedClientAddress.lsb());
+void DoIPConnection::sendDiagnosticAck(const DoIPAddress& sourceAddress, bool ackType, uint8_t ackCode) {
+    DoIPAddress data_TA(m_routedClientAddress.hsb(), m_routedClientAddress.lsb());
 
     uint8_t* message = createDiagnosticACK(ackType, sourceAddress, data_TA, ackCode);
     sendMessage(message, _GenericHeaderLength + _DiagnosticPositiveACKLength);

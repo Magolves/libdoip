@@ -41,7 +41,7 @@ void DoIPClient::startUdpConnection() {
         _clientAddr.sin_port = htons(_serverPortNr);
         _clientAddr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-        // binds the socket to any IP Address and the Port Number 13400
+        // binds the socket to any IP DoIPAddress and the Port Number 13400
         bind(_sockFd_udp, reinterpret_cast<struct sockaddr *>(&_clientAddr), sizeof(_clientAddr));
     }
 }
@@ -82,7 +82,7 @@ const DoIPRequest DoIPClient::buildRoutingActivationRequest() {
     rareq[7] = 0x07;
 
     // Payload-Type specific message-content
-    rareq[8] = 0x0E; // Source Address
+    rareq[8] = 0x0E; // Source DoIPAddress
     rareq[9] = 0x00;
     rareq[10] = 0x00; // Activation-Type
     rareq[11] = 0x00; // Reserved ISO(default)
@@ -111,8 +111,8 @@ ssize_t DoIPClient::sendRoutingActivationRequest() {
  * @param userData          data that will be given to the ecu
  * @param userDataLength    length of userData
  */
-ssize_t DoIPClient::sendDiagnosticMessage(const Address &targetAddress, uint8_t *userData, size_t userDataLength) {
-    Address sourceAddress(0x0E, 0x00);
+ssize_t DoIPClient::sendDiagnosticMessage(const DoIPAddress &targetAddress, uint8_t *userData, size_t userDataLength) {
+    DoIPAddress sourceAddress(0x0E, 0x00);
     uint8_t *message = createDiagnosticMessage(sourceAddress, targetAddress, userData, userDataLength);
 
     return write(_sockFd, message, _GenericHeaderLength + _DiagnosticMessageMinimumLength + userDataLength);
@@ -216,9 +216,9 @@ ssize_t DoIPClient::sendVehicleIdentificationRequest(const char *inet_address) {
     int setAddressError = inet_aton(inet_address, &(_serverAddr.sin_addr));
 
     if (setAddressError != 0) {
-        std::cout << "Address set succesfully" << '\n';
+        std::cout << "DoIPAddress set succesfully" << '\n';
     } else {
-        std::cout << "Could not set Address. Try again" << '\n';
+        std::cout << "Could not set DoIPAddress. Try again" << '\n';
     }
 
     int socketError = setsockopt(_sockFd_udp, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast));
@@ -242,7 +242,7 @@ ssize_t DoIPClient::sendVehicleIdentificationRequest(const char *inet_address) {
  * Sets the source address for this client
  * @param address   source address for the client
  */
-void DoIPClient::setSourceAddress(const Address &address) {
+void DoIPClient::setSourceAddress(const DoIPAddress &address) {
     m_sourceAddress = address;
 }
 

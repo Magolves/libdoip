@@ -33,9 +33,9 @@ TEST_SUITE("RoutingActivation") {
 	/*
 	* Checks if parsing a valid address will be found in the list of valid addresses
 	*/
-	TEST_CASE_FIXTURE(RoutingActivationFixture, "Valid Address Parsing") {
+	TEST_CASE_FIXTURE(RoutingActivationFixture, "Valid DoIPAddress Parsing") {
 		uint16_t expectedValue = 3858; // 0x0F12
-		Address address(request, 8);
+		DoIPAddress address(request, 8);
 
 		CHECK_MESSAGE(address.as_uint16() == expectedValue, "Converting address to uint failed");
 
@@ -46,7 +46,7 @@ TEST_SUITE("RoutingActivation") {
 	/*
 	* Checks if parsing a wrong address leads to the correct negative response code (0x00)
 	*/
-	TEST_CASE_FIXTURE(RoutingActivationFixture, "Wrong Address Parsing") {
+	TEST_CASE_FIXTURE(RoutingActivationFixture, "Wrong DoIPAddress Parsing") {
 		//Set wrong address in received message
 		request[8] = 0x0D;
 		request[9] = 0x00;

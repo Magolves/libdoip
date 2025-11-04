@@ -134,7 +134,7 @@ jobs:
 
   # Sanitizers job (Debug builds only)
   sanitizers:
-    name: Address & UB Sanitizers
+    name: DoIPAddress & UB Sanitizers
     runs-on: ubuntu-22.04
 
     steps:

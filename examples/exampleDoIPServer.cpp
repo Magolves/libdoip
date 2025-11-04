@@ -13,8 +13,8 @@ unique_ptr<DoIPConnection> connection(nullptr);
 std::vector<std::thread> doipReceiver;
 bool serverActive = false;
 
-void ReceiveFromLibrary(const Address& address, uint8_t* data, size_t length);
-bool DiagnosticMessageReceived(const Address& targetAddress);
+void ReceiveFromLibrary(const DoIPAddress& address, uint8_t* data, size_t length);
+bool DiagnosticMessageReceived(const DoIPAddress& targetAddress);
 void CloseConnection();
 void listenUdp();
 void listenTcp();
@@ -26,7 +26,7 @@ void ConfigureDoipServer();
  * @param data      message which was received
  * @param length    length of the message
  */
-void ReceiveFromLibrary(const Address& address, uint8_t* data, size_t length) {
+void ReceiveFromLibrary(const DoIPAddress& address, uint8_t* data, size_t length) {
     cout << "DoIP Message received from 0x" << hex << address << ": ";
     for(size_t i = 0; i < length; i++) {
         cout << hex << setw(2) << +data[i] << " ";
@@ -53,7 +53,7 @@ void ReceiveFromLibrary(const Address& address, uint8_t* data, size_t length) {
  * @param targetAddress     logical address to the ecu
  * @return                  If a positive or negative ACK should be send to the client
  */
-bool DiagnosticMessageReceived(const Address& targetAddress) {
+bool DiagnosticMessageReceived(const DoIPAddress& targetAddress) {
     (void)targetAddress;
     uint8_t ackCode;
 

@@ -17,7 +17,7 @@ Changes in particular are
 
 - Introduced cmake build and test env
 - Replace `gtest`with `doctest` (just a personal preference - IMHO `gtest` sucks)
-- Introduced `Address` struct, since the addresses had many different representations
+- Introduced `DoIPAddress` struct, since the addresses had many different representations
 - Introduced value semantics (WIP)
 - ...
 

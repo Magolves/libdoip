@@ -8,7 +8,7 @@
 uint8_t parseRoutingActivation(uint8_t *data) {
 
     // Check if source address is known
-    Address address(data, 8);
+    DoIPAddress address(data, 8);
     if (!address.isValidSourceAddress()) {
         // send routing activation negative response code --> close socket
         return _UnknownSourceAddressCode;
@@ -42,7 +42,7 @@ uint8_t parseRoutingActivation(uint8_t *data) {
  * @param responseCode      routing activation response code
  * @return                  complete routing activation response
  */
-uint8_t *createRoutingActivationResponse(const Address &sourceAddress, const Address &clientAddress,
+uint8_t *createRoutingActivationResponse(const DoIPAddress &sourceAddress, const DoIPAddress &clientAddress,
                                          uint8_t responseCode) {
 
     uint8_t *message = createGenericHeader(PayloadType::ROUTINGACTIVATIONRESPONSE,

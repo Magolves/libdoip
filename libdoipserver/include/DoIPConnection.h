@@ -24,18 +24,18 @@ const unsigned long _MaxDataSize = 0xFFFFFF;
 class DoIPConnection {
 
 public:
-    DoIPConnection(int tcpSocket, Address logicalGatewayAddress):
+    DoIPConnection(int tcpSocket, DoIPAddress logicalGatewayAddress):
         m_tcpSocket(tcpSocket), m_logicalGatewayAddress(logicalGatewayAddress) { };
 
     int receiveTcpMessage();
     size_t receiveFixedNumberOfBytesFromTCP(size_t payloadLength, uint8_t *receivedData);
 
-    void sendDiagnosticPayload(const Address& sourceAddress, uint8_t* data, size_t length);
+    void sendDiagnosticPayload(const DoIPAddress& sourceAddress, uint8_t* data, size_t length);
     bool isSocketActive() { return m_tcpSocket != 0; };
 
     void triggerDisconnection();
 
-    void sendDiagnosticAck(const Address& sourceAddress, bool ackType, uint8_t ackCode);
+    void sendDiagnosticAck(const DoIPAddress& sourceAddress, bool ackType, uint8_t ackCode);
     int sendNegativeAck(uint8_t ackCode);
 
     void setCallback(DiagnosticCallback dc, DiagnosticMessageNotification dmn, CloseConnectionCallback ccb);
@@ -50,8 +50,8 @@ private:
     CloseConnectionCallback m_close_connection;
     DiagnosticMessageNotification m_notify_application;
 
-    Address m_routedClientAddress;
-    Address m_logicalGatewayAddress;
+    DoIPAddress m_routedClientAddress;
+    DoIPAddress m_logicalGatewayAddress;
 
     void closeSocket();
 

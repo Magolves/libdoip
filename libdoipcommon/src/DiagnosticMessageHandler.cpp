@@ -9,7 +9,7 @@
  * @param data			message which was received
  * @param diagMessageLength     length of the diagnostic message
  */
-uint8_t parseDiagnosticMessage(DiagnosticCallback callback, const Address& sourceAddress ,
+uint8_t parseDiagnosticMessage(DiagnosticCallback callback, const DoIPAddress& sourceAddress ,
                                     const uint8_t* data, size_t diagMessageLength) {
     std::cout << "parse Diagnostic Message" << '\n';
     if(diagMessageLength >= _DiagnosticMessageMinimumLength) {
@@ -21,7 +21,7 @@ uint8_t parseDiagnosticMessage(DiagnosticCallback callback, const Address& sourc
 
         std::cout << "source address valid" << '\n';
         //Pass the diagnostic message to the target network/transport layer
-        Address target_address(data[2], data[3]);
+        DoIPAddress target_address(data[2], data[3]);
 
         size_t cb_message_length = diagMessageLength - _DiagnosticMessageMinimumLength;
         uint8_t* cb_message = new uint8_t[cb_message_length];
@@ -46,8 +46,8 @@ uint8_t parseDiagnosticMessage(DiagnosticCallback callback, const Address& sourc
  * @param responseCode		positive or negative acknowledge code
  * @return pointer to the created diagnostic message acknowledge
  */
-uint8_t* createDiagnosticACK(bool ackType, const Address& sourceAddress,
-                                    const Address& targetAddress, uint8_t responseCode) {
+uint8_t* createDiagnosticACK(bool ackType, const DoIPAddress& sourceAddress,
+                                    const DoIPAddress& targetAddress, uint8_t responseCode) {
 
     PayloadType type;
     if(ackType)
@@ -78,7 +78,7 @@ uint8_t* createDiagnosticACK(bool ackType, const Address& sourceAddress,
  * @param userData		actual diagnostic data
  * @param userDataLength	length of diagnostic data
  */
-uint8_t* createDiagnosticMessage(const Address& sourceAddress, const Address& targetAddress,
+uint8_t* createDiagnosticMessage(const DoIPAddress& sourceAddress, const DoIPAddress& targetAddress,
                                         uint8_t* userData, size_t userDataLength) {
 
     uint8_t* message = createGenericHeader(PayloadType::DIAGNOSTICMESSAGE, _DiagnosticMessageMinimumLength + userDataLength);

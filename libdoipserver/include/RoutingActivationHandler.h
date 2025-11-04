@@ -12,8 +12,8 @@ const uint8_t _UnsupportedRoutingTypeCode = 0x06;
 const uint8_t _SuccessfullyRoutedCode = 0x10;
 
 uint8_t parseRoutingActivation(uint8_t *data);
-uint8_t *createRoutingActivationResponse(const Address &sourceAddress,
-                                         const Address &clientAddress,
+uint8_t *createRoutingActivationResponse(const DoIPAddress &sourceAddress,
+                                         const DoIPAddress &clientAddress,
                                          uint8_t responseCode);
 
 #endif /* ROUTINGACTIVATIONHANDLER_H */

@@ -36,10 +36,10 @@ void DoIPServer::setupUdpSocket() {
     if (server_socket_udp < 0)
         std::cout << "Error setting up a udp socket" << '\n';
 
-    // binds the socket to any IP Address and the Port Number 13400
+    // binds the socket to any IP DoIPAddress and the Port Number 13400
     bind(server_socket_udp, reinterpret_cast<const struct sockaddr *>(&serverAddress), sizeof(serverAddress));
 
-    // setting the IP Address for Multicast
+    // setting the IP DoIPAddress for Multicast
     setMulticastGroup("224.0.0.2");
 }
 
@@ -210,7 +210,7 @@ void DoIPServer::setMulticastGroup(const char *address) {
     int setGroup = setsockopt(server_socket_udp, IPPROTO_IP, IP_ADD_MEMBERSHIP, reinterpret_cast<char *>(&mreq), sizeof(mreq));
 
     if (setGroup < 0) {
-        std::cout << "Setting Address Error" << '\n';
+        std::cout << "Setting DoIPAddress Error" << '\n';
     }
 }
 
@@ -224,7 +224,7 @@ int DoIPServer::sendVehicleAnnouncement() {
     int setAddressError = inet_aton(address, &(clientAddress.sin_addr));
 
     if (setAddressError != 0) {
-        std::cout << "Broadcast Address set successfully" << '\n';
+        std::cout << "Broadcast DoIPAddress set successfully" << '\n';
     }
 
     int socketError = setsockopt(server_socket_udp, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast));
