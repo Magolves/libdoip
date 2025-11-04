@@ -57,8 +57,8 @@ private:
 
     std::string VIN = "00000000000000000";
     unsigned short LogicalGatewayAddress = 0x0000;
-    uint8_t EID [6];
-    uint8_t GID [6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uint8_t EID [6]; // entity id
+    uint8_t GID [6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; // group id
     uint8_t FurtherActionReq = 0x00;
 
     int A_DoIP_Announce_Num = 3;    //Default Value = 3
