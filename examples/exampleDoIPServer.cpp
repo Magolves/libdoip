@@ -36,12 +36,12 @@ void ReceiveFromLibrary(const DoIPAddress& address, uint8_t* data, size_t length
 
     if(length > 2 && data[0] == 0x22)  {
         cout << "-> Send diagnostic message positive response" << endl;
-        uint8_t responseData[] = { 0x62, data[1], data[2], 0x01, 0x02, 0x03, 0x04};
-        connection->sendDiagnosticPayload(LOGICAL_ADDRESS, responseData, sizeof(responseData));
+        ByteArray responseData{ 0x62, data[1], data[2], 0x01, 0x02, 0x03, 0x04};
+        connection->sendDiagnosticPayload(LOGICAL_ADDRESS, responseData);
     } else {
         cout << "-> Send diagnostic message negative response" << endl;
-        uint8_t responseData[] = { 0x7F, data[0], 0x11};
-        connection->sendDiagnosticPayload(LOGICAL_ADDRESS, responseData, sizeof(responseData));
+        ByteArray responseData{ 0x7F, data[0], 0x11};
+        connection->sendDiagnosticPayload(LOGICAL_ADDRESS, responseData);
     }
 
 

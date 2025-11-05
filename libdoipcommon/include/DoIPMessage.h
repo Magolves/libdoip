@@ -256,6 +256,7 @@ struct DoIPMessage {
         return DoIPMessage(DoIPPayloadType::AliveCheckResponse, payload);
     }
 
+
     /**
      * @brief Gets the complete DoIP messages as byte array.
      *

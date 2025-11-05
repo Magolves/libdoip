@@ -32,7 +32,7 @@ public:
     int receiveTcpMessage();
     size_t receiveFixedNumberOfBytesFromTCP(size_t payloadLength, uint8_t *receivedData);
 
-    void sendDiagnosticPayload(const DoIPAddress& sourceAddress, uint8_t* data, size_t length);
+    void sendDiagnosticPayload(const DoIPAddress& sourceAddress, const ByteArray& payload);
     bool isSocketActive() { return m_tcpSocket != 0; };
 
     void triggerDisconnection();
@@ -59,7 +59,8 @@ private:
 
     int reactOnReceivedTcpMessage(GenericHeaderAction action, size_t payloadLength, uint8_t *payload);
 
-    int sendMessage(uint8_t* message, size_t messageLength);
+    ssize_t sendMessage(uint8_t* message, size_t messageLength);
+    ssize_t sendMessage(const ByteArray& message);
 
     void aliveCheckTimeout();
 };

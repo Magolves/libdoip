@@ -29,7 +29,7 @@ class DoIPClient {
     void receiveRoutingActivationResponse();
     void receiveUdpMessage();
     void receiveMessage();
-    ssize_t sendDiagnosticMessage(const DoIPAddress &targetAddress, uint8_t *userData, size_t userDataLength);
+    ssize_t sendDiagnosticMessage(const DoIPAddress &targetAddress, const ByteArray& payload);
     ssize_t sendAliveCheckResponse();
     void setSourceAddress(const DoIPAddress &address);
     void displayVIResponseInformation();

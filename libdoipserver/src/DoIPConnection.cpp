@@ -1,4 +1,5 @@
 #include "DoIPConnection.h"
+#include "DoIPMessage.h"
 
 #include <iostream>
 #include <iomanip>
@@ -172,8 +173,13 @@ void DoIPConnection::triggerDisconnection() {
  * @return                  number of bytes written is returned,
  *                          or -1 if error occurred
  */
-int DoIPConnection::sendMessage(uint8_t* message, size_t messageLength) {
-    int result = write(m_tcpSocket, message, messageLength);
+ssize_t DoIPConnection::sendMessage(uint8_t* message, size_t messageLength) {
+    ssize_t result = write(m_tcpSocket, message, messageLength);
+    return result;
+}
+
+ssize_t DoIPConnection::sendMessage(const ByteArray& message) {
+    ssize_t result = write(m_tcpSocket, message.data(), message.size());
     return result;
 }
 
@@ -196,16 +202,18 @@ void DoIPConnection::setGeneralInactivityTime(uint16_t seconds) {
  * @param value     received payload
  * @param length    length of received payload
  */
-void DoIPConnection::sendDiagnosticPayload(const DoIPAddress& sourceAddress, uint8_t* data, size_t length) {
+void DoIPConnection::sendDiagnosticPayload(const DoIPAddress& sourceAddress, const ByteArray& payload) {
 
     std::cout << "Sending diagnostic data: ";
-    for(size_t i = 0; i < length; i++) {
-        std::cout << std::hex << std::setw(2) << std::setfill('0') << data[i] << " ";
+    for(auto byte: payload) {
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << byte << " ";
     }
     std::cout << '\n';
 
-    uint8_t* message = createDiagnosticMessage(sourceAddress, m_routedClientAddress, data, length);
-    sendMessage(message, _GenericHeaderLength + _DiagnosticMessageMinimumLength + length);
+    //uint8_t* message = createDiagnosticMessage(sourceAddress, m_routedClientAddress, data, length);
+    ByteArray message = DoIPMessage::makeDiagnosticMessage(sourceAddress, m_routedClientAddress, payload).toBytes();
+
+    sendMessage(message);
 }
 
 /*

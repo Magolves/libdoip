@@ -1,4 +1,5 @@
 #include "DoIPClient_h.h"
+#include "DoIPMessage.h"
 
 using namespace doip;
 
@@ -113,22 +114,20 @@ ssize_t DoIPClient::sendRoutingActivationRequest() {
  * @param userData          data that will be given to the ecu
  * @param userDataLength    length of userData
  */
-ssize_t DoIPClient::sendDiagnosticMessage(const DoIPAddress &targetAddress, uint8_t *userData, size_t userDataLength) {
+ssize_t DoIPClient::sendDiagnosticMessage(const DoIPAddress &targetAddress, const ByteArray& payload) {
     DoIPAddress sourceAddress(0x0E, 0x00);
-    uint8_t *message = createDiagnosticMessage(sourceAddress, targetAddress, userData, userDataLength);
+    ByteArray msg = DoIPMessage::makeDiagnosticMessage(sourceAddress, targetAddress, payload).toBytes();
 
-    return write(_sockFd, message, _GenericHeaderLength + _DiagnosticMessageMinimumLength + userDataLength);
+    return write(_sockFd, msg.data(), msg.size());
 }
 
 /**
  * Sends a alive check response containing the clients source address to the server
  */
 ssize_t DoIPClient::sendAliveCheckResponse() {
-    size_t responseLength = 2;
-    uint8_t *message = createGenericHeader(PayloadType::ALIVECHECKRESPONSE, responseLength);
-    message[8] = m_sourceAddress.hsb();
-    message[9] = m_sourceAddress.lsb();
-    return write(_sockFd, message, _GenericHeaderLength + responseLength);
+    ByteArray msg = DoIPMessage::makeAliveCheckResponse(m_sourceAddress).toBytes();
+
+    return write(_sockFd, msg.data(), msg.size());
 }
 
 /*
