@@ -109,8 +109,11 @@ install(TARGETS ${DOIP_NAME}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
+message(STATUS "Lib dir ${CMAKE_INSTALL_LIBDIR}")
+message(STATUS "Inc dir ${CMAKE_INSTALL_INCLUDEDIR}")
+
 # Install headers
-install(DIRECTORY lib${DOIP_NAME}/inc/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lib${DOIP_NAME})
+install(DIRECTORY inc/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/{DOIP_NAME})
 
 # Create and install package config files
 install(EXPORT lib${DOIP_NAME}Targets
