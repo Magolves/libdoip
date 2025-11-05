@@ -110,7 +110,7 @@ install(TARGETS ${DOIP_NAME}
 )
 
 # Install headers
-install(DIRECTORY lib${DOIP_NAME}/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libdoip)
+install(DIRECTORY lib${DOIP_NAME}/inc/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lib${DOIP_NAME})
 
 # Create and install package config files
 install(EXPORT lib${DOIP_NAME}Targets
