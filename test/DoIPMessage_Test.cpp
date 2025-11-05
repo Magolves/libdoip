@@ -136,4 +136,40 @@ TEST_SUITE("DoIPMessage") {
             CHECK_MESSAGE(bytes.at(i) == expected.at(i), "Bytes to not match at pos ", i, ", got ", bytes.at(i), ", expected ", expected.at(i));
         }
     }
+
+    TEST_CASE("Init from raw bytes - invalid args") {
+        const uint8_t short_msg[] = {PROTOCOL_VERSION, PROTOCOL_VERSION_INV, 0x80, 0x01};
+        const uint8_t inv_protocol[] = {PROTOCOL_VERSION - 1, PROTOCOL_VERSION_INV + 1, 0x80, 0x01};
+        const uint8_t inconsistent_protocol[] = {PROTOCOL_VERSION, PROTOCOL_VERSION_INV + 1, 0x80, 0x01};
+        const uint8_t invalid_pl_type[] = {PROTOCOL_VERSION, PROTOCOL_VERSION_INV, 0xde, 0xad, 0x00, 0x02};
+        const uint8_t invalid_pl_length1[] = {PROTOCOL_VERSION, PROTOCOL_VERSION_INV, 0x40, 0x01, 0x00, 0x02, 0x0};
+        const uint8_t invalid_pl_length2[] = {PROTOCOL_VERSION, PROTOCOL_VERSION_INV, 0x40, 0x01, 0x00, 0x02, 0x0, 0x0, 0x0};
+
+        CHECK(DoIPMessage::fromRaw(nullptr, 12) == std::nullopt); // null ptr
+        CHECK(DoIPMessage::fromRaw(short_msg, sizeof(short_msg)) == std::nullopt); // too short
+        CHECK(DoIPMessage::fromRaw(inv_protocol, sizeof(inv_protocol)) == std::nullopt); // wrong protocol
+        CHECK(DoIPMessage::fromRaw(inconsistent_protocol, sizeof(inconsistent_protocol)) == std::nullopt); // inconsistent protocol
+        CHECK(DoIPMessage::fromRaw(invalid_pl_type, sizeof(invalid_pl_type)) == std::nullopt); // inconsistent payload type
+        CHECK(DoIPMessage::fromRaw(invalid_pl_length1, sizeof(invalid_pl_length1)) == std::nullopt); // pl size > payload len
+        CHECK(DoIPMessage::fromRaw(invalid_pl_length2, sizeof(invalid_pl_length2)) == std::nullopt); // pl size < payload len
+    }
+
+    TEST_CASE("Init from raw bytes - diagnostic message") {
+        // Diag message with RDBI request
+        const uint8_t example_diag[] = {PROTOCOL_VERSION, PROTOCOL_VERSION_INV, 0x80, 0x01, 0x00, 0x00, 0x00, 0x03, 0x22, 0xFD, 0x10};
+        auto opt_msg = DoIPMessage::fromRaw(example_diag, sizeof(example_diag));
+
+        CHECK_MESSAGE(opt_msg.has_value(), "No message was created");
+
+        auto msg = opt_msg.value();
+        CHECK(msg.getPayloadType() == DoIPPayloadType::DiagnosticMessage);
+        CHECK(msg.getPayloadSize() == 3);
+
+        ByteArray msg_conv = msg.toBytes();
+        CHECK(msg_conv.size() == 3 + DoIPMessage::DOIP_HEADER_SIZE);
+
+        for(size_t i = 0; i < sizeof(example_diag); i++) {
+            CHECK_MESSAGE(msg_conv.at(i) == example_diag[i], "Position ", i, " exp: ", example_diag[i], ", got: ", msg_conv.at(i) );
+        }
+    }
 }

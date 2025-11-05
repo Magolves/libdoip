@@ -2,6 +2,7 @@
 #define DOIPMESSAGE_H
 
 #include <stdint.h>
+#include <optional>
 
 #include "ByteArray.h"
 #include "DoIPAddress.h"
@@ -104,8 +105,8 @@ struct DoIPMessage {
      * @brief Constructs a DoIP message from raw byte array.
      *
      * @param pl_type The payload type for this message
-     * @param data Pointer to raw byte data
-     * @param size Number of bytes to copy from data
+     * @param data Pointer to raw payload byte data
+     * @param size Number of bytes to copy from payload data
      *
      * @warning No bounds checking is performed. Ensure data points to at least size bytes.
      */
@@ -156,6 +157,29 @@ struct DoIPMessage {
         uint16_t plt = static_cast<uint16_t>(m_payload_type);
         bytes.emplace_back(plt >> 8 & 0xff);
         bytes.emplace_back(plt & 0xff);
+    }
+
+    static std::optional<DoIPMessage> fromRaw(const uint8_t* data, size_t length) {
+        if (data == nullptr || length < DOIP_HEADER_SIZE) {
+            return std::nullopt; // message null or too short
+        }
+
+        if (data[0] != PROTOCOL_VERSION || data[1] != PROTOCOL_VERSION_INV) {
+            return std::nullopt; // invalid or corrupt protocol header
+        }
+
+        auto payload_type_opt = toPayloadType(data[2], data[3]);
+        if (!payload_type_opt) {
+            return std::nullopt; // invalid payload type
+        }
+
+        uint32_t payload_length = static_cast<uint32_t>(data[4] << 24 | data[5] << 16 | data[6] << 8 | data[7]);
+        if ((DOIP_HEADER_SIZE + payload_length) != length) {
+            std::cerr << "Payload length mismatch: Exp " << (DOIP_HEADER_SIZE + payload_length) << ", got " << length << '\n';
+            return std::nullopt; // inconsistent payload size
+        }
+
+        return DoIPMessage(*payload_type_opt, data + DOIP_HEADER_SIZE, length - DOIP_HEADER_SIZE);
     }
 
     /**
