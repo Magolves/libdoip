@@ -116,7 +116,7 @@ install(DIRECTORY lib${DOIP_NAME}/inc/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/l
 install(EXPORT lib${DOIP_NAME}Targets
     FILE lib${DOIP_NAME}Targets.cmake
     NAMESPACE lib${DOIP_NAME}::
-    DESTINATION ${CMAKE_INSTALL_libdoipTargetsLIBDIR}/cmake/lib${DOIP_NAME}
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/lib${DOIP_NAME}
 )
 
 # Generate package config file
