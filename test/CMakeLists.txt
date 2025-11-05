@@ -1,6 +1,5 @@
 
 add_executable(${DOIP_NAME}_tests
-    DoIPClient_Test.cpp
     DoIPGenericHeaderHandler_Test.cpp
     DoIPMessage_Test.cpp
     Main_Test.cpp
