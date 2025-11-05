@@ -153,7 +153,7 @@ void DoIPServer::setEIDdefault() {
     }
 }
 
-void DoIPServer::setVIN(std::string VINString) {
+void DoIPServer::setVIN(const std::string& VINString) {
 
     VIN = VINString;
 }

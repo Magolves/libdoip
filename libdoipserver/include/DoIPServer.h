@@ -43,7 +43,7 @@ public:
     int sendVehicleAnnouncement();
 
     void setEIDdefault();
-    void setVIN(std::string VINString);
+    void setVIN(const std::string& VINString);
     void setLogicalGatewayAddress(const unsigned short inputLogAdd);
     void setEID(const uint64_t inputEID);
     void setGID(const uint64_t inputGID);

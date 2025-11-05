@@ -29,7 +29,7 @@ struct DoIPAddress {
      * @brief Constructs an DoIPAddress with specified high and low significant bytes.
      *
      * @param hsb High significant byte (default: 0)
-     * @param lsb Low significant byte (default: 0)#include <stdint.h>
+     * @param lsb Low significant byte (default: 0)
      */
     constexpr DoIPAddress(uint8_t hsb = 0, uint8_t lsb = 0) : m_bytes{{hsb, lsb}} {}
 
@@ -46,7 +46,7 @@ struct DoIPAddress {
      * @note If data is nullptr, the address is initialized to {0, 0}
      * @warning No bounds checking is performed on the data array
      */
-    constexpr DoIPAddress(const uint8_t *data, size_t offset = 0) : m_bytes{0, 0} {
+    constexpr explicit DoIPAddress(const uint8_t *data, size_t offset = 0) : m_bytes{0, 0} {
         if (data != nullptr) {
             m_bytes[HSB] = data[offset];
             m_bytes[LSB] = data[offset + 1];

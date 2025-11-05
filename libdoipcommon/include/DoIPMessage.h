@@ -76,7 +76,7 @@ struct DoIPMessage {
      * @param pl_type The payload type for this message
      * @param payload The payload data as a vector of bytes
      */
-    DoIPMessage(DoIPPayloadType pl_type, const DoIPPayload &payload)
+    explicit DoIPMessage(DoIPPayloadType pl_type, const DoIPPayload &payload)
         : m_payload_type(pl_type), m_payload(payload) {}
 
     /**
@@ -85,7 +85,7 @@ struct DoIPMessage {
      * @param pl_type The payload type for this message
      * @param payload The payload data as a vector of bytes (moved)
      */
-    DoIPMessage(DoIPPayloadType pl_type, DoIPPayload &&payload)
+    explicit DoIPMessage(DoIPPayloadType pl_type, DoIPPayload &&payload)
         : m_payload_type(pl_type), m_payload(std::move(payload)) {}
 
     /**
@@ -109,7 +109,7 @@ struct DoIPMessage {
      *
      * @warning No bounds checking is performed. Ensure data points to at least size bytes.
      */
-    DoIPMessage(DoIPPayloadType pl_type, const uint8_t *data, size_t size)
+    explicit DoIPMessage(DoIPPayloadType pl_type, const uint8_t *data, size_t size)
         : m_payload_type(pl_type), m_payload(data, data + size) {}
 
     /**
@@ -121,7 +121,7 @@ struct DoIPMessage {
      * @param last Iterator to the end of the data range
      */
     template <typename Iterator>
-    DoIPMessage(DoIPPayloadType pl_type, Iterator first, Iterator last)
+    explicit DoIPMessage(DoIPPayloadType pl_type, Iterator first, Iterator last)
         : m_payload_type(pl_type), m_payload(first, last) {}
 
     /**
@@ -152,7 +152,7 @@ struct DoIPMessage {
      */
     size_t getMessageSize() const { return getPayloadSize() + DOIP_HEADER_SIZE; }
 
-    void appendPayloadType(ByteArray &bytes) {
+    void appendPayloadType(ByteArray &bytes) const {
         uint16_t plt = static_cast<uint16_t>(m_payload_type);
         bytes.emplace_back(plt >> 8 & 0xff);
         bytes.emplace_back(plt & 0xff);
@@ -256,13 +256,12 @@ struct DoIPMessage {
         return DoIPMessage(DoIPPayloadType::AliveCheckResponse, payload);
     }
 
-
     /**
      * @brief Gets the complete DoIP messages as byte array.
      *
      * @return ByteArray the DoIP message bytes
      */
-    ByteArray toBytes() {
+    [[nodiscard]] ByteArray toBytes() const {
         ByteArray bytes;
         bytes.reserve(getMessageSize()); // Pre-allocate memory but keep size = 0
 
@@ -293,7 +292,7 @@ struct DoIPMessage {
         m_payload.emplace_back(address.lsb());
     }
 
-    void appendSize(ByteArray &bytes) {
+    void appendSize(ByteArray &bytes) const {
         uint32_t size = static_cast<uint32_t>(m_payload.size());
 
         bytes.emplace_back(size >> 24 & 0xff);
