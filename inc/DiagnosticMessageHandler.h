@@ -2,6 +2,7 @@
 #define DIAGNOSTICMESSAGEHANDLER_H
 
 #include "DoIPGenericHeaderHandler.h"
+#include "ByteArray.h"
 #include <functional>
 
 namespace doip {
@@ -17,8 +18,6 @@ const uint8_t _InvalidSourceAddressCode = 0x02;
 const uint8_t _UnknownTargetAddressCode = 0x03;
 
 uint8_t parseDiagnosticMessage(DiagnosticCallback callback, const DoIPAddress& sourceAddress, const uint8_t *data, size_t diagMessageLength);
-uint8_t *createDiagnosticACK(bool ackType, const DoIPAddress& sourceAddress, const DoIPAddress&  targetAddress, uint8_t responseCode);
-uint8_t *createDiagnosticMessage(const DoIPAddress& sourceAddress, const DoIPAddress&  targetAddress, uint8_t *userData, size_t userDataLength);
 
 } // namespace doip
 

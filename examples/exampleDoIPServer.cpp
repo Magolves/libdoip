@@ -56,14 +56,12 @@ void ReceiveFromLibrary(const DoIPAddress& address, uint8_t* data, size_t length
  */
 bool DiagnosticMessageReceived(const DoIPAddress& targetAddress) {
     (void)targetAddress;
-    uint8_t ackCode;
 
     cout << "Received Diagnostic message" << endl;
 
     //send positiv ack
-    ackCode = 0x00;
     cout << "-> Send positive diagnostic message ack" << endl;
-    connection->sendDiagnosticAck(LOGICAL_ADDRESS, true, ackCode);
+    connection->sendDiagnosticAck(LOGICAL_ADDRESS);
 
     return true;
 }

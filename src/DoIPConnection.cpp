@@ -228,11 +228,14 @@ void DoIPConnection::setCallback(DiagnosticCallback dc, DiagnosticMessageNotific
     m_close_connection = ccb;
 }
 
-void DoIPConnection::sendDiagnosticAck(const DoIPAddress& sourceAddress, bool ackType, uint8_t ackCode) {
-    DoIPAddress data_TA(m_routedClientAddress.hsb(), m_routedClientAddress.lsb());
+void DoIPConnection::sendDiagnosticAck(const DoIPAddress& sourceAddress) {
+    ByteArray message = DoIPMessage::makeDiagnosticPositiveResponse(sourceAddress, m_routedClientAddress, {}).toBytes();
+    sendMessage(message);
+}
 
-    uint8_t* message = createDiagnosticACK(ackType, sourceAddress, data_TA, ackCode);
-    sendMessage(message, _GenericHeaderLength + _DiagnosticPositiveACKLength);
+void DoIPConnection::sendDiagnosticNegativeAck(const DoIPAddress& sourceAddress, DoIPNegativeDiagnosticAck ackCode) {
+    ByteArray message = DoIPMessage::makeDiagnosticNegativeResponse(sourceAddress, m_routedClientAddress, ackCode, {}).toBytes();
+    sendMessage(message);
 }
 
 /**

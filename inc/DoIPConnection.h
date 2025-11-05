@@ -16,6 +16,7 @@
 #include "RoutingActivationHandler.h"
 #include "DiagnosticMessageHandler.h"
 #include "AliveCheckTimer.h"
+#include "DoIPNegativeDiagnosticAck.h"
 
 namespace doip {
 
@@ -37,7 +38,8 @@ public:
 
     void triggerDisconnection();
 
-    void sendDiagnosticAck(const DoIPAddress& sourceAddress, bool ackType, uint8_t ackCode);
+    void sendDiagnosticAck(const DoIPAddress& sourceAddress);
+    void sendDiagnosticNegativeAck(const DoIPAddress& sourceAddress, DoIPNegativeDiagnosticAck ackCode);
     int sendNegativeAck(uint8_t ackCode);
 
     void setCallback(DiagnosticCallback dc, DiagnosticMessageNotification dmn, CloseConnectionCallback ccb);
