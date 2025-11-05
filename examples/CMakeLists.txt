@@ -4,8 +4,7 @@
 add_executable(exampleDoIPServer exampleDoIPServer.cpp)
 target_link_libraries(exampleDoIPServer
     PRIVATE
-    doipserver
-    doipcommon
+    ${DOIP_NAME}
     Threads::Threads
 )
 
@@ -20,8 +19,7 @@ set_target_properties(exampleDoIPServer PROPERTIES
 add_executable(exampleDoIPClient exampleDoIPClient.cpp)
 target_link_libraries(exampleDoIPClient
     PRIVATE
-    doipclient
-    doipcommon
+    ${DOIP_NAME}
 )
 
 
