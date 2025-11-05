@@ -34,3 +34,5 @@ runTest
 
 # Folder
 build/
+.vscode/
+*.pdf
