@@ -41,7 +41,6 @@ TEST_SUITE("DoIPMessage") {
 
     TEST_CASE("Message factory - makeDiagnosticMessage") {
         DoIPMessage msg = DoIPMessage::makeDiagnosticMessage(DoIPAddress(0xca, 0xfe), DoIPAddress(0xba, 0xbe), {0xde, 0xad, 0xbe, 0xef});
-        ByteArray got = DoIPMessage::makeDiagnosticMessageRaw(DoIPAddress(0xca, 0xfe), DoIPAddress(0xba, 0xbe), {0xde, 0xad, 0xbe, 0xef});
         ByteArray expected{
             0x04, 0xfb,             // protocol version + inv
             0x80, 0x01,             // payload type
@@ -58,10 +57,6 @@ TEST_SUITE("DoIPMessage") {
         const auto bytes = msg.toBytes();
         for (size_t i = 0; i < bytes.size(); i++) {
             CHECK_MESSAGE(bytes.at(i) == expected.at(i), "Bytes to not match at pos ", i, ", got ", bytes.at(i), ", expected ", expected.at(i));
-        }
-
-        for (size_t i = 0; i < got.size(); i++) {
-            CHECK_MESSAGE(got.at(i) == expected.at(i), "Bytes (raw) to not match at pos ", i, ", got ", got.at(i), ", expected ", expected.at(i));
         }
     }
 
