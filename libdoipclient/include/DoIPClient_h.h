@@ -28,8 +28,21 @@ class DoIPClient {
     ssize_t sendVehicleIdentificationRequest(const char *inet_address);
     void receiveRoutingActivationResponse();
     void receiveUdpMessage();
+    /*
+     * Send the builded request over the tcp-connection to server
+     */
     void receiveMessage();
-    ssize_t sendDiagnosticMessage(const DoIPAddress &targetAddress, const ByteArray& payload);
+
+    /**
+     * Sends a diagnostic message to the server
+     * @param targetAddress     the address of the ecu which should receive the message
+     * @param payload          data that will be given to the ecu
+     */
+    ssize_t sendDiagnosticMessage(const DoIPAddress &targetAddress, const ByteArray &payload);
+
+    /**
+     * Sends a alive check response containing the clients source address to the server
+     */
     ssize_t sendAliveCheckResponse();
     void setSourceAddress(const DoIPAddress &address);
     void displayVIResponseInformation();
@@ -53,6 +66,9 @@ class DoIPClient {
     uint8_t GIDResult[6];
     uint8_t FurtherActionReqResult;
 
+    /*
+     *Build the Routing-Activation-Request for server
+     */
     const DoIPRequest buildRoutingActivationRequest();
     const DoIPRequest buildVehicleIdentificationRequest();
     void parseVIResponseInformation(uint8_t *data);

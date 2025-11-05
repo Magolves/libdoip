@@ -65,9 +65,6 @@ void DoIPClient::reconnectServer() {
     startTcpConnection();
 }
 
-/*
- *Build the Routing-Activation-Request for server
- */
 const DoIPRequest DoIPClient::buildRoutingActivationRequest() {
 
     //std::pair<int, uint8_t *> *rareqWithLength = new std::pair<int, uint8_t *>();
@@ -93,37 +90,22 @@ const DoIPRequest DoIPClient::buildRoutingActivationRequest() {
     rareq[13] = 0x00;
     rareq[14] = 0x00;
 
-    // rareqWithLength->first = rareqLength;
-    // rareqWithLength->second = rareq;
-
     return std::make_pair(rareqLength, rareq);
 }
 
-/*
- * Send the builded request over the tcp-connection to server
- */
 ssize_t DoIPClient::sendRoutingActivationRequest() {
 
     const DoIPRequest rareqWithLength = buildRoutingActivationRequest();
     return write(_sockFd, rareqWithLength.second, rareqWithLength.first);
 }
 
-/**
- * Sends a diagnostic message to the server
- * @param targetAddress     the address of the ecu which should receive the message
- * @param userData          data that will be given to the ecu
- * @param userDataLength    length of userData
- */
-ssize_t DoIPClient::sendDiagnosticMessage(const DoIPAddress &targetAddress, const ByteArray& payload) {
+ssize_t DoIPClient::sendDiagnosticMessage(const DoIPAddress &targetAddress, const ByteArray &payload) {
     DoIPAddress sourceAddress(0x0E, 0x00);
     ByteArray msg = DoIPMessage::makeDiagnosticMessage(sourceAddress, targetAddress, payload).toBytes();
 
     return write(_sockFd, msg.data(), msg.size());
 }
 
-/**
- * Sends a alive check response containing the clients source address to the server
- */
 ssize_t DoIPClient::sendAliveCheckResponse() {
     ByteArray msg = DoIPMessage::makeAliveCheckResponse(m_sourceAddress).toBytes();
 
@@ -191,8 +173,6 @@ void DoIPClient::receiveUdpMessage() {
 }
 
 const DoIPRequest DoIPClient::buildVehicleIdentificationRequest() {
-
-    //std::pair<int, uint8_t *> *rareqWithLength = new std::pair<int, uint8_t *>();
     size_t rareqLength = 8;
     uint8_t *rareq = new uint8_t[rareqLength];
 
@@ -205,9 +185,6 @@ const DoIPRequest DoIPClient::buildVehicleIdentificationRequest() {
     rareq[5] = 0x00;
     rareq[6] = 0x00;
     rareq[7] = 0x00;
-
-    // rareqWithLength->first = rareqLength;
-    // rareqWithLength->second = rareq;
 
     return std::make_pair(rareqLength, rareq);
 }
