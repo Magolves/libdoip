@@ -129,6 +129,16 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     endif()
 endif()
 
+# Function to configure clang-tidy for test targets
+function(configure_clang_tidy_for_tests target_name)
+    if(CLANG_TIDY_EXE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        set_target_properties(${target_name} PROPERTIES
+            CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-checks=${CLANG_TIDY_CHECKS_TEST};-header-filter=.*"
+        )
+    endif()
+endfunction()
+
+
 # Static analysis tools
 if(ENABLE_STATIC_ANALYSIS)
     # Find and enable clang-tidy (only when using Clang to avoid GCC warning conflicts)
@@ -157,15 +167,6 @@ if(ENABLE_STATIC_ANALYSIS)
     else()
         message(WARNING "clang-tidy not found!")
     endif()
-
-    # Function to configure clang-tidy for test targets
-    function(configure_clang_tidy_for_tests target_name)
-        if(CLANG_TIDY_EXE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-            set_target_properties(${target_name} PROPERTIES
-                CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-checks=${CLANG_TIDY_CHECKS_TEST};-header-filter=.*"
-            )
-        endif()
-    endfunction()
 
     # Find and enable cppcheck
     find_program(CPPCHECK_EXE NAMES "cppcheck")
