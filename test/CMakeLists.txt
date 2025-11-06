@@ -13,6 +13,9 @@ target_link_libraries(${DOIP_NAME}_tests
         doctest::doctest
 )
 
+# Configure relaxed clang-tidy settings for tests (disable magic-numbers and nodiscard warnings)
+configure_clang_tidy_for_tests(${DOIP_NAME}_tests)
+
 # Use automatic test discovery instead of manual add_test
 doctest_discover_tests(${DOIP_NAME}_tests
     PROPERTIES

@@ -21,7 +21,7 @@ void AliveCheckTimer::waitForResponse() {
         if(secondsPassed >= maxSeconds) {
             disabled = true;
             timeout = true;
-            cb();
+            closeConnectionHandler();
         }
     }
 }

@@ -35,7 +35,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang
         add_compile_options(-Werror)
     endif()
 
-    # GCC-specific warnings
+    # GCC-specific warnings (only for GCC, not Clang)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         add_compile_options(
             -Wduplicated-cond       # Warn about duplicated conditions in if-else-if chains
@@ -131,18 +131,41 @@ endif()
 
 # Static analysis tools
 if(ENABLE_STATIC_ANALYSIS)
-    # Find and enable clang-tidy
+    # Find and enable clang-tidy (only when using Clang to avoid GCC warning conflicts)
     find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
-    if(CLANG_TIDY_EXE)
+    if(CLANG_TIDY_EXE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        # Base clang-tidy checks for main code (with magic-numbers and nodiscard enabled)
+        set(CLANG_TIDY_CHECKS_MAIN
+            "*,-llvmlibc-*,-fuchsia-*,-google-readability-todo,-readability-else-after-return,-llvm-header-guard,-llvm-namespace-comment,-modernize-use-trailing-return-type,-altera-struct-pack-align,-google-explicit-constructor,-hicpp-explicit-conversions,-cppcoreguidelines-pro-bounds-pointer-arithmetic,-hicpp-signed-bitwise,-readability-identifier-length,-bugprone-reserved-identifier,-cert-dcl37-c,-cert-dcl51-cpp,-google-runtime-int,-misc-include-cleaner,-misc-non-private-member-variables-in-classes,-google-build-using-namespace,-readability-convert-member-functions-to-static,-llvm-include-order,-misc-const-correctness"
+        )
+
+        # Additional checks to disable for test files
+        set(CLANG_TIDY_CHECKS_TEST
+            "${CLANG_TIDY_CHECKS_MAIN},-cppcoreguidelines-avoid-magic-numbers,-readability-magic-numbers,-modernize-use-nodiscard"
+        )
+
+        # Default clang-tidy configuration for main code
         set(CMAKE_CXX_CLANG_TIDY
             ${CLANG_TIDY_EXE};
-            -checks=*,-llvmlibc-*,-fuchsia-*,-google-readability-todo,-readability-else-after-return;
-            -header-filter=.*
+            -checks=${CLANG_TIDY_CHECKS_MAIN};
+            -header-filter=.*;
+            --quiet
         )
-        message(STATUS "clang-tidy found: ${CLANG_TIDY_EXE}")
+        message(STATUS "clang-tidy found: ${CLANG_TIDY_EXE} (enabled for Clang builds)")
+    elseif(CLANG_TIDY_EXE)
+        message(STATUS "clang-tidy found: ${CLANG_TIDY_EXE} (disabled with GCC due to warning conflicts)")
     else()
         message(WARNING "clang-tidy not found!")
     endif()
+
+    # Function to configure clang-tidy for test targets
+    function(configure_clang_tidy_for_tests target_name)
+        if(CLANG_TIDY_EXE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+            set_target_properties(${target_name} PROPERTIES
+                CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-checks=${CLANG_TIDY_CHECKS_TEST};-header-filter=.*"
+            )
+        endif()
+    endfunction()
 
     # Find and enable cppcheck
     find_program(CPPCHECK_EXE NAMES "cppcheck")

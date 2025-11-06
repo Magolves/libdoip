@@ -32,7 +32,7 @@ int DoIPConnection::receiveTcpMessage() {
     std::cout << "Waiting for DoIP Header..." << '\n';
     uint8_t genericHeader[_GenericHeaderLength];
     unsigned int readBytes = receiveFixedNumberOfBytesFromTCP(_GenericHeaderLength, genericHeader);
-    if(readBytes == _GenericHeaderLength && !m_aliveCheckTimer.timeout) {
+    if(readBytes == _GenericHeaderLength && !m_aliveCheckTimer.hasTimeout()) {
         std::cout << "Received DoIP Header." << '\n';
         GenericHeaderAction doipHeaderAction = parseGenericHeader(genericHeader, _GenericHeaderLength);
 
@@ -49,7 +49,7 @@ int DoIPConnection::receiveTcpMessage() {
         }
 
         //if alive check timouts should be possible, reset timer when message received
-        if(m_aliveCheckTimer.active) {
+        if(m_aliveCheckTimer.isActive()) {
             m_aliveCheckTimer.resetTimer();
         }
 
@@ -129,8 +129,8 @@ int DoIPConnection::reactOnReceivedTcpMessage(GenericHeaderAction action, unsign
                 m_routedClientAddress.update(payload[0], payload[1]);
 
                 //start alive check timer
-                if(!m_aliveCheckTimer.active) {
-                    m_aliveCheckTimer.cb = std::bind(&DoIPConnection::aliveCheckTimeout,this);
+                if(!m_aliveCheckTimer.isActive()) {
+                    m_aliveCheckTimer.setCloseConnectionHandler(std::bind(&DoIPConnection::aliveCheckTimeout,this));
                     m_aliveCheckTimer.startTimer();
                 }
             }
@@ -192,7 +192,7 @@ void DoIPConnection::setGeneralInactivityTime(uint16_t seconds) {
     if(seconds > 0) {
         m_aliveCheckTimer.setTimer(seconds);
     } else {
-        m_aliveCheckTimer.disabled = true;
+        m_aliveCheckTimer.setDisabled(true);
     }
 }
 
