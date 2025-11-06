@@ -159,7 +159,7 @@ TEST_SUITE("DoIPMessage") {
         const uint8_t example_diag[] = {PROTOCOL_VERSION, PROTOCOL_VERSION_INV, 0x80, 0x01, 0x00, 0x00, 0x00, 0x03, 0x22, 0xFD, 0x10};
         auto opt_msg = DoIPMessage::fromRaw(example_diag, sizeof(example_diag));
 
-        CHECK_MESSAGE(opt_msg.has_value(), "No message was created");
+        REQUIRE_MESSAGE(opt_msg.has_value(), "No message was created");
 
         auto msg = opt_msg.value();
         CHECK(msg.getPayloadType() == DoIPPayloadType::DiagnosticMessage);
