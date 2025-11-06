@@ -1,4 +1,5 @@
 #include "DoIPServer.h"
+#include "DoIPAddress.h"
 
 #include<iostream>
 #include<iomanip>
@@ -7,7 +8,7 @@
 using namespace doip;
 using namespace std;
 
-static const unsigned short LOGICAL_ADDRESS = 0x28;
+static const DoIPAddress LOGICAL_ADDRESS(static_cast<uint8_t>(0x0), static_cast<uint8_t>(0x28));
 
 DoIPServer server;
 unique_ptr<DoIPConnection> connection(nullptr);
@@ -106,7 +107,7 @@ void ConfigureDoipServer() {
     // VIN needs to have a fixed length of 17 bytes.
     // Shorter VINs will be padded with '0'
     server.setVIN("FOOBAR");
-    server.setLogicalGatewayAddress(LOGICAL_ADDRESS);
+    server.setLogicalGatewayAddress(LOGICAL_ADDRESS.as_uint16());
     server.setGID(0);
     server.setFAR(0);
     server.setEID(0);

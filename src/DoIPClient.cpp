@@ -8,13 +8,13 @@ using namespace doip;
  */
 void DoIPClient::startTcpConnection() {
 
-    const char *ipAddr = "127.0.0.1";
-    bool connectedFlag = false;
     _sockFd = socket(AF_INET, SOCK_STREAM, 0);
 
     if (_sockFd >= 0) {
         std::cout << "Client TCP-Socket created successfully" << '\n';
 
+        bool connectedFlag = false;
+        const char *ipAddr = "127.0.0.1";
         _serverAddr.sin_family = AF_INET;
         _serverAddr.sin_port = htons(_serverPortNr);
         inet_aton(ipAddr, &(_serverAddr.sin_addr));
@@ -243,7 +243,7 @@ int DoIPClient::getConnected() {
     return _connected;
 }
 
-void DoIPClient::parseVIResponseInformation(uint8_t *data) {
+void DoIPClient::parseVIResponseInformation(const uint8_t *data) {
 
     // VIN
     int j = 0;

@@ -2,6 +2,7 @@
 #define DOIPSERVER_H
 
 #include <iostream>
+#include <optional>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <netinet/in.h>
@@ -53,13 +54,13 @@ public:
 
 private:
 
-    int server_socket_tcp, server_socket_udp;
+    int server_socket_tcp{-1}, server_socket_udp{-1};
     struct sockaddr_in serverAddress, clientAddress;
-    uint8_t data[_MaxDataSize];
+    uint8_t data[_MaxDataSize] = {0};
 
     std::string VIN = "00000000000000000";
-    unsigned short LogicalGatewayAddress = 0x0000;
-    uint8_t EID [6]; // entity id
+    DoIPAddress logicalGatewayAddress = ZeroAddress;
+    uint8_t EID [6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; // entity id
     uint8_t GID [6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; // group id
     uint8_t FurtherActionReq = 0x00;
 

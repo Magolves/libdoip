@@ -31,7 +31,7 @@ struct DoIPAddress {
      * @param hsb High significant byte (default: 0)
      * @param lsb Low significant byte (default: 0)
      */
-    constexpr DoIPAddress(uint8_t hsb = 0, uint8_t lsb = 0) : m_bytes{{hsb, lsb}} {}
+    constexpr explicit DoIPAddress(uint8_t hsb = 0, uint8_t lsb = 0) : m_bytes{{hsb, lsb}} {}
 
     /**
      * @brief Constructs an DoIPAddress from a byte array starting at the specified offset.
@@ -107,6 +107,10 @@ struct DoIPAddress {
         m_bytes[LSB] = lsb;
     }
 
+    void update(uint16_t hsblsb) {
+       update((hsblsb >> 8) & 0xFF, hsblsb & 0xFF);
+    }
+
     /**
      * @brief Updates the address from a byte array starting at the specified offset.
      *
@@ -122,8 +126,10 @@ struct DoIPAddress {
      * @warning No null pointer checking is performed. Ensure data is not nullptr.
      */
     void update(const uint8_t* data, size_t offset = 0) {
-        m_bytes[HSB] = data[offset];
-        m_bytes[LSB] = data[offset + 1];
+        if (data == nullptr) {
+            return;
+        }
+        update(data[offset], data[offset + 1]);
     }
 
     /**
@@ -170,9 +176,10 @@ struct DoIPAddress {
      * @return true the source address is valid
      * @return false the source address is NOT valid
      */
-    bool isValidSourceAddress() const {
+    bool isValidSourceAddress() {
         return minSourceAddress <= as_uint16() && maxSourceAddress >= as_uint16();
     }
+
 
     static constexpr uint16_t minSourceAddress = 3584; // 0x0E00
     static constexpr uint16_t maxSourceAddress = 4095; // 0x0FFF
@@ -186,7 +193,6 @@ struct DoIPAddress {
 
 /**
  * @brief Constant for a DoIP zero address (0x0000).
- *
  */
 constexpr DoIPAddress ZeroAddress;
 

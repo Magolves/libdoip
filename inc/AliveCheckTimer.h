@@ -39,8 +39,8 @@ private:
 
     std::vector<std::thread> timerThreads;
     void waitForResponse();
-    clock_t startTime;
-    uint16_t maxSeconds;
+    clock_t startTime{};
+    uint16_t maxSeconds{};
 };
 
 } // namespace doip

@@ -25,7 +25,7 @@ std::unique_ptr<DoIPConnection> DoIPServer::waitForTcpConnection() {
     // waits till client approach to make connection
     listen(server_socket_tcp, 5);
     int tcpSocket = accept(server_socket_tcp, nullptr, nullptr);
-    return std::unique_ptr<DoIPConnection>(new DoIPConnection(tcpSocket, LogicalGatewayAddress));
+    return std::unique_ptr<DoIPConnection>(new DoIPConnection(tcpSocket, logicalGatewayAddress));
 }
 
 void DoIPServer::setupUdpSocket() {
@@ -104,7 +104,7 @@ int DoIPServer::reactToReceivedUdpMessage(size_t bytesRead) {
     }
 
     case PayloadType::VEHICLEIDENTREQUEST: {
-        uint8_t *message = createVehicleIdentificationResponse(VIN, LogicalGatewayAddress, EID, GID, FurtherActionReq);
+        uint8_t *message = createVehicleIdentificationResponse(VIN, logicalGatewayAddress, EID, GID, FurtherActionReq);
         sendedBytes = sendUdpMessage(message, DoIPMessage::DOIP_HEADER_SIZE + _VIResponseLength);
 
         return sendedBytes;
@@ -133,7 +133,7 @@ void DoIPServer::setEIDdefault() {
 
     struct ifreq ifr;
     const char *iface = "ens33"; // eth0
-    uint8_t *mac;
+
 
     fd = socket(AF_INET, SOCK_DGRAM, 0);
 
@@ -145,7 +145,7 @@ void DoIPServer::setEIDdefault() {
 
     close(fd);
 
-    mac = reinterpret_cast<uint8_t *>(ifr.ifr_hwaddr.sa_data);
+    const uint8_t * mac = reinterpret_cast<const uint8_t *>(ifr.ifr_hwaddr.sa_data);
 
     // memcpy(mac, (uint8_t *)ifr.ifr_hwaddr.sa_data, 48);
 
@@ -160,7 +160,7 @@ void DoIPServer::setVIN(const std::string& VINString) {
 }
 
 void DoIPServer::setLogicalGatewayAddress(const unsigned short inputLogAdd) {
-    LogicalGatewayAddress = inputLogAdd;
+    logicalGatewayAddress.update(inputLogAdd);
 }
 
 void DoIPServer::setEID(const uint64_t inputEID) {
@@ -238,7 +238,7 @@ int DoIPServer::sendVehicleAnnouncement() {
 
     int sendedmessage = -1;
 
-    uint8_t *message = createVehicleIdentificationResponse(VIN, LogicalGatewayAddress, EID, GID, FurtherActionReq);
+    uint8_t *message = createVehicleIdentificationResponse(VIN, logicalGatewayAddress, EID, GID, FurtherActionReq);
 
     for (int i = 0; i < A_DoIP_Announce_Num; i++) {
 

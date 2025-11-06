@@ -54,24 +54,24 @@ class DoIPClient {
     int getConnected();
 
   private:
-    uint8_t _receivedData[_maxDataSize];
-    int _sockFd, _sockFd_udp, _connected;
+    uint8_t _receivedData[_maxDataSize] = {0};
+    int _sockFd{-1}, _sockFd_udp{-1}, _connected{-1};
     int broadcast = 1;
     struct sockaddr_in _serverAddr, _clientAddr;
-    DoIPAddress m_sourceAddress;
+    DoIPAddress m_sourceAddress = ZeroAddress;
 
-    uint8_t VINResult[17];
-    DoIPAddress LogicalAddressResult;
-    uint8_t EIDResult[6];
-    uint8_t GIDResult[6];
-    uint8_t FurtherActionReqResult;
+    uint8_t VINResult[17] = {0};
+    DoIPAddress LogicalAddressResult = ZeroAddress;
+    uint8_t EIDResult[6] = {0};
+    uint8_t GIDResult[6] = {0};
+    uint8_t FurtherActionReqResult = 0x00;
 
     /*
      *Build the Routing-Activation-Request for server
      */
     const DoIPRequest buildRoutingActivationRequest();
     const DoIPRequest buildVehicleIdentificationRequest();
-    void parseVIResponseInformation(uint8_t *data);
+    void parseVIResponseInformation(const uint8_t *data);
 
     int emptyMessageCounter = 0;
 };

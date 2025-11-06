@@ -27,7 +27,7 @@ const unsigned long _MaxDataSize = 0xFFFFFF;
 class DoIPConnection {
 
 public:
-    DoIPConnection(int tcpSocket, DoIPAddress logicalGatewayAddress):
+    DoIPConnection(int tcpSocket, const DoIPAddress& logicalGatewayAddress):
         m_tcpSocket(tcpSocket), m_logicalGatewayAddress(logicalGatewayAddress) { };
 
     int receiveTcpMessage();

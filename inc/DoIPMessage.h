@@ -167,6 +167,11 @@ struct DoIPMessage {
      */
     std::optional<DoIPAddress> getSourceAddress() const {
         if (m_payload_type == DoIPPayloadType::DiagnosticMessage && m_payload.size() >= 2) {
+            // TODO: validate source address range
+            // if (!DoIPAddress::isValidSourceAddress(m_payload.data(), 0)) {
+            //     std::cerr << "Invalid source address in Diagnostic Message\n";
+            //     return std::nullopt;
+            // }
             return DoIPAddress(m_payload.data(), 0);
         }
         return std::nullopt;
@@ -195,7 +200,9 @@ struct DoIPMessage {
             return false; // message null or too short
         }
 
-        return data[0] != PROTOCOL_VERSION || data[1] != PROTOCOL_VERSION_INV;
+        return data[0] >= ISO_13400_2010 && // check minimum protocol version
+               data[0] <= ISO_13400_2025 && // check maximum (known) protocol version
+               data[0] + data[1] == 0xFF;   // check protocol version and its inverse
     }
 
     static std::optional<DoIPMessage> fromRaw(const uint8_t *data, size_t length) {
@@ -359,10 +366,12 @@ struct DoIPMessage {
      *
      * @param address the address to append
      */
+    // cppcheck-suppress unusedFunction
     void appendAddress(const DoIPAddress &address) {
         m_payload.emplace_back(address.hsb());
         m_payload.emplace_back(address.lsb());
     }
+    // cppcheck-suppress-end unusedFunction
 
     void appendSize(ByteArray &bytes) const {
         uint32_t size = static_cast<uint32_t>(m_payload.size());
