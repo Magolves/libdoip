@@ -1,8 +1,8 @@
 #ifndef DOIPMESSAGE_H
 #define DOIPMESSAGE_H
 
-#include <stdint.h>
 #include <optional>
+#include <stdint.h>
 
 #include "ByteArray.h"
 #include "DoIPAddress.h"
@@ -140,6 +140,13 @@ struct DoIPMessage {
     const DoIPPayload &getPayload() const { return m_payload; }
 
     /**
+     * @brief Sets the payload data.
+     *
+     * @param payload The new payload data
+     */
+    void setPayload(const DoIPPayload &payload) { m_payload = payload; }
+
+    /**
      * @brief Gets the payload size in bytes.
      *
      * @return size_t Number of bytes in the payload
@@ -153,19 +160,47 @@ struct DoIPMessage {
      */
     size_t getMessageSize() const { return getPayloadSize() + DOIP_HEADER_SIZE; }
 
+    /**
+     * @brief Get the Source Address of the message (if message is a Diagnostic Message).
+     *
+     * @return std::optional<DoIPAddress> The source address if present, std::nullopt otherwise
+     */
+    std::optional<DoIPAddress> getSourceAddress() const {
+        if (m_payload_type == DoIPPayloadType::DiagnosticMessage && m_payload.size() >= 2) {
+            return DoIPAddress(m_payload.data(), 0);
+        }
+        return std::nullopt;
+    }
+
+    /**
+     * @brief Get the Target Address of the message (if message is a Diagnostic Message).
+     *
+     * @return std::optional<DoIPAddress> The target address if present, std::nullopt otherwise
+     */
+    std::optional<DoIPAddress> getTargetAddress() const {
+        if (m_payload_type == DoIPPayloadType::DiagnosticMessage && m_payload.size() >= 4) {
+            return DoIPAddress(m_payload.data(), 2);
+        }
+        return std::nullopt;
+    }
+
     void appendPayloadType(ByteArray &bytes) const {
         uint16_t plt = static_cast<uint16_t>(m_payload_type);
         bytes.emplace_back(plt >> 8 & 0xff);
         bytes.emplace_back(plt & 0xff);
     }
 
-    static std::optional<DoIPMessage> fromRaw(const uint8_t* data, size_t length) {
+    static bool isValidProtocolVersion(const uint8_t *data, size_t length) {
         if (data == nullptr || length < DOIP_HEADER_SIZE) {
-            return std::nullopt; // message null or too short
+            return false; // message null or too short
         }
 
-        if (data[0] != PROTOCOL_VERSION || data[1] != PROTOCOL_VERSION_INV) {
-            return std::nullopt; // invalid or corrupt protocol header
+        return data[0] != PROTOCOL_VERSION || data[1] != PROTOCOL_VERSION_INV;
+    }
+
+    static std::optional<DoIPMessage> fromRaw(const uint8_t *data, size_t length) {
+        if (!isValidProtocolVersion(data, length)) {
+            return std::nullopt; // invalid protocol version
         }
 
         auto payload_type_opt = toPayloadType(data[2], data[3]);
@@ -180,6 +215,19 @@ struct DoIPMessage {
         }
 
         return DoIPMessage(*payload_type_opt, data + DOIP_HEADER_SIZE, length - DOIP_HEADER_SIZE);
+    }
+
+    static std::optional<DoIPPayloadType> getPayloadType(const uint8_t *data, size_t length) {
+        if (!isValidProtocolVersion(data, length)) {
+            return std::nullopt; // invalid protocol version
+        }
+
+        auto payload_type_opt = toPayloadType(data[2], data[3]);
+        if (!payload_type_opt) {
+            return std::nullopt; // invalid payload type
+        }
+
+        return payload_type_opt;
     }
 
     /**

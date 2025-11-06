@@ -33,8 +33,8 @@ struct GenericHeaderAction {
     unsigned long payloadLength;
 };
 
-GenericHeaderAction parseGenericHeader(uint8_t *data, int dataLenght);
-uint8_t *createGenericHeader(PayloadType type, uint32_t length);
+GenericHeaderAction parseGenericHeader(uint8_t *data, size_t dataLenght);
+uint8_t *createGenericHeader(PayloadType type, size_t length);
 
 } // namespace doip
 

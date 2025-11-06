@@ -14,7 +14,7 @@ unique_ptr<DoIPConnection> connection(nullptr);
 std::vector<std::thread> doipReceiver;
 bool serverActive = false;
 
-void ReceiveFromLibrary(const DoIPAddress& address, uint8_t* data, size_t length);
+void ReceiveFromLibrary(const DoIPAddress& address, const uint8_t* data, size_t length);
 bool DiagnosticMessageReceived(const DoIPAddress& targetAddress);
 void CloseConnection();
 void listenUdp();
@@ -27,7 +27,7 @@ void ConfigureDoipServer();
  * @param data      message which was received
  * @param length    length of the message
  */
-void ReceiveFromLibrary(const DoIPAddress& address, uint8_t* data, size_t length) {
+void ReceiveFromLibrary(const DoIPAddress& address, const uint8_t* data, size_t length) {
     cout << "DoIP Message received from 0x" << hex << address << ": ";
     for(size_t i = 0; i < length; i++) {
         cout << hex << setw(2) << +data[i] << " ";

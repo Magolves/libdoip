@@ -30,11 +30,11 @@ void DoIPConnection::closeSocket() {
  */
 int DoIPConnection::receiveTcpMessage() {
     std::cout << "Waiting for DoIP Header..." << '\n';
-    uint8_t genericHeader[_GenericHeaderLength];
-    unsigned int readBytes = receiveFixedNumberOfBytesFromTCP(_GenericHeaderLength, genericHeader);
-    if(readBytes == _GenericHeaderLength && !m_aliveCheckTimer.hasTimeout()) {
+    uint8_t genericHeader[DoIPMessage::DOIP_HEADER_SIZE];
+    unsigned int readBytes = receiveFixedNumberOfBytesFromTCP(DoIPMessage::DOIP_HEADER_SIZE, genericHeader);
+    if(readBytes == DoIPMessage::DOIP_HEADER_SIZE && !m_aliveCheckTimer.hasTimeout()) {
         std::cout << "Received DoIP Header." << '\n';
-        GenericHeaderAction doipHeaderAction = parseGenericHeader(genericHeader, _GenericHeaderLength);
+        GenericHeaderAction doipHeaderAction = parseGenericHeader(genericHeader, DoIPMessage::DOIP_HEADER_SIZE);
 
         uint8_t *payload = nullptr;
         if(doipHeaderAction.payloadLength > 0) {
@@ -119,7 +119,7 @@ int DoIPConnection::reactOnReceivedTcpMessage(GenericHeaderAction action, unsign
             DoIPAddress clientAddress(payload[0], payload[1]);
 
             uint8_t* message = createRoutingActivationResponse(m_logicalGatewayAddress, clientAddress, result);
-            sentBytes = sendMessage(message, _GenericHeaderLength + _ActivationResponseLength);
+            sentBytes = sendMessage(message, DoIPMessage::DOIP_HEADER_SIZE + _ActivationResponseLength);
 
             if(result == _UnknownSourceAddressCode || result == _UnsupportedRoutingTypeCode) {
                 closeSocket();
@@ -145,10 +145,10 @@ int DoIPConnection::reactOnReceivedTcpMessage(GenericHeaderAction action, unsign
         case PayloadType::DIAGNOSTICMESSAGE: {
 
             DoIPAddress target_address(payload[2], payload[3]);
-            bool ack = m_notify_application(target_address);
+            bool ack = m_notify_application && m_notify_application(target_address);
 
             if(ack)
-                parseDiagnosticMessage(m_diag_callback, m_routedClientAddress, payload, payloadLength);
+                handleDiagnosticMessage(m_diag_callback, m_routedClientAddress, payload, payloadLength);
 
             break;
         }
@@ -246,6 +246,6 @@ void DoIPConnection::sendDiagnosticNegativeAck(const DoIPAddress& sourceAddress,
 int DoIPConnection::sendNegativeAck(uint8_t ackCode) {
     uint8_t* message = createGenericHeader(PayloadType::NEGATIVEACK, _NACKLength);
     message[8] = ackCode;
-    int sendedBytes = sendMessage(message, _GenericHeaderLength + _NACKLength);
+    int sendedBytes = sendMessage(message, DoIPMessage::DOIP_HEADER_SIZE + _NACKLength);
     return sendedBytes;
 }

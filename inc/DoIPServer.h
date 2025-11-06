@@ -68,7 +68,7 @@ private:
 
     int broadcast = 1;
 
-    int reactToReceivedUdpMessage(int bytesRead);
+    int reactToReceivedUdpMessage(size_t bytesRead);
 
     int sendUdpMessage(uint8_t* message, size_t messageLength);
 

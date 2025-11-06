@@ -2,6 +2,8 @@
 #include <iostream>
 #include <iomanip>
 
+#include "DoIPMessage.h"
+
 using namespace std;
 
 namespace doip {
@@ -13,12 +15,12 @@ namespace doip {
  * @return              Returns a GenericHeaderAction struct, which stores the
  *                      payload type and a byte for further message processing
  */
-GenericHeaderAction parseGenericHeader(uint8_t* data, int dataLenght) {
+GenericHeaderAction parseGenericHeader(uint8_t* data, size_t dataLenght) {
 
     GenericHeaderAction action;
 
     //Only check header if received data is greater or equals the set header length
-    if(dataLenght >= _GenericHeaderLength) {
+    if(dataLenght >= DoIPMessage::DOIP_HEADER_SIZE) {
 
         //Check Generic DoIP synchronization pattern
         if((data[1] ^ (0xFF)) != static_cast<int>(data[0])) {
@@ -143,7 +145,7 @@ GenericHeaderAction parseGenericHeader(uint8_t* data, int dataLenght) {
  * @param length    length of the payload type specific message
  * @return          header array
  */
-uint8_t* createGenericHeader(PayloadType type, uint32_t length) {
+uint8_t* createGenericHeader(PayloadType type, size_t length) {
     uint8_t *header = new uint8_t[8 + length];
     header[0] = 0x02;
     header[1] = 0xFD;

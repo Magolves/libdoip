@@ -1,43 +1,50 @@
 #include "DiagnosticMessageHandler.h"
+#include "DoIPMessage.h"
+
 #include <cstring>
 #include <iostream>
 
 namespace doip {
 
-/**
- * Checks if a received Diagnostic Message is valid
- * @param callback                   callback which will be called with the user data
- * @param sourceAddress		currently registered source address on the socket
- * @param data			message which was received
- * @param diagMessageLength     length of the diagnostic message
- */
-uint8_t parseDiagnosticMessage(DiagnosticCallback callback, const DoIPAddress &sourceAddress,
-                               const uint8_t *data, size_t diagMessageLength) {
+/* Thanks to the brain-dead decision to reserve the zero in DoIPNegativeDiagnosticAck, we have to use std::optional to indicate 'ok' */
+DoIPDiagnosticAck handleDiagnosticMessage(DiagnosticCallback callback, const DoIPAddress &sourceAddress, const uint8_t *data, size_t length) {
     std::cout << "parse Diagnostic Message" << '\n';
-    if (diagMessageLength >= _DiagnosticMessageMinimumLength) {
-        // Check if the received SA is registered on the socket
-        if (data[0] != sourceAddress.hsb() || data[1] != sourceAddress.lsb()) {
-            // SA of received message is not registered on this TCP_DATA socket
-            return _InvalidSourceAddressCode;
-        }
 
-        std::cout << "source address valid" << '\n';
-        // Pass the diagnostic message to the target network/transport layer
-        DoIPAddress target_address(data, 2);
-
-        size_t cb_message_length = diagMessageLength - _DiagnosticMessageMinimumLength;
-        uint8_t *cb_message = new uint8_t[cb_message_length];
-
-        for (size_t i = _DiagnosticMessageMinimumLength; i < diagMessageLength; i++) {
-            cb_message[i - _DiagnosticMessageMinimumLength] = data[i];
-        }
-
-        callback(target_address, cb_message, cb_message_length);
-
-        // return positive ack code
-        return _ValidDiagnosticMessageCode;
+    auto optMsg = DoIPMessage::fromRaw(data, length);
+    if (optMsg.has_value() == false) {
+        std::cout << "Could not parse DoIP message" << '\n';
+        return DoIPNegativeDiagnosticAck::UnknownTargetAddress;
     }
-    return _UnknownTargetAddressCode;
+
+    auto msg = optMsg.value();
+    if (msg.getPayloadType() != DoIPPayloadType::DiagnosticMessage) {
+        std::cout << "Received message is not a Diagnostic Message" << '\n';
+        return DoIPNegativeDiagnosticAck::UnknownTargetAddress;
+    }
+
+    auto optSourceAddress = msg.getSourceAddress();
+    if (optSourceAddress != sourceAddress) {
+        std::cout << "Source address of received message does not match registered source address" << '\n';
+        return DoIPNegativeDiagnosticAck::InvalidSourceAddress;
+    }
+
+    auto optTargetAddress = msg.getTargetAddress();
+    if (!optTargetAddress.has_value()) {
+        std::cout << "Could not extract target address from Diagnostic Message" << '\n';
+        return DoIPNegativeDiagnosticAck::UnknownTargetAddress;
+    }
+
+    if (callback) {
+        size_t cb_message_length = msg.getPayloadSize() - _DiagnosticMessageMinimumLength;
+        // uint8_t *cb_message = new uint8_t[cb_message_length];
+
+        // std::memcpy(cb_message, payload.data() + _DiagnosticMessageMinimumLength, cb_message_length);
+
+        callback(optTargetAddress.value(), msg.getPayload().data(), cb_message_length);
+
+    }
+    // return positive ack code
+    return std::nullopt;
 }
 
 } // namespace doip

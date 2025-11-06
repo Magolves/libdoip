@@ -117,7 +117,12 @@ ssize_t DoIPClient::sendAliveCheckResponse() {
  */
 void DoIPClient::receiveMessage() {
 
-    int bytesRead = recv(_sockFd, _receivedData, _maxDataSize, 0);
+    ssize_t bytesRead = recv(_sockFd, _receivedData, _maxDataSize, 0);
+
+    if (bytesRead < 0) {
+        std::cerr << "Error receiving data from server" << '\n';
+        return;
+    }
 
     if (!bytesRead) // if server is disconnected from client; client gets empty messages
     {
@@ -137,7 +142,7 @@ void DoIPClient::receiveMessage() {
     }
     printf("\n ");
 
-    GenericHeaderAction action = parseGenericHeader(_receivedData, bytesRead);
+    GenericHeaderAction action = parseGenericHeader(_receivedData, static_cast<size_t>(bytesRead));
 
     if (action.type == PayloadType::DIAGNOSTICPOSITIVEACK || action.type == PayloadType::DIAGNOSTICNEGATIVEACK) {
         switch (action.type) {
@@ -167,7 +172,7 @@ void DoIPClient::receiveUdpMessage() {
     int bytesRead;
     bytesRead = recvfrom(_sockFd_udp, _receivedData, _maxDataSize, 0, reinterpret_cast<struct sockaddr *>(&_clientAddr), &length);
 
-    if (PayloadType::VEHICLEIDENTRESPONSE == parseGenericHeader(_receivedData, bytesRead).type) {
+    if (PayloadType::VEHICLEIDENTRESPONSE == parseGenericHeader(_receivedData, static_cast<size_t>(bytesRead)).type) {
         parseVIResponseInformation(_receivedData);
     }
 }

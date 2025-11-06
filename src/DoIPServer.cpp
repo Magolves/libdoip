@@ -1,4 +1,5 @@
 #include "DoIPServer.h"
+#include "DoIPMessage.h"
 
 using namespace doip;
 
@@ -64,9 +65,9 @@ void DoIPServer::closeUdpSocket() {
 int DoIPServer::receiveUdpMessage() {
 
     unsigned int length = sizeof(serverAddress);
-    int readBytes = recvfrom(server_socket_udp, data, _MaxDataSize, 0, reinterpret_cast<struct sockaddr *>(&serverAddress), &length);
+    ssize_t readBytes = recvfrom(server_socket_udp, data, _MaxDataSize, 0, reinterpret_cast<struct sockaddr *>(&serverAddress), &length);
 
-    int sentBytes = reactToReceivedUdpMessage(readBytes);
+    int sentBytes = reactToReceivedUdpMessage(static_cast<size_t>(readBytes));
 
     return sentBytes;
 }
@@ -76,7 +77,7 @@ int DoIPServer::receiveUdpMessage() {
  * @return      amount of bytes which were send back to client
  *              or -1 if error occurred
  */
-int DoIPServer::reactToReceivedUdpMessage(int bytesRead) {
+int DoIPServer::reactToReceivedUdpMessage(size_t bytesRead) {
 
     GenericHeaderAction action = parseGenericHeader(data, bytesRead);
 
@@ -91,7 +92,7 @@ int DoIPServer::reactToReceivedUdpMessage(int bytesRead) {
         // send NACK
         uint8_t *message = createGenericHeader(action.type, _NACKLength);
         message[8] = action.value;
-        sendedBytes = sendUdpMessage(message, _GenericHeaderLength + _NACKLength);
+        sendedBytes = sendUdpMessage(message, DoIPMessage::DOIP_HEADER_SIZE + _NACKLength);
 
         if (action.value == _IncorrectPatternFormatCode ||
             action.value == _InvalidPayloadLengthCode) {
@@ -104,7 +105,7 @@ int DoIPServer::reactToReceivedUdpMessage(int bytesRead) {
 
     case PayloadType::VEHICLEIDENTREQUEST: {
         uint8_t *message = createVehicleIdentificationResponse(VIN, LogicalGatewayAddress, EID, GID, FurtherActionReq);
-        sendedBytes = sendUdpMessage(message, _GenericHeaderLength + _VIResponseLength);
+        sendedBytes = sendUdpMessage(message, DoIPMessage::DOIP_HEADER_SIZE + _VIResponseLength);
 
         return sendedBytes;
     }
@@ -241,7 +242,7 @@ int DoIPServer::sendVehicleAnnouncement() {
 
     for (int i = 0; i < A_DoIP_Announce_Num; i++) {
 
-        sendedmessage = sendto(server_socket_udp, message, _GenericHeaderLength + _VIResponseLength, 0, reinterpret_cast<struct sockaddr *>(&clientAddress), sizeof(clientAddress));
+        sendedmessage = sendto(server_socket_udp, message, DoIPMessage::DOIP_HEADER_SIZE + _VIResponseLength, 0, reinterpret_cast<struct sockaddr *>(&clientAddress), sizeof(clientAddress));
 
         if (sendedmessage > 0) {
             std::cout << "Sending Vehicle Announcement" << '\n';
