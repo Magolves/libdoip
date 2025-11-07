@@ -10,7 +10,6 @@
 #include <unistd.h>
 
 #include "DiagnosticMessageHandler.h"
-#include "DoIPGenericHeaderHandler.h"
 
 namespace doip {
 

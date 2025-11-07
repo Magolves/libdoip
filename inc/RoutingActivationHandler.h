@@ -1,9 +1,10 @@
 #ifndef ROUTINGACTIVATIONHANDLER_H
 #define ROUTINGACTIVATIONHANDLER_H
 
-#include "DoIPGenericHeaderHandler.h"
 #include <arpa/inet.h>
 #include <netinet/in.h>
+
+#include "DoIPAddress.h"
 
 namespace doip {
 

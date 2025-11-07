@@ -1,8 +1,8 @@
 #ifndef VEHICLEIDENTIFICATIONHANDLER_H
 #define VEHICLEIDENTIFICATIONHANDLER_H
 
-#include "DoIPGenericHeaderHandler.h"
 #include <string>
+#include "DoIPAddress.h"
 
 namespace doip {
 

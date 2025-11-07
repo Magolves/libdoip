@@ -33,7 +33,6 @@ set(SOURCES
     src/DiagnosticMessageHandler.cpp
     src/DoIPClient.cpp
     src/DoIPConnection.cpp
-    src/DoIPGenericHeaderHandler.cpp
     src/DoIPServer.cpp
     src/RoutingActivationHandler.cpp
     src/VehicleIdentificationHandler.cpp

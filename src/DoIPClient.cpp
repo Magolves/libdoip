@@ -1,5 +1,7 @@
 #include "DoIPClient_h.h"
 #include "DoIPMessage.h"
+#include "DoIPPayloadType.h"
+
 
 using namespace doip;
 
@@ -142,27 +144,29 @@ void DoIPClient::receiveMessage() {
     }
     printf("\n ");
 
-    GenericHeaderAction action = parseGenericHeader(_receivedData, static_cast<size_t>(bytesRead));
+    auto optMsgHeader = DoIPMessageHeader::parseHeader(_receivedData, static_cast<size_t>(bytesRead));
+    if (!optMsgHeader.has_value()) {
+        std::cerr << "Failed to parse DoIP message header" << '\n';
+        return;
+    }
 
-    if (action.type == PayloadType::DIAGNOSTICPOSITIVEACK || action.type == PayloadType::DIAGNOSTICNEGATIVEACK) {
-        switch (action.type) {
-        case PayloadType::DIAGNOSTICPOSITIVEACK: {
-            std::cout << "Client received diagnostic message positive ack with code: ";
+    auto [payloadType, payloadLength] = optMsgHeader.value();
+
+    switch (payloadType) {
+        case DoIPPayloadType::DiagnosticMessageAck:
+                    std::cout << "Client received diagnostic message positive ack with code: ";
             printf("0x%02X ", _receivedData[12]);
             break;
-        }
-        case PayloadType::DIAGNOSTICNEGATIVEACK: {
+        case DoIPPayloadType::DiagnosticMessageNegativeAck:
             std::cout << "Client received diagnostic message negative ack with code: ";
             printf("0x%02X ", _receivedData[12]);
             break;
-        }
-        default: {
-            std::cerr << "not handled payload type occured in receiveMessage()" << '\n';
+        default:
+            std::cerr << "not handled payload type occured in receiveMessage()";
             break;
-        }
-        }
-        std::cout << '\n';
     }
+
+    std::cout << '\n';
 }
 
 void DoIPClient::receiveUdpMessage() {
@@ -172,9 +176,14 @@ void DoIPClient::receiveUdpMessage() {
     int bytesRead;
     bytesRead = recvfrom(_sockFd_udp, _receivedData, _maxDataSize, 0, reinterpret_cast<struct sockaddr *>(&_clientAddr), &length);
 
-    if (PayloadType::VEHICLEIDENTRESPONSE == parseGenericHeader(_receivedData, static_cast<size_t>(bytesRead)).type) {
-        parseVIResponseInformation(_receivedData);
+    std::cout << "Client received UDP message: ";
+    for (int i = 0; i < bytesRead; i++) {
+        printf("0x%02X ", _receivedData[i]);
     }
+    std::cout << '\n';
+    // if (PayloadType::VEHICLEIDENTRESPONSE == parseGenericHeader(_receivedData, static_cast<size_t>(bytesRead)).type) {
+    //     parseVIResponseInformation(_receivedData);
+    // }
 }
 
 const DoIPRequest DoIPClient::buildVehicleIdentificationRequest() {

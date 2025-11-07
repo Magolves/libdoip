@@ -11,10 +11,9 @@
 #include <net/if.h>
 #include <unistd.h>
 #include <memory>
-#include "DoIPGenericHeaderHandler.h"
 #include "RoutingActivationHandler.h"
 #include "VehicleIdentificationHandler.h"
-#include "DoIPGenericHeaderHandler.h"
+
 #include "RoutingActivationHandler.h"
 #include "DiagnosticMessageHandler.h"
 #include "AliveCheckTimer.h"

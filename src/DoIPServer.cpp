@@ -78,43 +78,48 @@ int DoIPServer::receiveUdpMessage() {
  *              or -1 if error occurred
  */
 int DoIPServer::reactToReceivedUdpMessage(size_t bytesRead) {
+    (void)bytesRead;
+    //GenericHeaderAction action = parseGenericHeader(data, bytesRead);
+    // TODO: implement reactToReceivedUdpMessage based on DoIPMessage and DoIPPayloadType
 
-    GenericHeaderAction action = parseGenericHeader(data, bytesRead);
+    // int sendedBytes;
+    // switch (action.type) {
 
-    int sendedBytes;
-    switch (action.type) {
+    // case PayloadType::VEHICLEIDENTRESPONSE: { // server should not send a negative ACK if he receives the sended VehicleIdentificationAnnouncement
+    //     return -1;
+    // }
 
-    case PayloadType::VEHICLEIDENTRESPONSE: { // server should not send a negative ACK if he receives the sended VehicleIdentificationAnnouncement
-        return -1;
-    }
+    // case PayloadType::NEGATIVEACK: {
+    //     // send NACK
+    //     //uint8_t *message = createGenericHeader(action.type, _NACKLength);
+    //     std::cerr << "Server received Negative Acknowledgment with code: ";
+    //     printf("0x%02X \n", action.value);
+    //     std::cerr << "Response not implemented yet." << '\n';
+    //     uint8_t  message[] = {0,0,0,0,0,0,0,0,0};
+    //     message[8] = action.value;
+    //     sendedBytes = sendUdpMessage(message, DoIPMessageHeader::DOIP_HEADER_SIZE + _NACKLength);
 
-    case PayloadType::NEGATIVEACK: {
-        // send NACK
-        uint8_t *message = createGenericHeader(action.type, _NACKLength);
-        message[8] = action.value;
-        sendedBytes = sendUdpMessage(message, DoIPMessage::DOIP_HEADER_SIZE + _NACKLength);
+    //     if (action.value == _IncorrectPatternFormatCode ||
+    //         action.value == _InvalidPayloadLengthCode) {
+    //         return -1;
+    //     } else {
+    //         // discard message when value 0x01, 0x02, 0x03
+    //     }
+    //     return sendedBytes;
+    // }
 
-        if (action.value == _IncorrectPatternFormatCode ||
-            action.value == _InvalidPayloadLengthCode) {
-            return -1;
-        } else {
-            // discard message when value 0x01, 0x02, 0x03
-        }
-        return sendedBytes;
-    }
+    // case PayloadType::VEHICLEIDENTREQUEST: {
+    //     uint8_t *message = createVehicleIdentificationResponse(VIN, logicalGatewayAddress, EID, GID, FurtherActionReq);
+    //     sendedBytes = sendUdpMessage(message, DoIPMessageHeader::DOIP_HEADER_SIZE + _VIResponseLength);
 
-    case PayloadType::VEHICLEIDENTREQUEST: {
-        uint8_t *message = createVehicleIdentificationResponse(VIN, logicalGatewayAddress, EID, GID, FurtherActionReq);
-        sendedBytes = sendUdpMessage(message, DoIPMessage::DOIP_HEADER_SIZE + _VIResponseLength);
+    //     return sendedBytes;
+    // }
 
-        return sendedBytes;
-    }
-
-    default: {
-        std::cerr << "not handled payload type occured in receiveUdpMessage()" << '\n';
-        return -1;
-    }
-    }
+    // default: {
+    //     std::cerr << "not handled payload type occured in receiveUdpMessage()" << '\n';
+    //     return -1;
+    // }
+    // }
     return -1;
 }
 
@@ -242,7 +247,7 @@ int DoIPServer::sendVehicleAnnouncement() {
 
     for (int i = 0; i < A_DoIP_Announce_Num; i++) {
 
-        sendedmessage = sendto(server_socket_udp, message, DoIPMessage::DOIP_HEADER_SIZE + _VIResponseLength, 0, reinterpret_cast<struct sockaddr *>(&clientAddress), sizeof(clientAddress));
+        sendedmessage = sendto(server_socket_udp, message, DoIPMessageHeader::DOIP_HEADER_SIZE + _VIResponseLength, 0, reinterpret_cast<struct sockaddr *>(&clientAddress), sizeof(clientAddress));
 
         if (sendedmessage > 0) {
             std::cout << "Sending Vehicle Announcement" << '\n';

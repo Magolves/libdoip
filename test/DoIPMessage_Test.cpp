@@ -166,7 +166,7 @@ TEST_SUITE("DoIPMessage") {
         CHECK(msg.getPayloadSize() == 7);
 
         ByteArray msg_conv = msg.toBytes();
-        CHECK(msg_conv.size() == 7 + DoIPMessage::DOIP_HEADER_SIZE);
+        CHECK(msg_conv.size() == 7 + DoIPMessageHeader::DOIP_HEADER_SIZE);
 
         for(size_t i = 0; i < sizeof(example_diag); i++) {
             CHECK_MESSAGE(msg_conv.at(i) == example_diag[i], "Position ", i, " exp: ", example_diag[i], ", got: ", msg_conv.at(i) );

@@ -1,4 +1,5 @@
 #include "RoutingActivationHandler.h"
+#include "DoIPMessage.h"
 
 namespace doip {
 
@@ -47,9 +48,9 @@ uint8_t parseRoutingActivation(uint8_t *data) {
 uint8_t *createRoutingActivationResponse(const DoIPAddress &sourceAddress, const DoIPAddress &clientAddress,
                                          uint8_t responseCode) {
 
-    uint8_t *message = createGenericHeader(PayloadType::ROUTINGACTIVATIONRESPONSE,
-                                           _ActivationResponseLength);
-
+    //uint8_t *message = createGenericHeader(PayloadType::ROUTINGACTIVATIONRESPONSE,
+    //                                       _ActivationResponseLength);
+    uint8_t *message = new uint8_t[DoIPMessageHeader::DOIP_HEADER_SIZE + _ActivationResponseLength];
     // Logical address of external test equipment
     message[8] = clientAddress.hsb();
     message[9] = clientAddress.lsb();
