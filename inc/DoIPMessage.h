@@ -189,6 +189,18 @@ struct DoIPMessage {
         return std::nullopt;
     }
 
+    /**
+     * @brief Get the Diagnostic Message Payload (if message is a Diagnostic Message).
+     *
+     * @return std::optional<std::pair<const uint8_t*, size_t>> Pointer to payload data and size if present, std::nullopt otherwise
+     */
+    std::optional<std::pair<const uint8_t*, size_t>> getDiagnosticMessagePayload() const {
+        if (m_payload_type == DoIPPayloadType::DiagnosticMessage && m_payload.size() > 4) {
+            return std::make_pair(m_payload.data() + 4, m_payload.size() - 4);
+        }
+        return std::nullopt;
+    }
+
     void appendPayloadType(ByteArray &bytes) const {
         uint16_t plt = static_cast<uint16_t>(m_payload_type);
         bytes.emplace_back(plt >> 8 & 0xff);

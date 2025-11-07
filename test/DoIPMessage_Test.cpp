@@ -156,20 +156,35 @@ TEST_SUITE("DoIPMessage") {
 
     TEST_CASE("Init from raw bytes - diagnostic message") {
         // Diag message with RDBI request
-        const uint8_t example_diag[] = {PROTOCOL_VERSION, PROTOCOL_VERSION_INV, 0x80, 0x01, 0x00, 0x00, 0x00, 0x03, 0x22, 0xFD, 0x10};
+        const uint8_t example_diag[] = {PROTOCOL_VERSION, PROTOCOL_VERSION_INV, 0x80, 0x01, 0x00, 0x00, 0x00, 0x07, DoIPAddress::MIN_SOURCE_ADDRESS >> 8, DoIPAddress::MIN_SOURCE_ADDRESS & 0xFF, 0xca, 0xfe, 0x22, 0xFD, 0x10};
         auto opt_msg = DoIPMessage::fromRaw(example_diag, sizeof(example_diag));
 
         REQUIRE_MESSAGE(opt_msg.has_value(), "No message was created");
 
         auto msg = opt_msg.value();
         CHECK(msg.getPayloadType() == DoIPPayloadType::DiagnosticMessage);
-        CHECK(msg.getPayloadSize() == 3);
+        CHECK(msg.getPayloadSize() == 7);
 
         ByteArray msg_conv = msg.toBytes();
-        CHECK(msg_conv.size() == 3 + DoIPMessage::DOIP_HEADER_SIZE);
+        CHECK(msg_conv.size() == 7 + DoIPMessage::DOIP_HEADER_SIZE);
 
         for(size_t i = 0; i < sizeof(example_diag); i++) {
             CHECK_MESSAGE(msg_conv.at(i) == example_diag[i], "Position ", i, " exp: ", example_diag[i], ", got: ", msg_conv.at(i) );
         }
+
+        auto optSa = msg.getSourceAddress();
+        REQUIRE_MESSAGE(optSa.has_value(), "No source address extracted");
+        CHECK(optSa->toUint16() == DoIPAddress::MIN_SOURCE_ADDRESS);
+
+        auto optTa = msg.getTargetAddress();
+        REQUIRE_MESSAGE(optTa.has_value(), "No target address extracted");
+        CHECK(optTa->toUint16() == 0xcafe);
+
+        auto optPayload = msg.getDiagnosticMessagePayload();
+        REQUIRE_MESSAGE(optPayload.has_value(), "No diagnostic payload extracted");
+        CHECK(optPayload->second == 3);  // size is the second element of the pair
+        CHECK(optPayload->first[0] == 0x22);
+        CHECK(optPayload->first[1] == 0xFD);
+        CHECK(optPayload->first[2] == 0x10);
     }
 }

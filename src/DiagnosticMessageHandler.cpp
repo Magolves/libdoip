@@ -36,10 +36,6 @@ DoIPDiagnosticAck handleDiagnosticMessage(DiagnosticCallback callback, const DoI
 
     if (callback) {
         size_t cb_message_length = msg.getPayloadSize() - _DiagnosticMessageMinimumLength;
-        // uint8_t *cb_message = new uint8_t[cb_message_length];
-
-        // std::memcpy(cb_message, payload.data() + _DiagnosticMessageMinimumLength, cb_message_length);
-
         callback(optTargetAddress.value(), msg.getPayload().data(), cb_message_length);
 
     }

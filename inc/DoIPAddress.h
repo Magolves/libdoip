@@ -75,7 +75,7 @@ struct DoIPAddress {
      *
      * @return The address as a 16-bit unsigned integer in host byte order
      */
-    uint16_t as_uint16() const { return (m_bytes[0] << 8) | m_bytes[1]; }
+    uint16_t toUint16() const { return (m_bytes[0] << 8) | m_bytes[1]; }
 
     /**
      * @brief Gets a pointer to the internal byte array.
@@ -154,7 +154,7 @@ struct DoIPAddress {
      * @return true if both addresses are equal, false otherwise
      */
     bool operator==(const DoIPAddress& other) const {
-        return as_uint16() == other.as_uint16();
+        return toUint16() == other.toUint16();
     }
 
     /**
@@ -177,12 +177,25 @@ struct DoIPAddress {
      * @return false the source address is NOT valid
      */
     bool isValidSourceAddress() {
-        return minSourceAddress <= as_uint16() && maxSourceAddress >= as_uint16();
+        return isValidSourceAddress(m_bytes.data());
     }
 
+    /**
+     * @brief Check if source address is valid
+     * @param data the data array containing the address
+     * @param offset the offset in the data array where the address starts
+     * @return true the source address is valid
+     * @return false the source address is NOT valid
+     */
+    static bool isValidSourceAddress(const uint8_t* data, size_t offset = 0) {
+        uint16_t addr_value = (data[offset] << 8) | data[offset + 1];
 
-    static constexpr uint16_t minSourceAddress = 3584; // 0x0E00
-    static constexpr uint16_t maxSourceAddress = 4095; // 0x0FFF
+        return MIN_SOURCE_ADDRESS <= addr_value && MAX_SOURCE_ADDRESS >= addr_value;
+    }
+
+    // ?? Nothing found in ISO 13400-2 ??
+    static constexpr uint16_t MIN_SOURCE_ADDRESS = 3584; // 0x0E00
+    static constexpr uint16_t MAX_SOURCE_ADDRESS = 4095; // 0x0FFF
 
   private:
     static constexpr uint8_t HSB = 0; ///< Index for High Significant Byte in the byte array
@@ -208,7 +221,7 @@ constexpr DoIPAddress ZeroAddress;
  * @return Reference to the output stream for chaining
  */
 inline std::ostream& operator<<(std::ostream& os, const DoIPAddress& addr) {
-    os << "0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(4) << addr.as_uint16();
+    os << "0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(4) << addr.toUint16();
     return os;
 }
 
