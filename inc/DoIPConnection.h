@@ -10,7 +10,6 @@
 #include <net/if.h>
 #include <unistd.h>
 #include "RoutingActivationHandler.h"
-#include "VehicleIdentificationHandler.h"
 #include "RoutingActivationHandler.h"
 #include "DiagnosticMessageHandler.h"
 #include "AliveCheckTimer.h"

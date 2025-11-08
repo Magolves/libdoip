@@ -35,7 +35,6 @@ set(SOURCES
     src/DoIPConnection.cpp
     src/DoIPServer.cpp
     src/RoutingActivationHandler.cpp
-    src/VehicleIdentificationHandler.cpp
 )
 
 

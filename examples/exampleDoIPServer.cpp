@@ -109,8 +109,12 @@ void ConfigureDoipServer() {
     server.setVIN("FOOBAR");
     server.setLogicalGatewayAddress(LOGICAL_ADDRESS.toUint16());
     server.setGID(0);
-    server.setFAR(0);
+    server.setFAR(DoIPFurtherAction::NoFurtherAction);
     server.setEID(0);
+
+    // be more relaxed for testing purposes
+    server.setAnnounceInterval(2000);
+    server.setAnnounceNum(10);
 
     // doipserver->setAnnounceNum(tempNum);
     // doipserver->setAnnounceInterval(tempInterval);

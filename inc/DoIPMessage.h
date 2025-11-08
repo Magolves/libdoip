@@ -3,6 +3,8 @@
 
 #include <optional>
 #include <stdint.h>
+#include <iostream>
+#include <iomanip>
 
 #include "ByteArray.h"
 #include "DoIPAddress.h"
@@ -484,6 +486,28 @@ struct DoIPMessage {
         bytes.emplace_back(size & 0xff);
     }
 };
+
+/**
+ * @brief Stream operator for DoIPMessage
+ *
+ * Prints the protocol version, payload type, payload size, and payload data.
+ * Example output:
+ * "DoIPMessage [Protocol: 0x04, Type: DiagnosticMessage (0x8001), Size: 5 bytes, Payload: 00.01.00.3E.01]"
+ *
+ * @param os Output stream
+ * @param msg DoIPMessage to print
+ * @return std::ostream& Reference to the output stream
+ */
+inline std::ostream& operator<<(std::ostream& os, const DoIPMessage& msg) {
+    os << "V"
+       << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
+       << static_cast<unsigned int>(PROTOCOL_VERSION) << std::dec
+       << "|" << msg.getPayloadType()
+       << "|L" << msg.getPayloadSize() << " bytes"
+       << "| " << msg.getPayload() << "]";
+
+    return os;
+}
 
 } // namespace doip
 

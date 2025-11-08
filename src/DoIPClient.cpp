@@ -138,34 +138,14 @@ void DoIPClient::receiveMessage() {
         return;
     }
 
-    printf("Client received: ");
-    for (int i = 0; i < bytesRead; i++) {
-        printf("0x%02X ", _receivedData[i]);
-    }
-    printf("\n ");
-
-    auto optMsgHeader = DoIPMessageHeader::parseHeader(_receivedData, static_cast<size_t>(bytesRead));
-    if (!optMsgHeader.has_value()) {
-        std::cerr << "Failed to parse DoIP message header" << '\n';
+    auto optMmsg = DoIPMessage::fromRaw(_receivedData, static_cast<size_t>(bytesRead));
+    if (!optMmsg.has_value()) {
+        std::cerr << "Failed to parse DoIP message from received data" << '\n';
         return;
     }
-
-    auto [payloadType, payloadLength] = optMsgHeader.value();
-
-    switch (payloadType) {
-        case DoIPPayloadType::DiagnosticMessageAck:
-                    std::cout << "Client received diagnostic message positive ack with code: ";
-            printf("0x%02X ", _receivedData[12]);
-            break;
-        case DoIPPayloadType::DiagnosticMessageNegativeAck:
-            std::cout << "Client received diagnostic message negative ack with code: ";
-            printf("0x%02X ", _receivedData[12]);
-            break;
-        default:
-            std::cerr << "not handled payload type occured in receiveMessage()";
-            break;
-    }
-
+    DoIPMessage msg = optMmsg.value();
+    std::cout << "Client received TCP message: ";
+    std::cout << msg;
     std::cout << '\n';
 }
 
@@ -176,10 +156,16 @@ void DoIPClient::receiveUdpMessage() {
     int bytesRead;
     bytesRead = recvfrom(_sockFd_udp, _receivedData, _maxDataSize, 0, reinterpret_cast<struct sockaddr *>(&_clientAddr), &length);
 
-    std::cout << "Client received UDP message: ";
-    for (int i = 0; i < bytesRead; i++) {
-        printf("0x%02X ", _receivedData[i]);
+    auto optMmsg = DoIPMessage::fromRaw(_receivedData, static_cast<size_t>(bytesRead));
+    if (!optMmsg.has_value()) {
+        std::cerr << "Failed to parse DoIP message from UDP data" << '\n';
+        return;
     }
+
+    DoIPMessage msg = optMmsg.value();
+
+    std::cout << "Client received UDP message: ";
+    std::cout << msg;
     std::cout << '\n';
     // if (PayloadType::VEHICLEIDENTRESPONSE == parseGenericHeader(_receivedData, static_cast<size_t>(bytesRead)).type) {
     //     parseVIResponseInformation(_receivedData);

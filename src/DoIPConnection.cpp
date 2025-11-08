@@ -46,6 +46,8 @@ int DoIPConnection::receiveTcpMessage() {
         auto plType = optHeader->first;
         auto payloadLength = optHeader->second;
 
+        std::cout << "Payload Type: " << plType << ", Payload Length: " << payloadLength << '\n';
+
 
         if (payloadLength > 0) {
             std::cout << "Waiting for " << payloadLength << " bytes of payload..." << '\n';

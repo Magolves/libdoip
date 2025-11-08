@@ -1,6 +1,5 @@
 #include "DoIPMessage.h"
 #include "DoIPServer.h"
-#include "VehicleIdentificationHandler.h"
 #include <doctest/doctest.h>
 #include <stdint.h>
 #include <string>
@@ -76,7 +75,7 @@ TEST_SUITE("VehicleIdentificationHandler") {
             // Sync Status (1 byte)
             0x00};
 
-        
+
         CHECK(msg.getPayloadType() == DoIPPayloadType::VehicleIdentificationResponse);
         CHECK(payload.size() == expected.size());
         CHECK_BYTE_ARRAY_EQ(payload, expected);

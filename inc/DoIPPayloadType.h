@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <iostream>
+#include <iomanip>
 #include <optional>
 
 namespace doip {
@@ -73,9 +74,84 @@ constexpr std::optional<DoIPPayloadType> toPayloadType(uint16_t value) noexcept 
 }
 
 constexpr std::optional<DoIPPayloadType> toPayloadType(uint8_t hsb, uint8_t lsb) noexcept {
-    return toPayloadType(hsb << 8 | lsb);
+    return toPayloadType(static_cast<uint16_t>((hsb << 8) | lsb));
 }
 
+/**
+ * @brief Stream operator for DoIPPayloadType enum
+ *
+ * Prints the payload type name and its hex value.
+ * Example: "DiagnosticMessage (0x8001)"
+ *
+ * @param os Output stream
+ * @param type Payload type to print
+ * @return std::ostream& Reference to the output stream
+ */
+inline std::ostream& operator<<(std::ostream& os, DoIPPayloadType type) {
+    const char* name = nullptr;
+
+    switch (type) {
+        case DoIPPayloadType::NegativeAck:
+            name = "NegativeAck";
+            break;
+        case DoIPPayloadType::VehicleIdentificationRequest:
+            name = "VehicleIdentificationRequest";
+            break;
+        case DoIPPayloadType::VehicleIdentificationRequestWithEid:
+            name = "VehicleIdentificationRequestWithEid";
+            break;
+        case DoIPPayloadType::VehicleIdentificationRequestWithVin:
+            name = "VehicleIdentificationRequestWithVin";
+            break;
+        case DoIPPayloadType::VehicleIdentificationResponse:
+            name = "VehicleIdentificationResponse";
+            break;
+        case DoIPPayloadType::RoutingActivationRequest:
+            name = "RoutingActivationRequest";
+            break;
+        case DoIPPayloadType::RoutingActivationResponse:
+            name = "RoutingActivationResponse";
+            break;
+        case DoIPPayloadType::AliveCheckRequest:
+            name = "AliveCheckRequest";
+            break;
+        case DoIPPayloadType::AliveCheckResponse:
+            name = "AliveCheckResponse";
+            break;
+        case DoIPPayloadType::EntityStatusRequest:
+            name = "EntityStatusRequest";
+            break;
+        case DoIPPayloadType::EntityStatusResponse:
+            name = "EntityStatusResponse";
+            break;
+        case DoIPPayloadType::DiagnosticPowerModeRequest:
+            name = "DiagnosticPowerModeRequest";
+            break;
+        case DoIPPayloadType::DiagnosticPowerModeResponse:
+            name = "DiagnosticPowerModeResponse";
+            break;
+        case DoIPPayloadType::DiagnosticMessage:
+            name = "DiagnosticMessage";
+            break;
+        case DoIPPayloadType::DiagnosticMessageAck:
+            name = "DiagnosticMessageAck";
+            break;
+        case DoIPPayloadType::DiagnosticMessageNegativeAck:
+            name = "DiagnosticMessageNegativeAck";
+            break;
+        case DoIPPayloadType::PeriodicDiagnosticMessage:
+            name = "PeriodicDiagnosticMessage";
+            break;
+        default:
+            name = "Unknown";
+            break;
+    }
+
+    os << name << " (0x" << std::hex << std::uppercase << std::setw(4) << std::setfill('0')
+       << static_cast<uint16_t>(type) << std::dec << ")";
+
+    return os;
+}
 
 } // namespace doip
 

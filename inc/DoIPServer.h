@@ -12,7 +12,6 @@
 #include <unistd.h>
 #include <memory>
 #include "RoutingActivationHandler.h"
-#include "VehicleIdentificationHandler.h"
 
 #include "RoutingActivationHandler.h"
 #include "DiagnosticMessageHandler.h"

@@ -94,10 +94,11 @@ ssize_t DoIPServer::reactToReceivedUdpMessage(size_t bytesRead) {
 
     auto plType = optHeader->first;
     //auto payloadLength = optHeader->second;
-
+    std::cout << "Received UDP message with Payload Type: " << plType << '\n';
     switch (plType) {
     case DoIPPayloadType::VehicleIdentificationRequest: {
         DoIPMessage msg = DoIPMessage::makeVehicleIdentificationResponse(m_VIN, m_gatewayAddress, m_EID, m_GID);
+        std::cout << "Send " << msg << '\n';
         ssize_t sendedBytes = sendUdpMessage(msg.toByteArray().data(), DoIPMessageHeader::DOIP_HEADER_SIZE + msg.getPayloadSize());
 
         return static_cast<int>(sendedBytes);
@@ -121,7 +122,6 @@ ssize_t DoIPServer::sendUdpMessage(const uint8_t *message, size_t messageLength)
 }
 
 void DoIPServer::setEIDdefault() {
-
     int fd;
 
     struct ifreq ifr;
@@ -241,9 +241,10 @@ ssize_t DoIPServer::sendVehicleAnnouncement() {
         sentBytes = sendto(m_udp_sock, msgBytes.data(), msgBytes.size(), 0, reinterpret_cast<struct sockaddr *>(&m_clientAddress), sizeof(m_clientAddress));
 
         if (sentBytes > 0) {
-            std::cout << "Sending Vehicle Announcement" << '\n';
+            std::cout << "Sending Vehicle Announcement" <<  '\n';
+            std::cout << msg << '\n';
         } else {
-            std::cout << "Failed Sending Vehicle Announcement" << '\n';
+            std::cerr << "Failed Sending Vehicle Announcement" << msg << '\n';
         }
         usleep(m_announceInterval * 1000);
     }

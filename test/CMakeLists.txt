@@ -2,6 +2,7 @@
 add_executable(${DOIP_NAME}_tests
     ByteArray_Test.cpp
     DoIPMessage_Test.cpp
+    DoIPMessage_StreamOperator_Test.cpp
     Main_Test.cpp
     RoutingActivationHandler_Test.cpp
     Identifiers_Test.cpp
