@@ -20,7 +20,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang
         -Wshadow                # Warn about variable shadowing
         -Wsign-conversion       # Warn about sign conversions
         -Wsign-promo            # Warn about promotions from signed to unsigned
-        -Wstrict-overflow=5     # Warn about optimizations based on strict overflow rules
+        -Wstrict-overflow=2     # Warn about optimizations based on strict overflow rules (level 2 = reasonable balance)
         -Wswitch-default        # Warn about switch statements without default
         -Wundef                 # Warn about undefined macros
         -Wunreachable-code      # Warn about unreachable code
