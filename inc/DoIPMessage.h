@@ -10,6 +10,9 @@
 #include "DoIPNegativeAck.h"
 #include "DoIPNegativeDiagnosticAck.h"
 #include "DoIPPayloadType.h"
+#include "DoIPIdentifiers.h"
+#include "DoIPFurtherAction.h"
+#include "DoIPSyncStatus.h"
 
 namespace doip {
 
@@ -271,13 +274,28 @@ struct DoIPMessage {
     }
 
     /**
-     * @brief 
+     * @brief
      *
      * @return DoIPMessage
      */
     static DoIPMessage makeVehicleIdentificationRequest() {
         return DoIPMessage(DoIPPayloadType::VehicleIdentificationRequest, {});
     }
+
+    static DoIPMessage makeVehicleIdentificationResponse(const DoIPVIN& vin, const DoIPAddress& logicalAddress, const DoIPEID& entityType, const DoIPGID& groupId, DoIPFurtherAction furtherAction = DoIPFurtherAction::NoFurtherAction, DoIPSyncStatus syncStatus = DoIPSyncStatus::GidVinSynchronized) {
+        // Table 5, p. 21
+        ByteArray payload;
+
+        vin.appendTo(payload);
+        logicalAddress.appendTo(payload);
+        entityType.appendTo(payload);
+        groupId.appendTo(payload);
+        payload.emplace_back(static_cast<uint8_t>(furtherAction));
+        payload.emplace_back(static_cast<uint8_t>(syncStatus));
+
+        return DoIPMessage(DoIPPayloadType::VehicleIdentificationResponse, payload);
+    }
+
 
     /**
      * @brief Creates a generic DoIP negative response (NACK).
