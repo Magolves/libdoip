@@ -541,6 +541,21 @@ TEST_SUITE("GenericFixedId") {
             CHECK(gid.size() == 6);
         }
 
+        SUBCASE("Construction from uint32_t - longer") {
+            uint32_t long_value = 0x544F4F4C; // ASCII for "TOOL"
+            DoIPGID gid(long_value);
+            CHECK(gid.toString() == "TOOL");
+            CHECK(gid.size() == 6);
+        }
+
+
+        SUBCASE("Construction from uint64_t - longer") {
+            uint64_t long_value = 0x544F4F4C4F4E47; // ASCII for "TOOLONG"
+            DoIPGID gid(long_value);
+            CHECK(gid.toString() == "OOLONG"); //
+            CHECK(gid.size() == 6);
+        }
+
         SUBCASE("Construction from byte array") {
             const uint8_t bytes[] = {0x10, 0x20, 0x30, 0x40, 0x50, 0x60};
             DoIPGID gid(bytes, sizeof(bytes));

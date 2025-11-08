@@ -112,8 +112,8 @@ void ConfigureDoipServer() {
     server.setFAR(0);
     server.setEID(0);
 
-    // doipserver->setA_DoIP_Announce_Num(tempNum);
-    // doipserver->setA_DoIP_Announce_Interval(tempInterval);
+    // doipserver->setAnnounceNum(tempNum);
+    // doipserver->setAnnounceInterval(tempInterval);
 
 }
 

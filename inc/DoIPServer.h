@@ -18,6 +18,7 @@
 #include "DiagnosticMessageHandler.h"
 #include "AliveCheckTimer.h"
 #include "DoIPConnection.h"
+#include "DoIPFurtherAction.h"
 
 namespace doip {
 
@@ -30,7 +31,9 @@ const int _ServerPort = 13400;
 class DoIPServer {
 
 public:
-    DoIPServer() = default;
+    DoIPServer() {
+        m_receiveBuf.reserve(MAX_ISOTP_MTU);
+    };
 
     void setupTcpSocket();
     std::unique_ptr<DoIPConnection> waitForTcpConnection();
@@ -40,39 +43,43 @@ public:
     void closeTcpSocket();
     void closeUdpSocket();
 
-    int sendVehicleAnnouncement();
+    ssize_t sendVehicleAnnouncement();
 
     void setEIDdefault();
     void setVIN(const std::string& VINString);
     void setLogicalGatewayAddress(const unsigned short inputLogAdd);
     void setEID(const uint64_t inputEID);
     void setGID(const uint64_t inputGID);
-    void setFAR(const unsigned int inputFAR);
-    void setA_DoIP_Announce_Num(int Num);
-    void setA_DoIP_Announce_Interval(unsigned int Interval);
+    void setFAR(DoIPFurtherAction inputFAR);
+    void setAnnounceNum(int Num);
+    void setAnnounceInterval(unsigned int Interval);
 
 private:
 
-    int server_socket_tcp{-1}, server_socket_udp{-1};
-    struct sockaddr_in serverAddress, clientAddress;
-    uint8_t data[_MaxDataSize] = {0};
+    int m_tcp_sock{-1};
+    int m_udp_sock{-1};
+    struct sockaddr_in m_serverAddress;
+    struct sockaddr_in m_clientAddress;
+    ByteArray m_receiveBuf{};
 
-    std::string VIN = "00000000000000000";
-    DoIPAddress logicalGatewayAddress = ZeroAddress;
-    uint8_t EID [6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; // entity id
-    uint8_t GID [6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; // group id
-    uint8_t FurtherActionReq = 0x00;
+    DoIPVIN m_VIN;
+    DoIPAddress m_gatewayAddress = ZeroAddress;
+    DoIPEID m_EID = DoIPEID::Zero;
+    DoIPGID m_GID = DoIPGID::Zero;
+    DoIPFurtherAction m_FurtherActionReq = DoIPFurtherAction::NoFurtherAction;
 
-    int A_DoIP_Announce_Num = 3;    //Default Value = 3
-    unsigned int A_DoIP_Announce_Interval = 500; //Default Value = 500ms
+    int m_announceNum = 3;    //Default Value = 3
+    unsigned int m_announceInterval = 500; //Default Value = 500ms
 
-    int broadcast = 1;
+    int m_broadcast = 1;
 
-    int reactToReceivedUdpMessage(size_t bytesRead);
-
-    int sendUdpMessage(uint8_t* message, size_t messageLength);
+    ssize_t reactToReceivedUdpMessage(size_t bytesRead);
+    ssize_t sendUdpMessage(const uint8_t* message, size_t messageLength);
 
     void setMulticastGroup(const char* address);
+
+    ssize_t sendNegativeUdpAck(DoIPNegativeAck ackCode);
+
 };
 
 } // namespace doip

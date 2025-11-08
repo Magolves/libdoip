@@ -55,7 +55,7 @@ class DoIPClient {
   private:
     uint8_t _receivedData[_maxDataSize] = {0};
     int _sockFd{-1}, _sockFd_udp{-1}, _connected{-1};
-    int broadcast = 1;
+    int m_broadcast = 1;
     struct sockaddr_in _serverAddr, _clientAddr;
     DoIPAddress m_sourceAddress = ZeroAddress;
 

@@ -18,7 +18,7 @@ TEST_SUITE("DoIPMessage") {
         CHECK(msg.getMessageSize() == 10);
         CHECK(msg.getPayloadType() == DoIPPayloadType::AliveCheckRequest);
 
-        const auto bytes = msg.toBytes();
+        const auto bytes = msg.toByteArray();
 
         for (size_t i = 0; i < bytes.size(); i++) {
             CHECK_MESSAGE(bytes.at(i) == expected.at(i), "Bytes to not match at pos ", i, ", got ", bytes.at(i), ", expected ", expected.at(i));
@@ -54,7 +54,7 @@ TEST_SUITE("DoIPMessage") {
         CHECK(msg.getMessageSize() == 16);
         CHECK(msg.getPayloadType() == DoIPPayloadType::DiagnosticMessage);
 
-        const auto bytes = msg.toBytes();
+        const auto bytes = msg.toByteArray();
         for (size_t i = 0; i < bytes.size(); i++) {
             CHECK_MESSAGE(bytes.at(i) == expected.at(i), "Bytes to not match at pos ", i, ", got ", bytes.at(i), ", expected ", expected.at(i));
         }
@@ -76,7 +76,7 @@ TEST_SUITE("DoIPMessage") {
         CHECK(msg.getMessageSize() == 17);
         CHECK(msg.getPayloadType() == DoIPPayloadType::DiagnosticMessageAck);
 
-        const auto bytes = msg.toBytes();
+        const auto bytes = msg.toByteArray();
         for (size_t i = 0; i < bytes.size(); i++) {
             CHECK_MESSAGE(bytes.at(i) == expected.at(i), "Bytes to not match at pos ", i, ", got ", bytes.at(i), ", expected ", expected.at(i));
         }
@@ -103,7 +103,7 @@ TEST_SUITE("DoIPMessage") {
         CHECK(msg.getMessageSize() == 17);
         CHECK(msg.getPayloadType() == DoIPPayloadType::DiagnosticMessageNegativeAck);
 
-        const auto bytes = msg.toBytes();
+        const auto bytes = msg.toByteArray();
         for (size_t i = 0; i < bytes.size(); i++) {
             CHECK_MESSAGE(bytes.at(i) == expected.at(i), "Bytes to not match at pos ", i, ", got ", bytes.at(i), ", expected ", expected.at(i));
         }
@@ -131,7 +131,7 @@ TEST_SUITE("DoIPMessage") {
         CHECK(msg.getMessageSize() == 10);
         CHECK(msg.getPayloadType() == DoIPPayloadType::AliveCheckResponse);
 
-        const auto bytes = msg.toBytes();
+        const auto bytes = msg.toByteArray();
         for (size_t i = 0; i < bytes.size(); i++) {
             CHECK_MESSAGE(bytes.at(i) == expected.at(i), "Bytes to not match at pos ", i, ", got ", bytes.at(i), ", expected ", expected.at(i));
         }
@@ -165,7 +165,7 @@ TEST_SUITE("DoIPMessage") {
         CHECK(msg.getPayloadType() == DoIPPayloadType::DiagnosticMessage);
         CHECK(msg.getPayloadSize() == 7);
 
-        ByteArray msg_conv = msg.toBytes();
+        ByteArray msg_conv = msg.toByteArray();
         CHECK(msg_conv.size() == 7 + DoIPMessageHeader::DOIP_HEADER_SIZE);
 
         for(size_t i = 0; i < sizeof(example_diag); i++) {

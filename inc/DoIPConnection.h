@@ -30,8 +30,8 @@ const size_t MAX_ISOTP_MTU = 4095;
 class DoIPConnection {
 
 public:
-    DoIPConnection(int tcpSocket, const DoIPAddress& logicalGatewayAddress):
-        m_tcpSocket(tcpSocket), m_logicalGatewayAddress(logicalGatewayAddress) { m_receiveBuf.reserve(MAX_ISOTP_MTU); };
+    DoIPConnection(int tcpSocket, const DoIPAddress& m_gatewayAddress):
+        m_tcpSocket(tcpSocket), m_m_gatewayAddress(m_gatewayAddress) { m_receiveBuf.reserve(MAX_ISOTP_MTU); };
 
     int receiveTcpMessage();
     size_t receiveFixedNumberOfBytesFromTCP(uint8_t *receivedData, size_t payloadLength);
@@ -59,7 +59,7 @@ private:
     DiagnosticMessageNotification m_notify_application;
 
     DoIPAddress m_routedClientAddress;
-    DoIPAddress m_logicalGatewayAddress;
+    DoIPAddress m_m_gatewayAddress;
 
     void closeSocket();
 

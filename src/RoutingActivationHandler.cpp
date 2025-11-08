@@ -41,19 +41,19 @@ uint8_t parseRoutingActivation(uint8_t *data) {
 /**
  * Create the complete routing activation response, which also contains the
  * generic header
- * @param clientAddress     address of the test equipment
+ * @param m_clientAddress     address of the test equipment
  * @param responseCode      routing activation response code
  * @return                  complete routing activation response
  */
-uint8_t *createRoutingActivationResponse(const DoIPAddress &sourceAddress, const DoIPAddress &clientAddress,
+uint8_t *createRoutingActivationResponse(const DoIPAddress &sourceAddress, const DoIPAddress &m_clientAddress,
                                          uint8_t responseCode) {
 
     //uint8_t *message = createGenericHeader(PayloadType::ROUTINGACTIVATIONRESPONSE,
     //                                       _ActivationResponseLength);
     uint8_t *message = new uint8_t[DoIPMessageHeader::DOIP_HEADER_SIZE + _ActivationResponseLength];
     // Logical address of external test equipment
-    message[8] = clientAddress.hsb();
-    message[9] = clientAddress.lsb();
+    message[8] = m_clientAddress.hsb();
+    message[9] = m_clientAddress.lsb();
 
     // logical address of DoIP entity
     message[10] = sourceAddress.hsb();

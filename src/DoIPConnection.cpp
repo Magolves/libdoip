@@ -38,7 +38,7 @@ int DoIPConnection::receiveTcpMessage() {
 
         auto optHeader = DoIPMessageHeader::parseHeader(genericHeader, DoIPMessageHeader::DOIP_HEADER_SIZE);
         if (!optHeader.has_value()) {
-            auto sentBytes = sendNegativeAck(DoIPNegativeAck::InvalidPayloadLength);
+            auto sentBytes = sendNegativeAck(DoIPNegativeAck::IncorrectPatternFormat);
             closeSocket();
             return sentBytes;
         }
@@ -115,7 +115,7 @@ int DoIPConnection::reactOnReceivedTcpMessage(const DoIPMessage &message) {
 
     case DoIPPayloadType::AliveCheckRequest: {
         // Handle Alive Check Request
-        sentBytes = sendMessage(DoIPMessage::makeAliveCheckResponse(m_logicalGatewayAddress).toBytes());
+        sentBytes = sendMessage(DoIPMessage::makeAliveCheckResponse(m_m_gatewayAddress).toByteArray());
         break;
     }
 
@@ -133,7 +133,7 @@ int DoIPConnection::reactOnReceivedTcpMessage(const DoIPMessage &message) {
         }
 
         m_routedClientAddress = optSourceAddress.value();
-        sentBytes = sendMessage(DoIPMessage::makeRoutingResponse(message, m_logicalGatewayAddress).toBytes());
+        sentBytes = sendMessage(DoIPMessage::makeRoutingResponse(message, m_m_gatewayAddress).toByteArray());
 
         break;
     }
@@ -220,7 +220,7 @@ void DoIPConnection::sendDiagnosticPayload(const DoIPAddress &sourceAddress, con
     std::cout << '\n';
 
     // uint8_t* message = createDiagnosticMessage(sourceAddress, m_routedClientAddress, data, length);
-    ByteArray message = DoIPMessage::makeDiagnosticMessage(sourceAddress, m_routedClientAddress, payload).toBytes();
+    ByteArray message = DoIPMessage::makeDiagnosticMessage(sourceAddress, m_routedClientAddress, payload).toByteArray();
 
     sendMessage(message);
 }
@@ -238,12 +238,12 @@ void DoIPConnection::setCallback(DiagnosticCallback dc, DiagnosticMessageNotific
 }
 
 void DoIPConnection::sendDiagnosticAck(const DoIPAddress &sourceAddress) {
-    ByteArray message = DoIPMessage::makeDiagnosticPositiveResponse(sourceAddress, m_routedClientAddress, {}).toBytes();
+    ByteArray message = DoIPMessage::makeDiagnosticPositiveResponse(sourceAddress, m_routedClientAddress, {}).toByteArray();
     sendMessage(message);
 }
 
 void DoIPConnection::sendDiagnosticNegativeAck(const DoIPAddress &sourceAddress, DoIPNegativeDiagnosticAck ackCode) {
-    ByteArray message = DoIPMessage::makeDiagnosticNegativeResponse(sourceAddress, m_routedClientAddress, ackCode, {}).toBytes();
+    ByteArray message = DoIPMessage::makeDiagnosticNegativeResponse(sourceAddress, m_routedClientAddress, ackCode, {}).toByteArray();
     sendMessage(message);
 }
 
@@ -254,6 +254,7 @@ void DoIPConnection::sendDiagnosticNegativeAck(const DoIPAddress &sourceAddress,
  */
 int DoIPConnection::sendNegativeAck(DoIPNegativeAck ackCode) {
     DoIPMessage message = DoIPMessage::makeNegativeAckMessage(ackCode);
-    int sendedBytes = sendMessage(message.getPayload());
-    return sendedBytes;
+    ByteArray msgBytes = message.toByteArray();
+    int sentBytes = sendMessage(msgBytes);
+    return sentBytes;
 }

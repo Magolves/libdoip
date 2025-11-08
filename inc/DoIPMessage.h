@@ -274,14 +274,25 @@ struct DoIPMessage {
     }
 
     /**
-     * @brief
+     * @brief Creates a vehicle identification request message.
      *
-     * @return DoIPMessage
+     * @return DoIPMessage the DoIP message
      */
     static DoIPMessage makeVehicleIdentificationRequest() {
         return DoIPMessage(DoIPPayloadType::VehicleIdentificationRequest, {});
     }
 
+    /**
+     * @brief Creates a vehicle identification response message.
+     *
+     * @param vin the vehicle identification number (VIN)
+     * @param logicalAddress the logical address of the entity
+     * @param entityType the entity identifier (EID)
+     * @param groupId the group identifier (GID)
+     * @param furtherAction the further action code
+     * @param syncStatus the synchronization status
+     * @return DoIPMessage the vehicle identification response message
+     */
     static DoIPMessage makeVehicleIdentificationResponse(const DoIPVIN& vin, const DoIPAddress& logicalAddress, const DoIPEID& entityType, const DoIPGID& groupId, DoIPFurtherAction furtherAction = DoIPFurtherAction::NoFurtherAction, DoIPSyncStatus syncStatus = DoIPSyncStatus::GidVinSynchronized) {
         // Table 5, p. 21
         ByteArray payload;
@@ -403,10 +414,10 @@ struct DoIPMessage {
      * @param actType the activation type
      * @return DoIPMessage the activation response message
      */
-    static DoIPMessage makeRoutingRequest(const DoIPAddress &sa, DoIPActivationType actType = DoIPActivationType::Default) {
+    static DoIPMessage makeRoutingRequest(const DoIPAddress &ea, DoIPActivationType actType = DoIPActivationType::Default) {
         ByteArray payload;
-        payload.reserve(sa.size() + 1 + 4);
-        sa.appendTo(payload);
+        payload.reserve(ea.size() + 1 + 4);
+        ea.appendTo(payload);
         payload.emplace_back(static_cast<uint8_t>(actType));
         // Reserved 4 bytes for further use, p. 67
         payload.insert(payload.end(), {0, 0, 0, 0});
@@ -431,7 +442,7 @@ struct DoIPMessage {
      *
      * @return ByteArray the DoIP message bytes
      */
-    [[nodiscard]] ByteArray toBytes() const {
+    [[nodiscard]] ByteArray toByteArray() const {
         ByteArray bytes;
         bytes.reserve(getMessageSize()); // Pre-allocate memory but keep size = 0
 

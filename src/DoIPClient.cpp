@@ -103,13 +103,13 @@ ssize_t DoIPClient::sendRoutingActivationRequest() {
 
 ssize_t DoIPClient::sendDiagnosticMessage(const DoIPAddress &targetAddress, const ByteArray &payload) {
     DoIPAddress sourceAddress(0x0E, 0x00);
-    ByteArray msg = DoIPMessage::makeDiagnosticMessage(sourceAddress, targetAddress, payload).toBytes();
+    ByteArray msg = DoIPMessage::makeDiagnosticMessage(sourceAddress, targetAddress, payload).toByteArray();
 
     return write(_sockFd, msg.data(), msg.size());
 }
 
 ssize_t DoIPClient::sendAliveCheckResponse() {
-    ByteArray msg = DoIPMessage::makeAliveCheckResponse(m_sourceAddress).toBytes();
+    ByteArray msg = DoIPMessage::makeAliveCheckResponse(m_sourceAddress).toByteArray();
 
     return write(_sockFd, msg.data(), msg.size());
 }
@@ -213,7 +213,7 @@ ssize_t DoIPClient::sendVehicleIdentificationRequest(const char *inet_address) {
         std::cout << "Could not set DoIPAddress. Try again" << '\n';
     }
 
-    int socketError = setsockopt(_sockFd_udp, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast));
+    int socketError = setsockopt(_sockFd_udp, SOL_SOCKET, SO_BROADCAST, &m_broadcast, sizeof(m_broadcast));
 
     if (socketError == 0) {
         std::cout << "Broadcast Option set successfully" << '\n';

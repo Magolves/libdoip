@@ -83,6 +83,27 @@ class GenericFixedId {
     }
 
     /**
+     * @brief Construct a new Generic Fixed Id object
+     *
+     * @tparam integral the integral type
+     * @tparam integral,
+     * typename
+     * @param id_value the identifier value as integral type
+     */
+    template <typename integral,
+              typename = std::enable_if_t<std::is_integral_v<integral>>>
+    explicit GenericFixedId(integral id_value) : m_id{} {
+        //static_assert(ID_LENGTH >= sizeof(integral), "ID_LENGTH is too large for the integral type");
+        // big endian!
+        constexpr size_t sizeof_integral = sizeof(integral);
+        constexpr size_t len = std::min(sizeof_integral, ID_LENGTH);
+        // big endian!
+        for (size_t i = 0; i < len; ++i) {
+            m_id[len - 1 - i] = (id_value >> (i * 8)) & 0xFF;
+        }
+    }
+
+    /**
      * @brief Copy constructor
      */
     GenericFixedId(const GenericFixedId &other) = default;
