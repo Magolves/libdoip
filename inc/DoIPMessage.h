@@ -271,6 +271,15 @@ struct DoIPMessage {
     }
 
     /**
+     * @brief 
+     *
+     * @return DoIPMessage
+     */
+    static DoIPMessage makeVehicleIdentificationRequest() {
+        return DoIPMessage(DoIPPayloadType::VehicleIdentificationRequest, {});
+    }
+
+    /**
      * @brief Creates a generic DoIP negative response (NACK).
      *
      * @param nack the negative response code,

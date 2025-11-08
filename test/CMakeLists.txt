@@ -4,6 +4,7 @@ add_executable(${DOIP_NAME}_tests
     DoIPMessage_Test.cpp
     Main_Test.cpp
     RoutingActivationHandler_Test.cpp
+    VIN_Test.cpp
     # Requires impl
     #VehicleIdentificationHandler_Test.cpp
 )
