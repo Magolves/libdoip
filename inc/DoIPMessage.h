@@ -71,7 +71,11 @@ struct DoIPMessageHeader {
             return std::nullopt;
         }
 
-        size_t payloadLength = static_cast<size_t>(data[4] << 24) | (data[5] << 16) | (data[6] << 8) | data[7];
+        uint32_t b3 = static_cast<uint32_t>(data[4] << 24);
+        uint32_t b2 = static_cast<uint32_t>(data[5] << 16);
+        uint32_t b1 = static_cast<uint32_t>(data[6] << 8);
+        uint32_t b0 = static_cast<uint32_t>(data[7]);
+        size_t payloadLength = static_cast<size_t>(b3 | b2 | b1 | b0);
 
         return std::make_pair(plt.value(), payloadLength);
     }
@@ -411,7 +415,6 @@ struct DoIPMessage {
     /**
      * @brief Creates a routing activation response message.
      *
-     * @param routingReq the routing activation request message
      * @param ea the entity (our) address
      * @param actType the activation type
      * @return DoIPMessage the activation response message
