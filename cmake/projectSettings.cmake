@@ -179,7 +179,6 @@ if(ENABLE_STATIC_ANALYSIS)
             --quiet;
             --suppress=missingIncludeSystem
             --suppress=unusedFunction
-            --suppress=unusedPrivateFunction
         )
         message(STATUS "cppcheck found: ${CPPCHECK_EXE}")
     else()
