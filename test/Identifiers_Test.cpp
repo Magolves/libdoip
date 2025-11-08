@@ -1,10 +1,10 @@
 #include <doctest/doctest.h>
-#include "DoIPVIN.h"
+#include "DoIPIdentifiers.h"
 #include <sstream>
 
 using namespace doip;
 
-TEST_SUITE("DoIPVIN") {
+TEST_SUITE("GenericFixedId") {
 
     TEST_CASE("Default constructor creates empty VIN") {
         DoIPVIN vin;
@@ -20,13 +20,13 @@ TEST_SUITE("DoIPVIN") {
         }
     }
 
-    TEST_CASE("Static VinZero instance") {
-        CHECK(DoIPVIN::VinZero.isEmpty());
-        CHECK(DoIPVIN::VinZero.size() == 17);
+    TEST_CASE("Static Zero instance") {
+        CHECK(DoIPVIN::Zero.isEmpty());
+        CHECK(DoIPVIN::Zero.size() == 17);
 
-        // VinZero should equal default constructed VIN
+        // Zero should equal default constructed identifier
         DoIPVIN default_vin;
-        CHECK(DoIPVIN::VinZero == default_vin);
+        CHECK(DoIPVIN::Zero == default_vin);
     }
 
     TEST_CASE("Construction from string - exact length") {
@@ -75,7 +75,7 @@ TEST_SUITE("DoIPVIN") {
 
         CHECK(vin.isEmpty());
         CHECK(vin.toString().empty());
-        CHECK(vin == DoIPVIN::VinZero);
+        CHECK(vin == DoIPVIN::Zero);
     }
 
     TEST_CASE("Construction from C-style string") {
@@ -92,7 +92,7 @@ TEST_SUITE("DoIPVIN") {
         DoIPVIN vin(null_ptr);
 
         CHECK(vin.isEmpty());
-        CHECK(vin == DoIPVIN::VinZero);
+        CHECK(vin == DoIPVIN::Zero);
     }
 
     TEST_CASE("Construction from byte sequence") {
@@ -127,7 +127,7 @@ TEST_SUITE("DoIPVIN") {
         DoIPVIN vin(nullptr, 10);
 
         CHECK(vin.isEmpty());
-        CHECK(vin == DoIPVIN::VinZero);
+        CHECK(vin == DoIPVIN::Zero);
     }
 
     TEST_CASE("Construction from ByteArray - exact length") {
@@ -162,7 +162,7 @@ TEST_SUITE("DoIPVIN") {
         DoIPVIN vin(bytes);
 
         CHECK(vin.isEmpty());
-        CHECK(vin == DoIPVIN::VinZero);
+        CHECK(vin == DoIPVIN::Zero);
     }
 
     TEST_CASE("Copy constructor") {
@@ -262,8 +262,8 @@ TEST_SUITE("DoIPVIN") {
             CHECK(vin.isEmpty());
         }
 
-        SUBCASE("VinZero") {
-            CHECK(DoIPVIN::VinZero.isEmpty());
+        SUBCASE("Zero instance") {
+            CHECK(DoIPVIN::Zero.isEmpty());
         }
 
         SUBCASE("Non-empty VIN") {
@@ -288,7 +288,7 @@ TEST_SUITE("DoIPVIN") {
         DoIPVIN vin4;
         DoIPVIN vin5;
         CHECK(vin4 == vin5);
-        CHECK(vin4 == DoIPVIN::VinZero);
+        CHECK(vin4 == DoIPVIN::Zero);
     }
 
     TEST_CASE("Inequality operator") {
@@ -443,5 +443,185 @@ TEST_SUITE("DoIPVIN") {
 
         const uint8_t* ptr = vin.data();
         CHECK(ptr[0] == 'C');
+    }
+
+    TEST_CASE("DoIPEID - Entity Identifier (6 bytes)") {
+        SUBCASE("Default constructor") {
+            DoIPEID eid;
+            CHECK(eid.isEmpty());
+            CHECK(eid.size() == 6);
+            CHECK(eid.toString().empty());
+        }
+
+        SUBCASE("Static Zero instance") {
+            CHECK(DoIPEID::Zero.isEmpty());
+            CHECK(DoIPEID::Zero.size() == 6);
+        }
+
+        SUBCASE("Construction from string - exact length") {
+            DoIPEID eid("ABC123");
+            CHECK(eid.toString() == "ABC123");
+            CHECK(eid.size() == 6);
+            CHECK_FALSE(eid.isEmpty());
+        }
+
+        SUBCASE("Construction from string - shorter") {
+            DoIPEID eid("EID");
+            CHECK(eid.toString() == "EID");
+            CHECK(eid.size() == 6);
+            CHECK(eid[0] == 'E');
+            CHECK(eid[2] == 'D');
+            CHECK(eid[3] == 0);
+            CHECK(eid[5] == 0);
+        }
+
+        SUBCASE("Construction from string - longer") {
+            DoIPEID eid("TOOLONGEID");
+            CHECK(eid.toString() == "TOOLON");
+            CHECK(eid.size() == 6);
+        }
+
+        SUBCASE("Construction from byte array") {
+            const uint8_t bytes[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06};
+            DoIPEID eid(bytes, sizeof(bytes));
+            CHECK(eid.size() == 6);
+            CHECK(eid[0] == 0x01);
+            CHECK(eid[5] == 0x06);
+            CHECK_FALSE(eid.isEmpty());
+        }
+
+        SUBCASE("Construction from ByteArray") {
+            ByteArray bytes = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
+            DoIPEID eid(bytes);
+            CHECK(eid.size() == 6);
+            CHECK(eid[0] == 0xAA);
+            CHECK(eid[5] == 0xFF);
+        }
+
+        SUBCASE("Equality and comparison") {
+            DoIPEID eid1("EID001");
+            DoIPEID eid2("EID001");
+            DoIPEID eid3("EID002");
+
+            CHECK(eid1 == eid2);
+            CHECK(eid1 != eid3);
+            CHECK(eid2 != eid3);
+        }
+
+        SUBCASE("toByteArray method") {
+            DoIPEID eid("TEST12");
+            ByteArray result = eid.toByteArray();
+            CHECK(result.size() == 6);
+            CHECK(result[0] == 'T');
+            CHECK(result[5] == '2');
+        }
+
+        SUBCASE("Copy and move semantics") {
+            DoIPEID eid1("COPY12");
+            DoIPEID eid2(eid1);
+            CHECK(eid1 == eid2);
+
+            DoIPEID eid3;
+            eid3 = eid1;
+            CHECK(eid3 == eid1);
+        }
+    }
+
+    TEST_CASE("DoIPGID - Group Identifier (6 bytes)") {
+        SUBCASE("Default constructor") {
+            DoIPGID gid;
+            CHECK(gid.isEmpty());
+            CHECK(gid.size() == 6);
+            CHECK(gid.toString().empty());
+        }
+
+        SUBCASE("Static Zero instance") {
+            CHECK(DoIPGID::Zero.isEmpty());
+            CHECK(DoIPGID::Zero.size() == 6);
+        }
+
+        SUBCASE("Construction from string - exact length") {
+            DoIPGID gid("GRP001");
+            CHECK(gid.toString() == "GRP001");
+            CHECK(gid.size() == 6);
+            CHECK_FALSE(gid.isEmpty());
+        }
+
+        SUBCASE("Construction from string - shorter") {
+            DoIPGID gid("GID");
+            CHECK(gid.toString() == "GID");
+            CHECK(gid.size() == 6);
+            CHECK(gid[0] == 'G');
+            CHECK(gid[2] == 'D');
+            CHECK(gid[3] == 0);
+            CHECK(gid[5] == 0);
+        }
+
+        SUBCASE("Construction from string - longer") {
+            DoIPGID gid("TOOLONGGID");
+            CHECK(gid.toString() == "TOOLON");
+            CHECK(gid.size() == 6);
+        }
+
+        SUBCASE("Construction from byte array") {
+            const uint8_t bytes[] = {0x10, 0x20, 0x30, 0x40, 0x50, 0x60};
+            DoIPGID gid(bytes, sizeof(bytes));
+            CHECK(gid.size() == 6);
+            CHECK(gid[0] == 0x10);
+            CHECK(gid[5] == 0x60);
+            CHECK_FALSE(gid.isEmpty());
+        }
+
+        SUBCASE("Construction from ByteArray") {
+            ByteArray bytes = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
+            DoIPGID gid(bytes);
+            CHECK(gid.size() == 6);
+            CHECK(gid[0] == 0x11);
+            CHECK(gid[5] == 0x66);
+        }
+
+        SUBCASE("Equality and comparison") {
+            DoIPGID gid1("GROUP1");
+            DoIPGID gid2("GROUP1");
+            DoIPGID gid3("GROUP2");
+
+            CHECK(gid1 == gid2);
+            CHECK(gid1 != gid3);
+            CHECK(gid2 != gid3);
+        }
+
+        SUBCASE("toByteArray method") {
+            DoIPGID gid("MYGRP1");
+            ByteArray result = gid.toByteArray();
+            CHECK(result.size() == 6);
+            CHECK(result[0] == 'M');
+            CHECK(result[5] == '1');
+        }
+
+        SUBCASE("Copy and move semantics") {
+            DoIPGID gid1("CPYGID");
+            DoIPGID gid2(gid1);
+            CHECK(gid1 == gid2);
+
+            DoIPGID gid3;
+            gid3 = gid1;
+            CHECK(gid3 == gid1);
+        }
+    }
+
+    TEST_CASE("Different identifier types are independent") {
+        // Even though EID and GID have the same length, they're different types
+        DoIPEID eid("ABC123");
+        DoIPGID gid("ABC123");
+
+        // They should have the same content but be different types
+        CHECK(eid.toString() == gid.toString());
+        CHECK(eid.size() == gid.size());
+
+        // Verify they're truly independent instances
+        DoIPEID eid2(eid);
+        DoIPGID gid2(gid);
+        CHECK(eid == eid2);
+        CHECK(gid == gid2);
     }
 }
