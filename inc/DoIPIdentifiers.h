@@ -86,8 +86,6 @@ class GenericFixedId {
      * @brief Construct a new Generic Fixed Id object
      *
      * @tparam integral the integral type
-     * @tparam integral,
-     * typename
      * @param id_value the identifier value as integral type
      */
     template <typename integral,

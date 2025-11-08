@@ -71,7 +71,7 @@ struct DoIPMessageHeader {
             return std::nullopt;
         }
 
-        size_t payloadLength = (data[4] << 24) | (data[5] << 16) | (data[6] << 8) | data[7];
+        size_t payloadLength = static_cast<size_t>(data[4] << 24) | (data[5] << 16) | (data[6] << 8) | data[7];
 
         return std::make_pair(plt.value(), payloadLength);
     }
