@@ -1,9 +1,10 @@
 #ifndef ROUTINGACTIVATIONHANDLER_H
 #define ROUTINGACTIVATIONHANDLER_H
 
-#include "DoIPGenericHeaderHandler.h"
 #include <arpa/inet.h>
 #include <netinet/in.h>
+
+#include "DoIPAddress.h"
 
 namespace doip {
 
@@ -15,7 +16,7 @@ const uint8_t _SuccessfullyRoutedCode = 0x10;
 
 uint8_t parseRoutingActivation(uint8_t *data);
 uint8_t *createRoutingActivationResponse(const DoIPAddress &sourceAddress,
-                                         const DoIPAddress &clientAddress,
+                                         const DoIPAddress &m_clientAddress,
                                          uint8_t responseCode);
 
 } // namespace doip

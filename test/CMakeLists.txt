@@ -1,9 +1,12 @@
 
 add_executable(${DOIP_NAME}_tests
-    DoIPGenericHeaderHandler_Test.cpp
+    ByteArray_Test.cpp
     DoIPMessage_Test.cpp
+    DoIPServer_Test.cpp
     Main_Test.cpp
+    MacAddress_Test.cpp
     RoutingActivationHandler_Test.cpp
+    Identifiers_Test.cpp
     VehicleIdentificationHandler_Test.cpp
 )
 

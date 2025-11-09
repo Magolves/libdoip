@@ -3,12 +3,18 @@
 
 #include <optional>
 #include <stdint.h>
+#include <iostream>
+#include <iomanip>
 
 #include "ByteArray.h"
 #include "DoIPAddress.h"
+#include "DoIPActivationType.h"
 #include "DoIPNegativeAck.h"
 #include "DoIPNegativeDiagnosticAck.h"
 #include "DoIPPayloadType.h"
+#include "DoIPIdentifiers.h"
+#include "DoIPFurtherAction.h"
+#include "DoIPSyncStatus.h"
 
 namespace doip {
 
@@ -46,6 +52,59 @@ constexpr uint8_t DIAGNOSTIC_MESSAGE_ACK = 0;
 
 using DoIPPayload = ByteArray;
 
+struct DoIPMessageHeader {
+        /**
+     * @brief Size of the DoIP header
+     */
+    static constexpr size_t DOIP_HEADER_SIZE = 8;
+
+
+    static std::optional<std::pair<DoIPPayloadType, uint32_t>> parseHeader(const uint8_t *data, size_t length) {
+        if (!data || length < DoIPMessageHeader::DOIP_HEADER_SIZE) return std::nullopt;
+
+        if (!isValidProtocolVersion(data, length)) {
+            return std::nullopt;
+        }
+
+        auto plt = getPayloadType(data, length);
+        if (!plt.has_value()) {
+            return std::nullopt;
+        }
+
+        uint32_t b3 = static_cast<uint32_t>(data[4] << 24);
+        uint32_t b2 = static_cast<uint32_t>(data[5] << 16);
+        uint32_t b1 = static_cast<uint32_t>(data[6] << 8);
+        uint32_t b0 = static_cast<uint32_t>(data[7]);
+        size_t payloadLength = static_cast<size_t>(b3 | b2 | b1 | b0);
+
+        return std::make_pair(plt.value(), payloadLength);
+    }
+
+    static bool isValidProtocolVersion(const uint8_t *data, size_t length) {
+        if (data == nullptr || length < DoIPMessageHeader::DOIP_HEADER_SIZE) {
+            return false; // message null or too short
+        }
+
+        return data[0] >= ISO_13400_2010 && // check minimum protocol version
+               data[0] <= ISO_13400_2025 && // check maximum (known) protocol version
+               data[0] + data[1] == 0xFF;   // check protocol version and its inverse
+    }
+
+    static std::optional<DoIPPayloadType> getPayloadType(const uint8_t *data, size_t length) {
+        if (data == nullptr || length < DoIPMessageHeader::DOIP_HEADER_SIZE) {
+            return std::nullopt; // message null or too short
+        }
+
+        auto payloadType = toPayloadType(data[2], data[3]);
+        if (!payloadType) {
+            return std::nullopt; // invalid payload type
+        }
+
+        return payloadType;
+    }
+
+};
+
 /**
  * @brief Represents a DoIP message with payload type and data.
  *
@@ -66,11 +125,6 @@ using DoIPPayload = ByteArray;
 }
  */
 struct DoIPMessage {
-    /**
-     * @brief Size of the DoIP header
-     */
-    static constexpr size_t DOIP_HEADER_SIZE = 8;
-
     /**
      * @brief Constructs a DoIP message with payload type and data.
      *
@@ -158,7 +212,7 @@ struct DoIPMessage {
      *
      * @return size_t Number of bytes of the message (header + payload)
      */
-    size_t getMessageSize() const { return getPayloadSize() + DOIP_HEADER_SIZE; }
+    size_t getMessageSize() const { return getPayloadSize() + DoIPMessageHeader::DOIP_HEADER_SIZE; }
 
     /**
      * @brief Get the Source Address of the message (if message is a Diagnostic Message).
@@ -189,53 +243,76 @@ struct DoIPMessage {
         return std::nullopt;
     }
 
+    /**
+     * @brief Get the Diagnostic Message Payload (if message is a Diagnostic Message).
+     *
+     * @return std::optional<std::pair<const uint8_t*, size_t>> Pointer to payload data and size if present, std::nullopt otherwise
+     */
+    std::optional<std::pair<const uint8_t*, size_t>> getDiagnosticMessagePayload() const {
+        if (m_payload_type == DoIPPayloadType::DiagnosticMessage && m_payload.size() > 4) {
+            return std::make_pair(m_payload.data() + 4, m_payload.size() - 4);
+        }
+        return std::nullopt;
+    }
+
     void appendPayloadType(ByteArray &bytes) const {
         uint16_t plt = static_cast<uint16_t>(m_payload_type);
         bytes.emplace_back(plt >> 8 & 0xff);
         bytes.emplace_back(plt & 0xff);
     }
 
-    static bool isValidProtocolVersion(const uint8_t *data, size_t length) {
-        if (data == nullptr || length < DOIP_HEADER_SIZE) {
-            return false; // message null or too short
-        }
-
-        return data[0] >= ISO_13400_2010 && // check minimum protocol version
-               data[0] <= ISO_13400_2025 && // check maximum (known) protocol version
-               data[0] + data[1] == 0xFF;   // check protocol version and its inverse
-    }
 
     static std::optional<DoIPMessage> fromRaw(const uint8_t *data, size_t length) {
-        if (!isValidProtocolVersion(data, length)) {
-            return std::nullopt; // invalid protocol version
+        auto optHeader = DoIPMessageHeader::parseHeader(data, length);
+        if (!optHeader.has_value()) {
+            return std::nullopt;
         }
 
-        auto payload_type_opt = toPayloadType(data[2], data[3]);
-        if (!payload_type_opt) {
-            return std::nullopt; // invalid payload type
-        }
+        auto [payloadType, payloadLength] = optHeader.value();
+        auto expectedLength = DoIPMessageHeader::DOIP_HEADER_SIZE + payloadLength;
 
-        uint32_t payload_length = static_cast<uint32_t>(data[4] << 24 | data[5] << 16 | data[6] << 8 | data[7]);
-        if ((DOIP_HEADER_SIZE + payload_length) != length) {
-            std::cerr << "Payload length mismatch: Exp " << (DOIP_HEADER_SIZE + payload_length) << ", got " << length << '\n';
+        if (expectedLength != length) {
+            std::cerr << "Payload length mismatch: Exp " << expectedLength  << ", got " << length << '\n';
             return std::nullopt; // inconsistent payload size
         }
 
-        return DoIPMessage(*payload_type_opt, data + DOIP_HEADER_SIZE, length - DOIP_HEADER_SIZE);
+        return DoIPMessage(payloadType, data + DoIPMessageHeader::DOIP_HEADER_SIZE, length - DoIPMessageHeader::DOIP_HEADER_SIZE);
     }
 
-    static std::optional<DoIPPayloadType> getPayloadType(const uint8_t *data, size_t length) {
-        if (!isValidProtocolVersion(data, length)) {
-            return std::nullopt; // invalid protocol version
-        }
-
-        auto payload_type_opt = toPayloadType(data[2], data[3]);
-        if (!payload_type_opt) {
-            return std::nullopt; // invalid payload type
-        }
-
-        return payload_type_opt;
+    /**
+     * @brief Creates a vehicle identification request message.
+     *
+     * @return DoIPMessage the DoIP message
+     */
+    static DoIPMessage makeVehicleIdentificationRequest() {
+        return DoIPMessage(DoIPPayloadType::VehicleIdentificationRequest, {});
     }
+
+    /**
+     * @brief Creates a vehicle identification response message.
+     *
+     * @param vin the vehicle identification number (VIN)
+     * @param logicalAddress the logical address of the entity
+     * @param entityType the entity identifier (EID)
+     * @param groupId the group identifier (GID)
+     * @param furtherAction the further action code
+     * @param syncStatus the synchronization status
+     * @return DoIPMessage the vehicle identification response message
+     */
+    static DoIPMessage makeVehicleIdentificationResponse(const DoIPVIN& vin, const DoIPAddress& logicalAddress, const DoIPEID& entityType, const DoIPGID& groupId, DoIPFurtherAction furtherAction = DoIPFurtherAction::NoFurtherAction, DoIPSyncStatus syncStatus = DoIPSyncStatus::GidVinSynchronized) {
+        // Table 5, p. 21
+        ByteArray payload;
+
+        vin.appendTo(payload);
+        logicalAddress.appendTo(payload);
+        entityType.appendTo(payload);
+        groupId.appendTo(payload);
+        payload.emplace_back(static_cast<uint8_t>(furtherAction));
+        payload.emplace_back(static_cast<uint8_t>(syncStatus));
+
+        return DoIPMessage(DoIPPayloadType::VehicleIdentificationResponse, payload);
+    }
+
 
     /**
      * @brief Creates a generic DoIP negative response (NACK).
@@ -336,11 +413,41 @@ struct DoIPMessage {
     }
 
     /**
+     * @brief Creates a routing activation response message.
+     *
+     * @param ea the entity (our) address
+     * @param actType the activation type
+     * @return DoIPMessage the activation response message
+     */
+    static DoIPMessage makeRoutingRequest(const DoIPAddress &ea, DoIPActivationType actType = DoIPActivationType::Default) {
+        ByteArray payload;
+        payload.reserve(ea.size() + 1 + 4);
+        ea.appendTo(payload);
+        payload.emplace_back(static_cast<uint8_t>(actType));
+        // Reserved 4 bytes for further use, p. 67
+        payload.insert(payload.end(), {0, 0, 0, 0});
+
+        return DoIPMessage(DoIPPayloadType::RoutingActivationRequest, payload);
+    }
+
+    static DoIPMessage makeRoutingResponse(const DoIPMessage &routingReq, const DoIPAddress &ea, DoIPActivationType actType = DoIPActivationType::Default) {
+        ByteArray payload;
+        payload.reserve(ea.size() + 1 + 4);
+        routingReq.getSourceAddress().value().appendTo(payload);
+        ea.appendTo(payload);
+        payload.emplace_back(static_cast<uint8_t>(actType));
+        // Reserved 4 bytes for further use, p. 67
+        payload.insert(payload.end(), {0, 0, 0, 0});
+
+        return DoIPMessage(DoIPPayloadType::RoutingActivationRequest, payload);
+    }
+
+    /**
      * @brief Gets the complete DoIP messages as byte array.
      *
      * @return ByteArray the DoIP message bytes
      */
-    [[nodiscard]] ByteArray toBytes() const {
+    [[nodiscard]] ByteArray toByteArray() const {
         ByteArray bytes;
         bytes.reserve(getMessageSize()); // Pre-allocate memory but keep size = 0
 
@@ -357,7 +464,7 @@ struct DoIPMessage {
     // TODO: Periodic message, p. 49
     // TODO: Entity status request/response, p. 25
 
-  private:
+  protected:
     DoIPPayloadType m_payload_type; ///< The type of DoIP payload
     DoIPPayload m_payload;          ///< The payload data as byte vector
 
@@ -382,6 +489,28 @@ struct DoIPMessage {
         bytes.emplace_back(size & 0xff);
     }
 };
+
+/**
+ * @brief Stream operator for DoIPMessage
+ *
+ * Prints the protocol version, payload type, payload size, and payload data.
+ * Example output:
+ * "DoIPMessage [Protocol: 0x04, Type: DiagnosticMessage (0x8001), Size: 5 bytes, Payload: 00.01.00.3E.01]"
+ *
+ * @param os Output stream
+ * @param msg DoIPMessage to print
+ * @return std::ostream& Reference to the output stream
+ */
+inline std::ostream& operator<<(std::ostream& os, const DoIPMessage& msg) {
+    os << "V"
+       << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
+       << static_cast<unsigned int>(PROTOCOL_VERSION) << std::dec
+       << "|" << msg.getPayloadType()
+       << "|L" << msg.getPayloadSize() << " bytes"
+       << "| " << msg.getPayload() << "]";
+
+    return os;
+}
 
 } // namespace doip
 

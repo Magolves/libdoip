@@ -1,20 +1,23 @@
+#include "DoIPMessage.h"
 #include "DoIPServer.h"
-#include "VehicleIdentificationHandler.h"
 #include <doctest/doctest.h>
 #include <stdint.h>
 #include <string>
+
+#include "doctest_aux.h"
 
 using namespace doip;
 using namespace std;
 
 TEST_SUITE("VehicleIdentificationHandler") {
     struct VehicleIdentificationHandlerFixture {
-        string matchingVIN = "MatchingVin_12345";
-        string shortVIN = "shortVin";
-        string shortVINPadded = "shortVin000000000";
-        uint8_t EID[6] = {0, 0, 0, 0, 0, 0};
-        uint8_t GID[6] = {0, 0, 0, 0, 0, 0};
-        uint8_t far = 0;
+        DoIPVIN matchingVIN = DoIPVIN("MatchingVin_12345");
+        DoIPVIN shortVIN = DoIPVIN("shortVin");
+        DoIPVIN shortVINPadded = DoIPVIN("shortVin000000000");
+        DoIPEID EID = DoIPEID::Zero;
+        DoIPGID GID = DoIPGID::Zero;
+        DoIPFurtherAction far = DoIPFurtherAction::NoFurtherAction;
+        DoIPFurtherAction far_cs = DoIPFurtherAction::RoutingActivationForCentralSecurity;
 
         VehicleIdentificationHandlerFixture() {
             // Setup code here if needed
@@ -29,24 +32,25 @@ TEST_SUITE("VehicleIdentificationHandler") {
      * Checks if a VIN with 17 bytes matches correctly the input data
      */
     TEST_CASE_FIXTURE(VehicleIdentificationHandlerFixture, "VIN 17 Bytes") {
-        // Call function under test to create message
-        uint8_t *message =
-            createVehicleIdentificationResponse(matchingVIN, ZeroAddress, EID, GID, far);
+        DoIPMessage msg = DoIPMessage::makeVehicleIdentificationResponse(matchingVIN, DoIPAddress::ZeroAddress, EID, GID, far);
+        ByteArray payload = msg.getPayload();
+        ByteArray expected{
+            // VIN (17 bytes)
+            'M', 'a', 't', 'c', 'h', 'i', 'n', 'g', 'V', 'i', 'n', '_', '1', '2', '3', '4', '5',
+            // Logical Address (2 bytes)
+            0x00, 0x00,
+            // Entity Type (6 bytes)
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            // Group ID (6 bytes)
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            // Further Action Required (1 byte)
+            0x00,
+            // Sync Status (1 byte)
+            0x00};
 
-        // Extract VIN from created test message
-        char tempvin[18]; // Need 1 byte more for \0 at the end for parsing via
-                          // string()
-        for (int i = 0; i <= 16; i++) {
-            tempvin[i] = static_cast<char>(message[i + 8]);
-        }
-        tempvin[17] = 0; // Mark end of string
-
-        delete[] message;
-
-        // Assert that extracted VIN matches input data
-        string expected = string(tempvin);
-        CHECK_EQ(matchingVIN, expected);
-        CHECK_MESSAGE(matchingVIN == expected, "Setting VIN with 17 bytes failed");
+        CHECK(msg.getPayloadType() == DoIPPayloadType::VehicleIdentificationResponse);
+        CHECK(payload.size() == expected.size());
+        CHECK_BYTE_ARRAY_EQ(payload, expected);
     }
 
     /*
@@ -54,33 +58,26 @@ TEST_SUITE("VehicleIdentificationHandler") {
      */
     TEST_CASE_FIXTURE(VehicleIdentificationHandlerFixture,
                       "VIN Less Than 17 Bytes") {
-        // Call function under test to create message
-        uint8_t *message =
-            createVehicleIdentificationResponse(shortVIN, ZeroAddress, EID, GID, far);
 
-        // Extract VIN from created test message
-        char c_tempvin[18];
-        for (int i = 0; i <= 16; i++) {
-            c_tempvin[i] = static_cast<char>(message[i + 8]);
-        }
-        c_tempvin[17] = 0; // Mark end of string
+        DoIPMessage msg = DoIPMessage::makeVehicleIdentificationResponse(shortVIN, DoIPAddress::ZeroAddress, EID, GID, far_cs);
+        ByteArray payload = msg.getPayload();
+        ByteArray expected{
+            // VIN (17 bytes)
+            's', 'h', 'o', 'r', 't', 'V', 'i', 'n', '0', '0', '0', '0', '0', '0', '0', '0', '0',
+            // Logical Address (2 bytes)
+            0x00, 0x00,
+            // Entity Type (6 bytes)
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            // Group ID (6 bytes)
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            // Further Action Required (1 byte)
+            0x10,
+            // Sync Status (1 byte)
+            0x00};
 
-        // Create expected string value
-        string actualVin = string(c_tempvin);
 
-        // Assert that extracted VIN matches input data
-        CHECK_EQ(shortVINPadded, actualVin);
-        CHECK_MESSAGE(shortVINPadded == actualVin,
-                      "Setting VIN with < 17 bytes failed");
-
-        // Assert message after shortVin bytes is padded with '0'
-        for (int i = 16; i <= 24; i++) {
-            CHECK_EQ(message[i], '0');
-            if (message[i] != '0') {
-                CHECK_MESSAGE(false,
-                              "VIN not correctly padded at byte: ", std::to_string(i));
-            }
-        }
-        delete[] message;
+        CHECK(msg.getPayloadType() == DoIPPayloadType::VehicleIdentificationResponse);
+        CHECK(payload.size() == expected.size());
+        CHECK_BYTE_ARRAY_EQ(payload, expected);
     }
 }

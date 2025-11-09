@@ -1,5 +1,7 @@
 #include "DoIPClient_h.h"
 #include "DoIPMessage.h"
+#include "DoIPPayloadType.h"
+
 
 using namespace doip;
 
@@ -101,13 +103,13 @@ ssize_t DoIPClient::sendRoutingActivationRequest() {
 
 ssize_t DoIPClient::sendDiagnosticMessage(const DoIPAddress &targetAddress, const ByteArray &payload) {
     DoIPAddress sourceAddress(0x0E, 0x00);
-    ByteArray msg = DoIPMessage::makeDiagnosticMessage(sourceAddress, targetAddress, payload).toBytes();
+    ByteArray msg = DoIPMessage::makeDiagnosticMessage(sourceAddress, targetAddress, payload).toByteArray();
 
     return write(_sockFd, msg.data(), msg.size());
 }
 
 ssize_t DoIPClient::sendAliveCheckResponse() {
-    ByteArray msg = DoIPMessage::makeAliveCheckResponse(m_sourceAddress).toBytes();
+    ByteArray msg = DoIPMessage::makeAliveCheckResponse(m_sourceAddress).toByteArray();
 
     return write(_sockFd, msg.data(), msg.size());
 }
@@ -136,33 +138,15 @@ void DoIPClient::receiveMessage() {
         return;
     }
 
-    printf("Client received: ");
-    for (int i = 0; i < bytesRead; i++) {
-        printf("0x%02X ", _receivedData[i]);
+    auto optMmsg = DoIPMessage::fromRaw(_receivedData, static_cast<size_t>(bytesRead));
+    if (!optMmsg.has_value()) {
+        std::cerr << "Failed to parse DoIP message from received data" << '\n';
+        return;
     }
-    printf("\n ");
-
-    GenericHeaderAction action = parseGenericHeader(_receivedData, static_cast<size_t>(bytesRead));
-
-    if (action.type == PayloadType::DIAGNOSTICPOSITIVEACK || action.type == PayloadType::DIAGNOSTICNEGATIVEACK) {
-        switch (action.type) {
-        case PayloadType::DIAGNOSTICPOSITIVEACK: {
-            std::cout << "Client received diagnostic message positive ack with code: ";
-            printf("0x%02X ", _receivedData[12]);
-            break;
-        }
-        case PayloadType::DIAGNOSTICNEGATIVEACK: {
-            std::cout << "Client received diagnostic message negative ack with code: ";
-            printf("0x%02X ", _receivedData[12]);
-            break;
-        }
-        default: {
-            std::cerr << "not handled payload type occured in receiveMessage()" << '\n';
-            break;
-        }
-        }
-        std::cout << '\n';
-    }
+    DoIPMessage msg = optMmsg.value();
+    std::cout << "Client received TCP message: ";
+    std::cout << msg;
+    std::cout << '\n';
 }
 
 void DoIPClient::receiveUdpMessage() {
@@ -172,9 +156,20 @@ void DoIPClient::receiveUdpMessage() {
     int bytesRead;
     bytesRead = recvfrom(_sockFd_udp, _receivedData, _maxDataSize, 0, reinterpret_cast<struct sockaddr *>(&_clientAddr), &length);
 
-    if (PayloadType::VEHICLEIDENTRESPONSE == parseGenericHeader(_receivedData, static_cast<size_t>(bytesRead)).type) {
-        parseVIResponseInformation(_receivedData);
+    auto optMmsg = DoIPMessage::fromRaw(_receivedData, static_cast<size_t>(bytesRead));
+    if (!optMmsg.has_value()) {
+        std::cerr << "Failed to parse DoIP message from UDP data" << '\n';
+        return;
     }
+
+    DoIPMessage msg = optMmsg.value();
+
+    std::cout << "Client received UDP message: ";
+    std::cout << msg;
+    std::cout << '\n';
+    // if (PayloadType::VEHICLEIDENTRESPONSE == parseGenericHeader(_receivedData, static_cast<size_t>(bytesRead)).type) {
+    //     parseVIResponseInformation(_receivedData);
+    // }
 }
 
 const DoIPRequest DoIPClient::buildVehicleIdentificationRequest() {
@@ -204,7 +199,7 @@ ssize_t DoIPClient::sendVehicleIdentificationRequest(const char *inet_address) {
         std::cout << "Could not set DoIPAddress. Try again" << '\n';
     }
 
-    int socketError = setsockopt(_sockFd_udp, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast));
+    int socketError = setsockopt(_sockFd_udp, SOL_SOCKET, SO_BROADCAST, &m_broadcast, sizeof(m_broadcast));
 
     if (socketError == 0) {
         std::cout << "Broadcast Option set successfully" << '\n';

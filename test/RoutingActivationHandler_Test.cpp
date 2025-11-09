@@ -26,7 +26,7 @@ TEST_SUITE("RoutingActivation") {
 		uint16_t expectedValue = 3858; // 0x0F12
 		DoIPAddress address(data(), 8);
 
-		CHECK_MESSAGE(address.as_uint16() == expectedValue, "Converting address to uint failed");
+		CHECK_MESSAGE(address.toUint16() == expectedValue, "Converting address to uint failed");
 
 		CHECK(address.isValidSourceAddress() == true);
 		CHECK_MESSAGE(address.isValidSourceAddress(), "Didn't found address");

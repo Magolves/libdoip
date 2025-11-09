@@ -36,3 +36,4 @@ runTest
 build/
 .vscode/
 *.pdf
+checks.json

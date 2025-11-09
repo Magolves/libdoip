@@ -10,7 +10,6 @@
 #include <unistd.h>
 
 #include "DiagnosticMessageHandler.h"
-#include "DoIPGenericHeaderHandler.h"
 
 namespace doip {
 
@@ -56,12 +55,12 @@ class DoIPClient {
   private:
     uint8_t _receivedData[_maxDataSize] = {0};
     int _sockFd{-1}, _sockFd_udp{-1}, _connected{-1};
-    int broadcast = 1;
+    int m_broadcast = 1;
     struct sockaddr_in _serverAddr, _clientAddr;
-    DoIPAddress m_sourceAddress = ZeroAddress;
+    DoIPAddress m_sourceAddress = DoIPAddress::ZeroAddress;
 
     uint8_t VINResult[17] = {0};
-    DoIPAddress LogicalAddressResult = ZeroAddress;
+    DoIPAddress LogicalAddressResult = DoIPAddress::ZeroAddress;
     uint8_t EIDResult[6] = {0};
     uint8_t GIDResult[6] = {0};
     uint8_t FurtherActionReqResult = 0x00;

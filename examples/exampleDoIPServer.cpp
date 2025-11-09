@@ -107,13 +107,17 @@ void ConfigureDoipServer() {
     // VIN needs to have a fixed length of 17 bytes.
     // Shorter VINs will be padded with '0'
     server.setVIN("FOOBAR");
-    server.setLogicalGatewayAddress(LOGICAL_ADDRESS.as_uint16());
+    server.setLogicalGatewayAddress(LOGICAL_ADDRESS.toUint16());
     server.setGID(0);
-    server.setFAR(0);
+    server.setFAR(DoIPFurtherAction::NoFurtherAction);
     server.setEID(0);
 
-    // doipserver->setA_DoIP_Announce_Num(tempNum);
-    // doipserver->setA_DoIP_Announce_Interval(tempInterval);
+    // be more relaxed for testing purposes
+    server.setAnnounceInterval(2000);
+    server.setAnnounceNum(10);
+
+    // doipserver->setAnnounceNum(tempNum);
+    // doipserver->setAnnounceInterval(tempInterval);
 
 }
 

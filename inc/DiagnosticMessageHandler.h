@@ -1,8 +1,8 @@
 #ifndef DIAGNOSTICMESSAGEHANDLER_H
 #define DIAGNOSTICMESSAGEHANDLER_H
 
-#include "DoIPGenericHeaderHandler.h"
 #include "ByteArray.h"
+#include "DoIPAddress.h"
 #include "DoIPNegativeDiagnosticAck.h"
 #include <functional>
 #include <optional>
