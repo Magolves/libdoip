@@ -64,8 +64,7 @@ private:
 
     int reactOnReceivedTcpMessage(const DoIPMessage& message);
 
-    ssize_t sendMessage(uint8_t* message, size_t messageLength);
-    ssize_t sendMessage(const ByteArray& message);
+    ssize_t sendMessage(const uint8_t* message, size_t messageLength);
 
     void aliveCheckTimeout();
 };

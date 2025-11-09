@@ -31,12 +31,12 @@ void DoIPConnection::closeSocket() {
  */
 int DoIPConnection::receiveTcpMessage() {
     std::cout << "Waiting for DoIP Header..." << '\n';
-    uint8_t genericHeader[DoIPMessageHeader::DOIP_HEADER_SIZE];
-    unsigned int readBytes = receiveFixedNumberOfBytesFromTCP(genericHeader, DoIPMessageHeader::DOIP_HEADER_SIZE);
-    if (readBytes == DoIPMessageHeader::DOIP_HEADER_SIZE && !m_aliveCheckTimer.hasTimeout()) {
+    uint8_t genericHeader[DOIP_HEADER_SIZE];
+    unsigned int readBytes = receiveFixedNumberOfBytesFromTCP(genericHeader, DOIP_HEADER_SIZE);
+    if (readBytes == DOIP_HEADER_SIZE && !m_aliveCheckTimer.hasTimeout()) {
         std::cout << "Received DoIP Header." << '\n';
 
-        auto optHeader = DoIPMessageHeader::parseHeader(genericHeader, DoIPMessageHeader::DOIP_HEADER_SIZE);
+        auto optHeader = DoIPMessage::parseHeader(genericHeader, DOIP_HEADER_SIZE);
         if (!optHeader.has_value()) {
             auto sentBytes = sendNegativeAck(DoIPNegativeAck::IncorrectPatternFormat);
             closeSocket();
@@ -117,7 +117,8 @@ int DoIPConnection::reactOnReceivedTcpMessage(const DoIPMessage &message) {
 
     case DoIPPayloadType::AliveCheckRequest: {
         // Handle Alive Check Request
-        sentBytes = sendMessage(DoIPMessage::makeAliveCheckResponse(m_m_gatewayAddress).toByteArray());
+        DoIPMessage response = message::makeAliveCheckResponse(m_m_gatewayAddress);
+        sentBytes = sendMessage(response.data(), response.size());
         break;
     }
 
@@ -135,7 +136,8 @@ int DoIPConnection::reactOnReceivedTcpMessage(const DoIPMessage &message) {
         }
 
         m_routedClientAddress = optSourceAddress.value();
-        sentBytes = sendMessage(DoIPMessage::makeRoutingResponse(message, m_m_gatewayAddress).toByteArray());
+        DoIPMessage response = message::makeRoutingActivationResponse(message, m_m_gatewayAddress);
+        sentBytes = sendMessage(response.data(), response.size());
 
         break;
     }
@@ -149,7 +151,7 @@ int DoIPConnection::reactOnReceivedTcpMessage(const DoIPMessage &message) {
         DoIPAddress ta = optTargetAddress.value();
         DoIPDiagnosticAck ackResponse = std::nullopt;
         if (m_notify_application && m_notify_application(ta)) {
-            ackResponse = handleDiagnosticMessage(m_diag_callback, m_routedClientAddress, message.getPayload().data(), message.getPayloadSize());
+            ackResponse = handleDiagnosticMessage(m_diag_callback, m_routedClientAddress, message.getPayload().first, message.getPayloadSize());
         }
 
         if (ackResponse.has_value()) {
@@ -184,13 +186,8 @@ void DoIPConnection::triggerDisconnection() {
  * @return                  number of bytes written is returned,
  *                          or -1 if error occurred
  */
-ssize_t DoIPConnection::sendMessage(uint8_t *message, size_t messageLength) {
+ssize_t DoIPConnection::sendMessage(const uint8_t *message, size_t messageLength) {
     ssize_t result = write(m_tcpSocket, message, messageLength);
-    return result;
-}
-
-ssize_t DoIPConnection::sendMessage(const ByteArray &message) {
-    ssize_t result = write(m_tcpSocket, message.data(), message.size());
     return result;
 }
 
@@ -222,9 +219,8 @@ void DoIPConnection::sendDiagnosticPayload(const DoIPAddress &sourceAddress, con
     std::cout << '\n';
 
     // uint8_t* message = createDiagnosticMessage(sourceAddress, m_routedClientAddress, data, length);
-    ByteArray message = DoIPMessage::makeDiagnosticMessage(sourceAddress, m_routedClientAddress, payload).toByteArray();
-
-    sendMessage(message);
+    DoIPMessage msg = message::makeDiagnosticMessage(sourceAddress, m_routedClientAddress, payload);
+    sendMessage(msg.data(), msg.size());
 }
 
 /*
@@ -240,13 +236,13 @@ void DoIPConnection::setCallback(DiagnosticCallback dc, DiagnosticMessageNotific
 }
 
 void DoIPConnection::sendDiagnosticAck(const DoIPAddress &sourceAddress) {
-    ByteArray message = DoIPMessage::makeDiagnosticPositiveResponse(sourceAddress, m_routedClientAddress, {}).toByteArray();
-    sendMessage(message);
+    DoIPMessage msg = message::makeDiagnosticPositiveResponse(sourceAddress, m_routedClientAddress, {});
+    sendMessage(msg.data(), msg.size());
 }
 
 void DoIPConnection::sendDiagnosticNegativeAck(const DoIPAddress &sourceAddress, DoIPNegativeDiagnosticAck ackCode) {
-    ByteArray message = DoIPMessage::makeDiagnosticNegativeResponse(sourceAddress, m_routedClientAddress, ackCode, {}).toByteArray();
-    sendMessage(message);
+    DoIPMessage msg = message::makeDiagnosticNegativeResponse(sourceAddress, m_routedClientAddress, ackCode, {});
+    sendMessage(msg.data(), msg.size());
 }
 
 /**
@@ -255,8 +251,7 @@ void DoIPConnection::sendDiagnosticNegativeAck(const DoIPAddress &sourceAddress,
  * @return              amount of bytes sended to the client
  */
 int DoIPConnection::sendNegativeAck(DoIPNegativeAck ackCode) {
-    DoIPMessage message = DoIPMessage::makeNegativeAckMessage(ackCode);
-    ByteArray msgBytes = message.toByteArray();
-    int sentBytes = sendMessage(msgBytes);
+    DoIPMessage msg = message::makeNegativeAckMessage(ackCode);
+    int sentBytes = sendMessage(msg.data(), msg.size());
     return sentBytes;
 }

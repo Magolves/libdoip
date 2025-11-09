@@ -18,7 +18,7 @@ TEST_SUITE("DoIPMessage") {
         CHECK(msg.getMessageSize() == 10);
         CHECK(msg.getPayloadType() == DoIPPayloadType::AliveCheckRequest);
 
-        const auto bytes = msg.toByteArray();
+        const auto bytes = msg.asByteArray();
 
         for (size_t i = 0; i < bytes.size(); i++) {
             CHECK_MESSAGE(bytes.at(i) == expected.at(i), "Bytes to not match at pos ", i, ", got ", bytes.at(i), ", expected ", expected.at(i));
@@ -26,7 +26,7 @@ TEST_SUITE("DoIPMessage") {
     }
 
     TEST_CASE("Message factory - makeNegativeAckMessage") {
-        DoIPMessage msg = DoIPMessage::makeNegativeAckMessage(DoIPNegativeAck::InvalidPayloadLength);
+        DoIPMessage msg = message::makeNegativeAckMessage(DoIPNegativeAck::InvalidPayloadLength);
         ByteArray expected{
             0x04, 0xfb,             // protocol version + inv
             0x00, 0x00,             // payload type
@@ -40,7 +40,7 @@ TEST_SUITE("DoIPMessage") {
     }
 
     TEST_CASE("Message factory - makeDiagnosticMessage") {
-        DoIPMessage msg = DoIPMessage::makeDiagnosticMessage(DoIPAddress(0xca, 0xfe), DoIPAddress(0xba, 0xbe), {0xde, 0xad, 0xbe, 0xef});
+        DoIPMessage msg = message::makeDiagnosticMessage(DoIPAddress(0xca, 0xfe), DoIPAddress(0xba, 0xbe), {0xde, 0xad, 0xbe, 0xef});
         ByteArray expected{
             0x04, 0xfb,             // protocol version + inv
             0x80, 0x01,             // payload type
@@ -54,17 +54,17 @@ TEST_SUITE("DoIPMessage") {
         CHECK(msg.getMessageSize() == 16);
         CHECK(msg.getPayloadType() == DoIPPayloadType::DiagnosticMessage);
 
-        const auto bytes = msg.toByteArray();
+        const auto bytes = msg.asByteArray();
         for (size_t i = 0; i < bytes.size(); i++) {
             CHECK_MESSAGE(bytes.at(i) == expected.at(i), "Bytes to not match at pos ", i, ", got ", bytes.at(i), ", expected ", expected.at(i));
         }
     }
 
     TEST_CASE("Message factory - makeDiagnosticPositiveResponse") {
-        DoIPMessage msg = DoIPMessage::makeDiagnosticPositiveResponse(DoIPAddress(0xca, 0xfe), DoIPAddress(0xba, 0xbe), {0xde, 0xad, 0xbe, 0xef});
+        DoIPMessage msg = message::makeDiagnosticPositiveResponse(DoIPAddress(0xca, 0xfe), DoIPAddress(0xba, 0xbe), {0xde, 0xad, 0xbe, 0xef});
         ByteArray expected{
             0x04, 0xfb,             // protocol version + inv
-            0x80, 0x02,             // payload tyByteArray raw = DoIPMessage::makeAliveCheckResponse(DoIPAddress(0xa0, 0xb0));pe
+            0x80, 0x02,             // payload tyByteArray raw = message::makeAliveCheckResponse(DoIPAddress(0xa0, 0xb0));pe
             0x00, 0x00, 0x00, 0x09, // payload length
             0xca, 0xfe,             // sa
             0xba, 0xbe,             // ta
@@ -76,14 +76,14 @@ TEST_SUITE("DoIPMessage") {
         CHECK(msg.getMessageSize() == 17);
         CHECK(msg.getPayloadType() == DoIPPayloadType::DiagnosticMessageAck);
 
-        const auto bytes = msg.toByteArray();
+        const auto bytes = msg.asByteArray();
         for (size_t i = 0; i < bytes.size(); i++) {
             CHECK_MESSAGE(bytes.at(i) == expected.at(i), "Bytes to not match at pos ", i, ", got ", bytes.at(i), ", expected ", expected.at(i));
         }
     }
 
     TEST_CASE("Message factory - makeDiagnosticNegativeResponse") {
-        DoIPMessage msg = DoIPMessage::makeDiagnosticNegativeResponse(
+        DoIPMessage msg = message::makeDiagnosticNegativeResponse(
             DoIPAddress(0xca, 0xfe),
             DoIPAddress(0xba, 0xbe),
             DoIPNegativeDiagnosticAck::TargetBusy,
@@ -103,14 +103,14 @@ TEST_SUITE("DoIPMessage") {
         CHECK(msg.getMessageSize() == 17);
         CHECK(msg.getPayloadType() == DoIPPayloadType::DiagnosticMessageNegativeAck);
 
-        const auto bytes = msg.toByteArray();
+        const auto bytes = msg.asByteArray();
         for (size_t i = 0; i < bytes.size(); i++) {
             CHECK_MESSAGE(bytes.at(i) == expected.at(i), "Bytes to not match at pos ", i, ", got ", bytes.at(i), ", expected ", expected.at(i));
         }
     }
 
     TEST_CASE("Message factory - makeAliveCheckRequest") {
-        DoIPMessage msg = DoIPMessage::makeAliveCheckRequest();
+        DoIPMessage msg = message::makeAliveCheckRequest();
 
         CHECK(msg.getPayloadSize() == 0);
         CHECK(msg.getMessageSize() == 8);
@@ -118,7 +118,7 @@ TEST_SUITE("DoIPMessage") {
     }
 
     TEST_CASE("Message factory - makeAliveCheckResponse") {
-        DoIPMessage msg = DoIPMessage::makeAliveCheckResponse(DoIPAddress(0xa0, 0xb0));
+        DoIPMessage msg = message::makeAliveCheckResponse(DoIPAddress(0xa0, 0xb0));
         ByteArray expected{
             0x04, 0xfb, // protocol version + inv
             0x00, 0x08,                      // payload type
@@ -131,7 +131,7 @@ TEST_SUITE("DoIPMessage") {
         CHECK(msg.getMessageSize() == 10);
         CHECK(msg.getPayloadType() == DoIPPayloadType::AliveCheckResponse);
 
-        const auto bytes = msg.toByteArray();
+        const auto bytes = msg.asByteArray();
         for (size_t i = 0; i < bytes.size(); i++) {
             CHECK_MESSAGE(bytes.at(i) == expected.at(i), "Bytes to not match at pos ", i, ", got ", bytes.at(i), ", expected ", expected.at(i));
         }
@@ -145,19 +145,19 @@ TEST_SUITE("DoIPMessage") {
         const uint8_t invalid_pl_length1[] = {PROTOCOL_VERSION, PROTOCOL_VERSION_INV, 0x40, 0x01, 0x00, 0x02, 0x0};
         const uint8_t invalid_pl_length2[] = {PROTOCOL_VERSION, PROTOCOL_VERSION_INV, 0x40, 0x01, 0x00, 0x02, 0x0, 0x0, 0x0};
 
-        CHECK(DoIPMessage::fromRaw(nullptr, 12) == std::nullopt); // null ptr
-        CHECK(DoIPMessage::fromRaw(short_msg, sizeof(short_msg)) == std::nullopt); // too short
-        CHECK(DoIPMessage::fromRaw(inv_protocol, sizeof(inv_protocol)) == std::nullopt); // wrong protocol
-        CHECK(DoIPMessage::fromRaw(inconsistent_protocol, sizeof(inconsistent_protocol)) == std::nullopt); // inconsistent protocol
-        CHECK(DoIPMessage::fromRaw(invalid_pl_type, sizeof(invalid_pl_type)) == std::nullopt); // inconsistent payload type
-        CHECK(DoIPMessage::fromRaw(invalid_pl_length1, sizeof(invalid_pl_length1)) == std::nullopt); // pl size > payload len
-        CHECK(DoIPMessage::fromRaw(invalid_pl_length2, sizeof(invalid_pl_length2)) == std::nullopt); // pl size < payload len
+        CHECK(DoIPMessage::tryParse(nullptr, 12) == std::nullopt); // null ptr
+        CHECK(DoIPMessage::tryParse(short_msg, sizeof(short_msg)) == std::nullopt); // too short
+        CHECK(DoIPMessage::tryParse(inv_protocol, sizeof(inv_protocol)) == std::nullopt); // wrong protocol
+        CHECK(DoIPMessage::tryParse(inconsistent_protocol, sizeof(inconsistent_protocol)) == std::nullopt); // inconsistent protocol
+        CHECK(DoIPMessage::tryParse(invalid_pl_type, sizeof(invalid_pl_type)) == std::nullopt); // inconsistent payload type
+        CHECK(DoIPMessage::tryParse(invalid_pl_length1, sizeof(invalid_pl_length1)) == std::nullopt); // pl size > payload len
+        CHECK(DoIPMessage::tryParse(invalid_pl_length2, sizeof(invalid_pl_length2)) == std::nullopt); // pl size < payload len
     }
 
     TEST_CASE("Init from raw bytes - diagnostic message") {
         // Diag message with RDBI request
         const uint8_t example_diag[] = {PROTOCOL_VERSION, PROTOCOL_VERSION_INV, 0x80, 0x01, 0x00, 0x00, 0x00, 0x07, DoIPAddress::MIN_SOURCE_ADDRESS >> 8, DoIPAddress::MIN_SOURCE_ADDRESS & 0xFF, 0xca, 0xfe, 0x22, 0xFD, 0x10};
-        auto opt_msg = DoIPMessage::fromRaw(example_diag, sizeof(example_diag));
+        auto opt_msg = DoIPMessage::tryParse(example_diag, sizeof(example_diag));
 
         REQUIRE_MESSAGE(opt_msg.has_value(), "No message was created");
 
@@ -165,8 +165,8 @@ TEST_SUITE("DoIPMessage") {
         CHECK(msg.getPayloadType() == DoIPPayloadType::DiagnosticMessage);
         CHECK(msg.getPayloadSize() == 7);
 
-        ByteArray msg_conv = msg.toByteArray();
-        CHECK(msg_conv.size() == 7 + DoIPMessageHeader::DOIP_HEADER_SIZE);
+        ByteArray msg_conv = msg.asByteArray();
+        CHECK(msg_conv.size() == 7 + DOIP_HEADER_SIZE);
 
         for(size_t i = 0; i < sizeof(example_diag); i++) {
             CHECK_MESSAGE(msg_conv.at(i) == example_diag[i], "Position ", i, " exp: ", example_diag[i], ", got: ", msg_conv.at(i) );
@@ -180,11 +180,14 @@ TEST_SUITE("DoIPMessage") {
         REQUIRE_MESSAGE(optTa.has_value(), "No target address extracted");
         CHECK(optTa->toUint16() == 0xcafe);
 
-        auto optPayload = msg.getDiagnosticMessagePayload();
-        REQUIRE_MESSAGE(optPayload.has_value(), "No diagnostic payload extracted");
-        CHECK(optPayload->second == 3);  // size is the second element of the pair
-        CHECK(optPayload->first[0] == 0x22);
-        CHECK(optPayload->first[1] == 0xFD);
-        CHECK(optPayload->first[2] == 0x10);
+        auto optPayload = msg.getPayload();
+
+        const size_t DIAG_MSG_OFFSET = 4; // after header + sa + ta
+
+
+        CHECK(optPayload.second == 3 + DIAG_MSG_OFFSET);  // size is the second element of the pair
+        CHECK(optPayload.first[DIAG_MSG_OFFSET + 0] == 0x22);
+        CHECK(optPayload.first[DIAG_MSG_OFFSET + 1] == 0xFD);
+        CHECK(optPayload.first[DIAG_MSG_OFFSET + 2] == 0x10);
     }
 }

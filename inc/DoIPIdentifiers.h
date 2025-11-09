@@ -166,8 +166,8 @@ class GenericFixedId {
      *
      * @return ByteArray The identifier as byte array (always IdLength bytes)
      */
-    ByteArray toByteArray() const {
-        return ByteArray(m_id.begin(), m_id.end());
+    ByteArrayRef asByteArray() const {
+        return {m_id.data(), ID_LENGTH};
     }
 
     /**

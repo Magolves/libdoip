@@ -10,7 +10,7 @@ namespace doip {
 DoIPDiagnosticAck handleDiagnosticMessage(DiagnosticCallback callback, const DoIPAddress &sourceAddress, const uint8_t *data, size_t length) {
     std::cout << "parse Diagnostic Message" << '\n';
 
-    auto optMsg = DoIPMessage::fromRaw(data, length);
+    auto optMsg = DoIPMessage::tryParse(data, length);
     if (optMsg.has_value() == false) {
         std::cout << "Could not parse DoIP message" << '\n';
         return DoIPNegativeDiagnosticAck::UnknownTargetAddress;
@@ -35,8 +35,8 @@ DoIPDiagnosticAck handleDiagnosticMessage(DiagnosticCallback callback, const DoI
     }
 
     if (callback) {
-        size_t cb_message_length = msg.getPayloadSize() - _DiagnosticMessageMinimumLength;
-        callback(optTargetAddress.value(), msg.getPayload().data(), cb_message_length);
+        auto [payload_ptr, payload_size] = msg.getPayload();
+        callback(optTargetAddress.value(), payload_ptr, payload_size);
 
     }
     // return positive ack code

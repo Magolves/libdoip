@@ -19,7 +19,7 @@ GenericHeaderAction parseGenericHeader(uint8_t* data, size_t dataLenght) {
     GenericHeaderAction action;
 
     //Only check header if received data is greater or equals the set header length
-    if(dataLenght >= DoIPMessageHeader::DOIP_HEADER_SIZE) {
+    if(dataLenght >= DOIP_HEADER_SIZE) {
 
         //Check Generic DoIP synchronization pattern
         if((data[1] ^ (0xFF)) != static_cast<int>(data[0])) {

@@ -50,7 +50,7 @@ uint8_t *createRoutingActivationResponse(const DoIPAddress &sourceAddress, const
 
     //uint8_t *message = createGenericHeader(PayloadType::ROUTINGACTIVATIONRESPONSE,
     //                                       _ActivationResponseLength);
-    uint8_t *message = new uint8_t[DoIPMessageHeader::DOIP_HEADER_SIZE + _ActivationResponseLength];
+    uint8_t *message = new uint8_t[DOIP_HEADER_SIZE + _ActivationResponseLength];
     // Logical address of external test equipment
     message[8] = m_clientAddress.hsb();
     message[9] = m_clientAddress.lsb();

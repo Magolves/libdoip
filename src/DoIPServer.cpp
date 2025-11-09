@@ -97,7 +97,7 @@ ssize_t DoIPServer::reactToReceivedUdpMessage(size_t bytesRead) {
     ssize_t sentBytes = -1;
     // GenericHeaderAction action = parseGenericHeader(data, bytesRead);
 
-    auto optHeader = DoIPMessageHeader::parseHeader(m_receiveBuf.data(), DoIPMessageHeader::DOIP_HEADER_SIZE);
+    auto optHeader = DoIPMessage::parseHeader(m_receiveBuf.data(), DOIP_HEADER_SIZE);
     if (!optHeader.has_value()) {
         return sendNegativeUdpAck(DoIPNegativeAck::IncorrectPatternFormat);
     }
@@ -107,9 +107,9 @@ ssize_t DoIPServer::reactToReceivedUdpMessage(size_t bytesRead) {
     std::cout << "Received UDP message with Payload Type: " << plType << '\n';
     switch (plType) {
     case DoIPPayloadType::VehicleIdentificationRequest: {
-        DoIPMessage msg = DoIPMessage::makeVehicleIdentificationResponse(m_VIN, m_gatewayAddress, m_EID, m_GID);
+        DoIPMessage msg = message::makeVehicleIdentificationResponse(m_VIN, m_gatewayAddress, m_EID, m_GID);
         std::cout << "Send " << msg << '\n';
-        ssize_t sendedBytes = sendUdpMessage(msg.toByteArray().data(), DoIPMessageHeader::DOIP_HEADER_SIZE + msg.getPayloadSize());
+        ssize_t sendedBytes = sendUdpMessage(msg.data(), DOIP_HEADER_SIZE + msg.size());
 
         return static_cast<int>(sendedBytes);
     }
@@ -218,11 +218,10 @@ ssize_t DoIPServer::sendVehicleAnnouncement() {
     ssize_t sentBytes = -1;
 
     // uint8_t *message = createVehicleIdentificationResponse(VIN, m_gatewayAddress, m_EID, GID, FurtherActionReq);
-    DoIPMessage msg = DoIPMessage::makeVehicleIdentificationResponse(m_VIN, m_gatewayAddress, m_EID, m_GID, m_FurtherActionReq);
-    ByteArray msgBytes = msg.toByteArray();
+    DoIPMessage msg = message::makeVehicleIdentificationResponse(m_VIN, m_gatewayAddress, m_EID, m_GID, m_FurtherActionReq);
 
     for (int i = 0; i < m_announceNum; i++) {
-        sentBytes = sendto(m_udp_sock, msgBytes.data(), msgBytes.size(), 0, reinterpret_cast<struct sockaddr *>(&m_clientAddress), sizeof(m_clientAddress));
+        sentBytes = sendto(m_udp_sock, msg.data(), msg.size(), 0, reinterpret_cast<struct sockaddr *>(&m_clientAddress), sizeof(m_clientAddress));
 
         if (sentBytes > 0) {
             std::cout << "Sending Vehicle Announcement" <<  '\n';
@@ -236,7 +235,6 @@ ssize_t DoIPServer::sendVehicleAnnouncement() {
 }
 
 ssize_t DoIPServer::sendNegativeUdpAck(DoIPNegativeAck ackCode) {
-    DoIPMessage message = DoIPMessage::makeNegativeAckMessage(ackCode);
-    ByteArray msgBytes = message.toByteArray();
-    return sendUdpMessage(msgBytes.data(), msgBytes.size());
+    DoIPMessage message = message::makeNegativeAckMessage(ackCode);
+    return sendUdpMessage(message.data(), message.size());
 }

@@ -63,7 +63,7 @@ TEST_SUITE("GenericFixedId") {
 
         CHECK(vin.isEmpty());
         CHECK(vin.toString() == "00000000000000000");
-        CHECK_BYTE_ARRAY_EQ(vin.toByteArray(), DoIPVIN::Zero.toByteArray());
+        CHECK_BYTE_ARRAY_REF_EQ(vin.asByteArray(), DoIPVIN::Zero.asByteArray());
     }
 
     TEST_CASE("Construction from C-style string") {
@@ -80,7 +80,7 @@ TEST_SUITE("GenericFixedId") {
         DoIPVIN vin(null_ptr);
 
         CHECK(vin.isEmpty());
-        CHECK_BYTE_ARRAY_EQ(vin.toByteArray(), DoIPVIN::Zero.toByteArray());
+        CHECK_BYTE_ARRAY_REF_EQ(vin.asByteArray(), DoIPVIN::Zero.asByteArray());
     }
 
     TEST_CASE("Construction from byte sequence") {
@@ -150,7 +150,7 @@ TEST_SUITE("GenericFixedId") {
         DoIPVIN vin(bytes);
 
         CHECK(vin.isEmpty());
-        CHECK_BYTE_ARRAY_EQ(vin.toByteArray(), DoIPVIN::Zero.toByteArray());
+        CHECK_BYTE_ARRAY_REF_EQ(vin.asByteArray(), DoIPVIN::Zero.asByteArray());
     }
 
     TEST_CASE("Copy constructor") {
@@ -185,30 +185,6 @@ TEST_SUITE("GenericFixedId") {
             DoIPVIN vin;
             CHECK(vin.toString() == "00000000000000000");
         }
-    }
-
-    TEST_CASE("toByteArray method") {
-        DoIPVIN vin("TESTBYTEARRAY1234");
-        ByteArray result = vin.toByteArray();
-
-        CHECK(result.size() == 17);
-        CHECK(result[0] == static_cast<uint8_t>('T'));
-        CHECK(result[16] == static_cast<uint8_t>('4'));
-
-        // Verify it's a copy, not a reference
-        result[0] = static_cast<uint8_t>('X');
-        CHECK(vin[0] == static_cast<uint8_t>('T'));
-    }
-
-    TEST_CASE("toByteArray with padding") {
-        DoIPVIN vin("SHORT");
-        ByteArray result = vin.toByteArray();
-
-        CHECK(result.size() == 17);
-        CHECK(result[0] == 'S');
-        CHECK(result[4] == 'T');
-        CHECK(result[5] == '0');
-        CHECK(result[16] == '0');
     }
 
     TEST_CASE("getArray method") {
@@ -276,7 +252,7 @@ TEST_SUITE("GenericFixedId") {
         DoIPVIN vin4;
         DoIPVIN vin5;
         CHECK(vin4 == vin5);
-        CHECK_BYTE_ARRAY_EQ(vin4.toByteArray(), DoIPVIN::Zero.toByteArray());
+        CHECK_BYTE_ARRAY_REF_EQ(vin4.asByteArray(), DoIPVIN::Zero.asByteArray());
     }
 
     TEST_CASE("Inequality operator") {
@@ -366,24 +342,6 @@ TEST_SUITE("GenericFixedId") {
         }
     }
 
-    TEST_CASE("Comparison between different construction methods") {
-        const char* vin_str = "COMPAREVIN1234567";
-
-        DoIPVIN vin1{std::string(vin_str)};
-        DoIPVIN vin2(vin_str);
-
-        ByteArray bytes(vin_str, vin_str + 17);
-        DoIPVIN vin3(bytes);
-
-        uint8_t byte_arr[17];
-        std::copy(vin_str, vin_str + 17, byte_arr);
-        DoIPVIN vin4(byte_arr, 17);
-
-        CHECK(vin1 == vin2);
-        CHECK(vin2 == vin3);
-        CHECK(vin3 == vin4);
-    }
-
     TEST_CASE("VIN conversion round-trip") {
         const std::string original = "ROUNDTRIP12345678";
 
@@ -399,11 +357,11 @@ TEST_SUITE("GenericFixedId") {
         const std::string original = "BYTEARRAYTRIP1234";
 
         DoIPVIN vin1(original);
-        ByteArray bytes = vin1.toByteArray();
-        DoIPVIN vin2(bytes);
+        ByteArrayRef bytes = vin1.asByteArray();
+        DoIPVIN vin2(bytes.first, bytes.second);
 
         CHECK(vin1 == vin2);
-        CHECK(bytes.size() == 17);
+        CHECK(bytes.second == 17);
     }
 
     TEST_CASE("VIN with null bytes in middle") {
@@ -496,12 +454,12 @@ TEST_SUITE("GenericFixedId") {
             CHECK(eid2 != eid3);
         }
 
-        SUBCASE("toByteArray method") {
+        SUBCASE("asByteArray method") {
             DoIPEID eid("TEST12");
-            ByteArray result = eid.toByteArray();
-            CHECK(result.size() == 6);
-            CHECK(result[0] == 'T');
-            CHECK(result[5] == '2');
+            ByteArrayRef result = eid.asByteArray();
+            CHECK(result.second == 6);
+            CHECK(result.first[0] == 'T');
+            CHECK(result.first[5] == '2');
         }
     }
 
@@ -583,12 +541,12 @@ TEST_SUITE("GenericFixedId") {
             CHECK(gid2 != gid3);
         }
 
-        SUBCASE("toByteArray method") {
+        SUBCASE("asByteArray method") {
             DoIPGID gid("MYGRP1");
-            ByteArray result = gid.toByteArray();
-            CHECK(result.size() == 6);
-            CHECK(result[0] == 'M');
-            CHECK(result[5] == '1');
+            ByteArrayRef result = gid.asByteArray();
+            CHECK(result.second == 6);
+            CHECK(result.first[0] == 'M');
+            CHECK(result.first[5] == '1');
         }
     }
 

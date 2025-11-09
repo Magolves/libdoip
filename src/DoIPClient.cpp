@@ -103,14 +103,13 @@ ssize_t DoIPClient::sendRoutingActivationRequest() {
 
 ssize_t DoIPClient::sendDiagnosticMessage(const DoIPAddress &targetAddress, const ByteArray &payload) {
     DoIPAddress sourceAddress(0x0E, 0x00);
-    ByteArray msg = DoIPMessage::makeDiagnosticMessage(sourceAddress, targetAddress, payload).toByteArray();
+    DoIPMessage msg = message::makeDiagnosticMessage(sourceAddress, targetAddress, payload);
 
     return write(_sockFd, msg.data(), msg.size());
 }
 
 ssize_t DoIPClient::sendAliveCheckResponse() {
-    ByteArray msg = DoIPMessage::makeAliveCheckResponse(m_sourceAddress).toByteArray();
-
+    DoIPMessage msg = message::makeAliveCheckResponse(m_sourceAddress);
     return write(_sockFd, msg.data(), msg.size());
 }
 
@@ -138,7 +137,7 @@ void DoIPClient::receiveMessage() {
         return;
     }
 
-    auto optMmsg = DoIPMessage::fromRaw(_receivedData, static_cast<size_t>(bytesRead));
+    auto optMmsg = DoIPMessage::tryParse(_receivedData, static_cast<size_t>(bytesRead));
     if (!optMmsg.has_value()) {
         std::cerr << "Failed to parse DoIP message from received data" << '\n';
         return;
@@ -156,7 +155,7 @@ void DoIPClient::receiveUdpMessage() {
     int bytesRead;
     bytesRead = recvfrom(_sockFd_udp, _receivedData, _maxDataSize, 0, reinterpret_cast<struct sockaddr *>(&_clientAddr), &length);
 
-    auto optMmsg = DoIPMessage::fromRaw(_receivedData, static_cast<size_t>(bytesRead));
+    auto optMmsg = DoIPMessage::tryParse(_receivedData, static_cast<size_t>(bytesRead));
     if (!optMmsg.has_value()) {
         std::cerr << "Failed to parse DoIP message from UDP data" << '\n';
         return;

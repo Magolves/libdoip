@@ -32,8 +32,8 @@ TEST_SUITE("VehicleIdentificationHandler") {
      * Checks if a VIN with 17 bytes matches correctly the input data
      */
     TEST_CASE_FIXTURE(VehicleIdentificationHandlerFixture, "VIN 17 Bytes") {
-        DoIPMessage msg = DoIPMessage::makeVehicleIdentificationResponse(matchingVIN, DoIPAddress::ZeroAddress, EID, GID, far);
-        ByteArray payload = msg.getPayload();
+        DoIPMessage msg = message::makeVehicleIdentificationResponse(matchingVIN, DoIPAddress::ZeroAddress, EID, GID, far);
+        ByteArrayRef payload = msg.getPayload();
         ByteArray expected{
             // VIN (17 bytes)
             'M', 'a', 't', 'c', 'h', 'i', 'n', 'g', 'V', 'i', 'n', '_', '1', '2', '3', '4', '5',
@@ -49,8 +49,8 @@ TEST_SUITE("VehicleIdentificationHandler") {
             0x00};
 
         CHECK(msg.getPayloadType() == DoIPPayloadType::VehicleIdentificationResponse);
-        CHECK(payload.size() == expected.size());
-        CHECK_BYTE_ARRAY_EQ(payload, expected);
+        CHECK(payload.second == expected.size());
+        CHECK_BYTE_ARRAY_EQ(ByteArray(payload.first, payload.second), expected);
     }
 
     /*
@@ -59,8 +59,8 @@ TEST_SUITE("VehicleIdentificationHandler") {
     TEST_CASE_FIXTURE(VehicleIdentificationHandlerFixture,
                       "VIN Less Than 17 Bytes") {
 
-        DoIPMessage msg = DoIPMessage::makeVehicleIdentificationResponse(shortVIN, DoIPAddress::ZeroAddress, EID, GID, far_cs);
-        ByteArray payload = msg.getPayload();
+        DoIPMessage msg = message::makeVehicleIdentificationResponse(shortVIN, DoIPAddress::ZeroAddress, EID, GID, far_cs);
+        ByteArrayRef payload = msg.getPayload();
         ByteArray expected{
             // VIN (17 bytes)
             's', 'h', 'o', 'r', 't', 'V', 'i', 'n', '0', '0', '0', '0', '0', '0', '0', '0', '0',
@@ -77,7 +77,7 @@ TEST_SUITE("VehicleIdentificationHandler") {
 
 
         CHECK(msg.getPayloadType() == DoIPPayloadType::VehicleIdentificationResponse);
-        CHECK(payload.size() == expected.size());
-        CHECK_BYTE_ARRAY_EQ(payload, expected);
+        CHECK(payload.second == expected.size());
+        CHECK_BYTE_ARRAY_EQ(ByteArray(payload.first, payload.second), expected);
     }
 }
