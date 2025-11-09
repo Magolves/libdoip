@@ -154,22 +154,10 @@ void DoIPServer::setLogicalGatewayAddress(const unsigned short inputLogAdd) {
 
 void DoIPServer::setEID(const uint64_t inputEID) {
     m_EID = DoIPEID(inputEID);
-    // m_EID[0] = (inputEID >> 40) & 0xFF;
-    // m_EID[1] = (inputEID >> 32) & 0xFF;
-    // m_EID[2] = (inputEID >> 24) & 0xFF;
-    // m_EID[3] = (inputEID >> 16) & 0xFF;
-    // m_EID[4] = (inputEID >> 8) & 0xFF;
-    // m_EID[5] = inputEID & 0xFF;
 }
 
 void DoIPServer::setGID(const uint64_t inputGID) {
     m_GID = DoIPGID(inputGID);
-    // GID[0] = (inputGID >> 40) & 0xFF;
-    // GID[1] = (inputGID >> 32) & 0xFF;
-    // GID[2] = (inputGID >> 24) & 0xFF;
-    // GID[3] = (inputGID >> 16) & 0xFF;
-    // GID[4] = (inputGID >> 8) & 0xFF;
-    // GID[5] = inputGID & 0xFF;
 }
 
 void DoIPServer::setFAR(DoIPFurtherAction inputFAR) {
@@ -185,7 +173,6 @@ void DoIPServer::setAnnounceInterval(unsigned int Interval) {
 }
 
 void DoIPServer::setMulticastGroup(const char *address) {
-
     int loop = 1;
 
     // set Option using the same Port for multiple Sockets
