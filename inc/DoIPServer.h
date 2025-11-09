@@ -18,15 +18,19 @@
 #include "AliveCheckTimer.h"
 #include "DoIPConnection.h"
 #include "DoIPFurtherAction.h"
+#include "MacAddress.h"
 
 namespace doip {
 
 using CloseConnectionCallback = std::function<void()>;
 
 const int DOIP_SERVER_PORT = 13400;
-//const unsigned long _MaxDataSize = 4294967294;
-//const unsigned long _MaxDataSize = 0xFFFFFF;
 
+
+/**
+ * @brief DoIP Server class to handle incoming DoIP connections and UDP messages.
+ *
+ */
 class DoIPServer {
 
 public:
@@ -37,7 +41,7 @@ public:
     void setupTcpSocket();
     std::unique_ptr<DoIPConnection> waitForTcpConnection();
     void setupUdpSocket();
-    size_t receiveUdpMessage();
+    ssize_t receiveUdpMessage();
 
     void setAnnounceNum(int Num);
     void setAnnounceInterval(unsigned int Interval);

@@ -1,12 +1,6 @@
-#include <array>
-#include <ifaddrs.h>
-#if defined(__APPLE__)
-#include <net/if_dl.h>
-#endif
-
-
 #include "DoIPServer.h"
 #include "DoIPMessage.h"
+#include "MacAddress.h"
 
 using namespace doip;
 
@@ -18,29 +12,6 @@ const char* DEFAULT_IFACE = "en0";
 #pragmea error "Unsupported platform"
 #endif
 
-using MacAddress = std::array<uint8_t, 6>;
-
-bool getMacAddress(const char* ifname, MacAddress& mac) {
-    struct ifaddrs *ifap, *ifaptr;
-
-    if (getifaddrs(&ifap) != 0) {
-        return false;
-    }
-
-    for (ifaptr = ifap; ifaptr != nullptr; ifaptr = ifaptr->ifa_next) {
-        if (strcmp(ifaptr->ifa_name, ifname) == 0 &&
-            ifaptr->ifa_addr->sa_family == AF_LINK) {
-
-            struct sockaddr_dl* sdl = (struct sockaddr_dl*)ifaptr->ifa_addr;
-            memcpy(mac.data(), LLADDR(sdl), 6);
-            freeifaddrs(ifap);
-            return true;
-        }
-    }
-
-    freeifaddrs(ifap);
-    return false;
-}
 
 /*
  * Set up a tcp socket, so the socket is ready to accept a connection
@@ -101,7 +72,7 @@ void DoIPServer::closeUdpSocket() {
  * @return      amount of bytes which were send back to client
  *              or -1 if error occurred
  */
-size_t DoIPServer::receiveUdpMessage() {
+ssize_t DoIPServer::receiveUdpMessage() {
 
     unsigned int length = sizeof(m_serverAddress);
     const ssize_t readBytes = recvfrom(m_udp_sock, m_receiveBuf.data(), m_receiveBuf.size(), 0, reinterpret_cast<struct sockaddr *>(&m_serverAddress), &length);
@@ -111,7 +82,7 @@ size_t DoIPServer::receiveUdpMessage() {
         return -1;
     }
 
-    size_t sentBytes = reactToReceivedUdpMessage(static_cast<size_t>(readBytes));
+    ssize_t sentBytes = reactToReceivedUdpMessage(static_cast<size_t>(readBytes));
 
     return sentBytes;
 }
@@ -163,7 +134,7 @@ ssize_t DoIPServer::sendUdpMessage(const uint8_t *message, size_t messageLength)
 
 void DoIPServer::setEIDdefault() {
     MacAddress mac = {0};
-    if (!getMacAddress("en0", mac)) {
+    if (!getFirstMacAddress(mac)) {
         std::cerr << "Failed to get MAC address, using default EID" << '\n';
         m_EID = DoIPEID::Zero;
         return;

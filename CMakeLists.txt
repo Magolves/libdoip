@@ -35,6 +35,7 @@ set(SOURCES
     src/DoIPClient.cpp
     src/DoIPConnection.cpp
     src/DoIPServer.cpp
+    src/MacAddress.cpp
     src/RoutingActivationHandler.cpp
 )
 
