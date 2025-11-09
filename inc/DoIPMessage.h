@@ -303,11 +303,7 @@ public:
         }
 
         // Extract payload length from header
-        uint32_t b3 = static_cast<uint32_t>(data[4] << 24);
-        uint32_t b2 = static_cast<uint32_t>(data[5] << 16);
-        uint32_t b1 = static_cast<uint32_t>(data[6] << 8);
-        uint32_t b0 = static_cast<uint32_t>(data[7]);
-        size_t payloadLength = static_cast<size_t>(b3 | b2 | b1 | b0);
+        uint32_t payloadLength = util::readU32BE(data, 4);
 
         return std::make_pair(payloadType.value(), payloadLength);
     }
@@ -320,32 +316,19 @@ public:
      * @return std::optional<DoIPMessage> The parsed message or std::nullopt if invalid
      */
     static std::optional<DoIPMessage> tryParse(const uint8_t *data, size_t length) {
-        if (!data || length < DOIP_HEADER_SIZE) {
+        auto optHeader = tryParseHeader(data, length);
+        if (!optHeader.has_value()) {
             return std::nullopt;
         }
-
-        // Validate protocol version
-        if (data[0] < ISO_13400_2010 || data[0] > ISO_13400_2025 ||
-            data[0] + data[1] != 0xFF) {
-            return std::nullopt;
-        }
-
-        // Extract payload length from header
-        uint32_t b3 = static_cast<uint32_t>(data[4]) << 24;
-        uint32_t b2 = static_cast<uint32_t>(data[5]) << 16;
-        uint32_t b1 = static_cast<uint32_t>(data[6]) << 8;
-        uint32_t b0 = static_cast<uint32_t>(data[7]);
-        size_t payloadLength = static_cast<size_t>(b3 | b2 | b1 | b0);
-
 
         // Check if we have the complete message
-        if (length < DOIP_HEADER_SIZE + payloadLength) {
+        if (length < DOIP_HEADER_SIZE + optHeader->second) {
             return std::nullopt;
         }
 
         // Create message from complete data
         DoIPMessage msg;
-        msg.m_data.assign(data, data + DOIP_HEADER_SIZE + payloadLength);
+        msg.m_data.assign(data, data + DOIP_HEADER_SIZE + optHeader->second);
 
         return msg;
     }
