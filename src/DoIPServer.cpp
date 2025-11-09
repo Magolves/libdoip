@@ -8,6 +8,14 @@
 
 using namespace doip;
 
+#if defined(__linux__)
+const char* DEFAULT_IFACE = "eth0";
+#elif defined(__APPLE__)
+const char* DEFAULT_IFACE = "en0";
+#else
+#pragmea error "Unsupported platform"
+#endif
+
 using MacAddress = std::array<uint8_t, 6>;
 
 bool getMacAddress(const char* ifname, MacAddress& mac) {
