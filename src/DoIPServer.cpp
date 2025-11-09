@@ -1,6 +1,8 @@
 #include <array>
 #include <ifaddrs.h>
+#if defined(__APPLE__)
 #include <net/if_dl.h>
+#endif
 
 
 #include "DoIPServer.h"
