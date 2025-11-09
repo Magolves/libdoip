@@ -34,7 +34,7 @@ TEST_SUITE("DoIPServer Tests") {
 
         // Check that the VIN in the payload matches the set VIN
         for (size_t i = 0; i < 17; ++i) {
-            CHECK_MESSAGE(payload[i] == static_cast<uint8_t>(testVIN[i]), "VIN byte mismatch at index " << i << ": expected " << static_cast<uint8_t>(testVIN[i]) << ", got " << static_cast<uint8_t>(payload[i]));
+            CHECK_MESSAGE(payload[i] == static_cast<uint8_t>(testVIN[i]), "VIN byte mismatch at index " << i << ": expected " << testVIN[i] << ", got " << +payload[i]);
         }
     }
 
