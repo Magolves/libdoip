@@ -9,6 +9,8 @@
 
 C/C++ library for Diagnostics over IP (DoIP) (fork from https://github.com/GerritRiesch94/libdoip)
 
+**CAUTION** The current API is under construction any may change at any time.
+
 Despite the excellent work I saw some shortcomings in the design and refactored some parts - hopefully for the better.
 
 The C++ standard is set to C++ 17. However, so far the code does not use C++ 17 features and could compile also with older standards like C++ 11 or 14.
@@ -20,6 +22,27 @@ Changes in particular are
 - Introduced `DoIPAddress` struct, since the addresses had many different representations
 - Introduced value semantics (WIP)
 - ...
+
+## Documentation
+
+📚 **[Online Documentation](https://magolves.github.io/libdoip/)** - Full API documentation generated with Doxygen
+
+The documentation is automatically generated from source code comments and deployed to GitHub Pages on every push to the main branch.
+
+### Building Documentation Locally
+
+To generate the documentation locally:
+
+```bash
+# Install Doxygen and Graphviz
+sudo apt install doxygen graphviz
+
+# Generate documentation
+doxygen Doxyfile
+
+# Open the documentation
+xdg-open docs/html/index.html
+```
 
 ### Installing library for Diagnostics over IP
 

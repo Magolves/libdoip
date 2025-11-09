@@ -37,3 +37,6 @@ build/
 .vscode/
 *.pdf
 checks.json
+
+# Doxygen generated documentation
+docs/

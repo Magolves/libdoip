@@ -177,6 +177,8 @@ jobs:
     name: Generate Documentation
     runs-on: ubuntu-22.04
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+    permissions:
+      contents: write
 
     steps:
     - name: Checkout repository
@@ -189,17 +191,7 @@ jobs:
 
     - name: Generate documentation
       run: |
-        mkdir -p docs
         doxygen --version
-        # Add Doxyfile generation or use existing one
-        echo "PROJECT_NAME = libdoip" > Doxyfile
-        echo "INPUT = libdoipcommon/include libdoipserver/include libdoipclient/include" >> Doxyfile
-        echo "OUTPUT_DIRECTORY = docs" >> Doxyfile
-        echo "GENERATE_HTML = YES" >> Doxyfile
-        echo "GENERATE_LATEX = NO" >> Doxyfile
-        echo "RECURSIVE = YES" >> Doxyfile
-        echo "EXTRACT_ALL = YES" >> Doxyfile
-        echo "HAVE_DOT = YES" >> Doxyfile
         doxygen Doxyfile
 
     - name: Deploy to GitHub Pages
@@ -208,6 +200,10 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./docs/html
+        force_orphan: true
+        user_name: 'github-actions[bot]'
+        user_email: 'github-actions[bot]@users.noreply.github.com'
+        commit_message: 'Deploy documentation to GitHub Pages'
 
   # Code coverage (only on main branch)
   coverage:
