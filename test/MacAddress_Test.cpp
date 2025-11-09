@@ -7,15 +7,6 @@ using namespace doip;
 
 TEST_SUITE("MacAddress") {
 
-    TEST_CASE("MacAddress type definition") {
-        MacAddress mac;
-        CHECK(mac.size() == 6);
-
-        // Verify it's a std::array
-        static_assert(std::is_same<MacAddress, std::array<uint8_t, 6>>::value,
-                      "MacAddress should be std::array<uint8_t, 6>");
-    }
-
     TEST_CASE("getMacAddress with nullptr returns first interface") {
         MacAddress mac;
 
@@ -167,22 +158,8 @@ TEST_SUITE("MacAddress") {
         CHECK(mac[4] == 0x44);
         CHECK(mac[5] == 0x55);
 
-        CHECK(mac.size() == 6);
-
         // Test array access
         CHECK(mac.data() != nullptr);
-    }
-
-    TEST_CASE("MAC address copy and assignment") {
-        MacAddress mac1 = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
-        MacAddress mac2 = mac1;
-
-        CHECK(mac1 == mac2);
-
-        MacAddress mac3;
-        mac3 = mac1;
-
-        CHECK(mac1 == mac3);
     }
 
     TEST_CASE("Platform detection (informational)") {

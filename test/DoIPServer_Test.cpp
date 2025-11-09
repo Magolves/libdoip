@@ -46,7 +46,7 @@ TEST_SUITE("DoIPServer Tests") {
 
         // Check that the EID in the payload matches the set EID
         for (size_t i = 0; i < 6; ++i) {
-            CHECK(payload[17 + 2 + i] == static_cast<uint8_t>((testEID >> (40 - i * 8)) & 0xFF));
+            CHECK(payload[17 + 2 + i] == ((testEID >> (40 - i * 8)) & 0xFF));
         }
     }
 
