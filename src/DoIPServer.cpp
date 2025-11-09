@@ -97,7 +97,7 @@ ssize_t DoIPServer::reactToReceivedUdpMessage(size_t bytesRead) {
     ssize_t sentBytes = -1;
     // GenericHeaderAction action = parseGenericHeader(data, bytesRead);
 
-    auto optHeader = DoIPMessage::parseHeader(m_receiveBuf.data(), DOIP_HEADER_SIZE);
+    auto optHeader = DoIPMessage::tryParseHeader(m_receiveBuf.data(), DOIP_HEADER_SIZE);
     if (!optHeader.has_value()) {
         return sendNegativeUdpAck(DoIPNegativeAck::IncorrectPatternFormat);
     }

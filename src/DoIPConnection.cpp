@@ -36,7 +36,7 @@ int DoIPConnection::receiveTcpMessage() {
     if (readBytes == DOIP_HEADER_SIZE && !m_aliveCheckTimer.hasTimeout()) {
         std::cout << "Received DoIP Header." << '\n';
 
-        auto optHeader = DoIPMessage::parseHeader(genericHeader, DOIP_HEADER_SIZE);
+        auto optHeader = DoIPMessage::tryParseHeader(genericHeader, DOIP_HEADER_SIZE);
         if (!optHeader.has_value()) {
             auto sentBytes = sendNegativeAck(DoIPNegativeAck::IncorrectPatternFormat);
             closeSocket();

@@ -288,10 +288,9 @@ public:
      *
      * @param data Pointer to the byte array
      * @param length Length of the data
-     * @param offset Offset to start reading from (default: 0)
      * @return std::optional<DoIPPayloadType> The payload type if valid
      */
-    static std::optional<std::pair<DoIPPayloadType, uint32_t>> parseHeader(const uint8_t *data, size_t length) {
+    static std::optional<std::pair<DoIPPayloadType, uint32_t>> tryParseHeader(const uint8_t *data, size_t length) {
         if (!data || length < DOIP_HEADER_SIZE) return std::nullopt;
 
         if (!isValidProtocolVersion(data, length)) {
