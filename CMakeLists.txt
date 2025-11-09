@@ -9,6 +9,7 @@ project(libdoip
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(MAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Build options
 option(WITH_UNIT_TEST "Build unit tests" OFF)

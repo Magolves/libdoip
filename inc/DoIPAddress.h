@@ -1,18 +1,18 @@
 #ifndef DOIPADDRESS_H
 #define DOIPADDRESS_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include <array>
-#include <iostream>
 #include <iomanip>
+#include <iostream>
 
 #include "ByteArray.h"
 
 namespace doip {
 
-    constexpr size_t DOIP_ADDRESS_SIZE = 2;
+constexpr size_t DOIP_ADDRESS_SIZE = 2;
 
 /**
  * @brief Represents a 16-bit DoIP address consisting of high and low significant bytes.
@@ -94,7 +94,7 @@ struct DoIPAddress {
      *
      * @return constexpr size_t the address size
      */
-    constexpr size_t size() const {return DOIP_ADDRESS_SIZE;}
+    constexpr size_t size() const { return DOIP_ADDRESS_SIZE; }
 
     /**
      * @brief Updates the address with new high and low significant bytes.
@@ -108,7 +108,7 @@ struct DoIPAddress {
     }
 
     void update(uint16_t hsblsb) {
-       update((hsblsb >> 8) & 0xFF, hsblsb & 0xFF);
+        update((hsblsb >> 8) & 0xFF, hsblsb & 0xFF);
     }
 
     /**
@@ -125,7 +125,7 @@ struct DoIPAddress {
      *          data[offset] and data[offset+1] are valid memory locations.
      * @warning No null pointer checking is performed. Ensure data is not nullptr.
      */
-    void update(const uint8_t* data, size_t offset = 0) {
+    void update(const uint8_t *data, size_t offset = 0) {
         if (data == nullptr) {
             return;
         }
@@ -138,7 +138,7 @@ struct DoIPAddress {
      * @param bytes the byte array to append to
      * @return ByteArray& the modified byte array
      */
-    ByteArray& appendTo(ByteArray& bytes) const {
+    ByteArray &appendTo(ByteArray &bytes) const {
         bytes.emplace_back(hsb());
         bytes.emplace_back(lsb());
         return bytes;
@@ -153,7 +153,7 @@ struct DoIPAddress {
      * @param other The DoIPAddress object to compare with
      * @return true if both addresses are equal, false otherwise
      */
-    bool operator==(const DoIPAddress& other) const {
+    bool operator==(const DoIPAddress &other) const {
         return toUint16() == other.toUint16();
     }
 
@@ -166,7 +166,7 @@ struct DoIPAddress {
      * @param other The DoIPAddress object to compare with
      * @return true if the addresses are not equal, false otherwise
      */
-    bool operator!=(const DoIPAddress& other) const {
+    bool operator!=(const DoIPAddress &other) const {
         return !(*this == other);
     }
 
@@ -187,7 +187,7 @@ struct DoIPAddress {
      * @return true the source address is valid
      * @return false the source address is NOT valid
      */
-    static bool isValidSourceAddress(const uint8_t* data, size_t offset = 0) {
+    static bool isValidSourceAddress(const uint8_t *data, size_t offset = 0) {
         uint16_t addr_value = (data[offset] << 8) | data[offset + 1];
 
         return MIN_SOURCE_ADDRESS <= addr_value && MAX_SOURCE_ADDRESS >= addr_value;
@@ -197,17 +197,17 @@ struct DoIPAddress {
     static constexpr uint16_t MIN_SOURCE_ADDRESS = 3584; // 0x0E00
     static constexpr uint16_t MAX_SOURCE_ADDRESS = 4095; // 0x0FFF
 
+    /**
+     * @brief Constant for a DoIP zero address (0x0000).
+     */
+    static const DoIPAddress ZeroAddress;
+
   private:
     static constexpr uint8_t HSB = 0; ///< Index for High Significant Byte in the byte array
     static constexpr uint8_t LSB = 1; ///< Index for Low Significant Byte in the byte array
 
     std::array<uint8_t, DOIP_ADDRESS_SIZE> m_bytes; ///< Internal storage for the 2-byte address
 };
-
-/**
- * @brief Constant for a DoIP zero address (0x0000).
- */
-constexpr DoIPAddress ZeroAddress;
 
 /**
  * @brief Stream output operator for DoIPAddress objects.
@@ -220,11 +220,13 @@ constexpr DoIPAddress ZeroAddress;
  * @param addr The DoIPAddress object to output
  * @return Reference to the output stream for chaining
  */
-inline std::ostream& operator<<(std::ostream& os, const DoIPAddress& addr) {
+inline std::ostream &operator<<(std::ostream &os, const DoIPAddress &addr) {
     os << "0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(4) << addr.toUint16();
     return os;
 }
 
+inline const DoIPAddress DoIPAddress::ZeroAddress = DoIPAddress();
+
 } // namespace doip
 
-#endif  /* DOIPADDRESS_H */
+#endif /* DOIPADDRESS_H */

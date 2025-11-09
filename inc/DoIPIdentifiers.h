@@ -6,6 +6,7 @@
 #include <array>
 #include <cstring>
 #include <string>
+#include <sstream>
 
 namespace doip {
 
@@ -91,8 +92,8 @@ class GenericFixedId {
     template <typename integral,
               typename = std::enable_if_t<std::is_integral_v<integral>>>
     explicit GenericFixedId(integral id_value) : m_id{} {
-        //static_assert(ID_LENGTH >= sizeof(integral), "ID_LENGTH is too large for the integral type");
-        // big endian!
+        // static_assert(ID_LENGTH >= sizeof(integral), "ID_LENGTH is too large for the integral type");
+        //  big endian!
         constexpr size_t sizeof_integral = sizeof(integral);
         constexpr size_t len = std::min(sizeof_integral, ID_LENGTH);
         // big endian!
@@ -141,6 +142,23 @@ class GenericFixedId {
             effective_length = i + 1;
         }
         return std::string(reinterpret_cast<const char *>(m_id.data()), effective_length);
+    }
+
+    /**
+     * @brief Get identifier as hex string, bytes separated by '.'
+     *
+     * @return std::string Hex representation (e.g. "01.02.0A")
+     */
+    std::string toHexString() const {
+        std::ostringstream oss;
+        oss << std::uppercase << std::hex << std::setfill('0');
+        for (size_t i = 0; i < ID_LENGTH; ++i) {
+            oss << std::setw(2) << static_cast<int>(m_id[i]);
+            if (i + 1 < ID_LENGTH) {
+                oss << '.';
+            }
+        }
+        return oss.str();
     }
 
     /**

@@ -1,7 +1,36 @@
+#include <array>
+#include <ifaddrs.h>
+#include <net/if_dl.h>
+
+
 #include "DoIPServer.h"
 #include "DoIPMessage.h"
 
 using namespace doip;
+
+using MacAddress = std::array<uint8_t, 6>;
+
+bool getMacAddress(const char* ifname, uint8_t* mac) {
+    struct ifaddrs *ifap, *ifaptr;
+
+    if (getifaddrs(&ifap) != 0) {
+        return false;
+    }
+
+    for (ifaptr = ifap; ifaptr != nullptr; ifaptr = ifaptr->ifa_next) {
+        if (strcmp(ifaptr->ifa_name, ifname) == 0 &&
+            ifaptr->ifa_addr->sa_family == AF_LINK) {
+
+            struct sockaddr_dl* sdl = (struct sockaddr_dl*)ifaptr->ifa_addr;
+            memcpy(mac, LLADDR(sdl), 6);
+            freeifaddrs(ifap);
+            return true;
+        }
+    }
+
+    freeifaddrs(ifap);
+    return false;
+}
 
 /*
  * Set up a tcp socket, so the socket is ready to accept a connection
@@ -12,7 +41,7 @@ void DoIPServer::setupTcpSocket() {
 
     m_serverAddress.sin_family = AF_INET;
     m_serverAddress.sin_addr.s_addr = htonl(INADDR_ANY);
-    m_serverAddress.sin_port = htons(_ServerPort);
+    m_serverAddress.sin_port = htons(DOIP_SERVER_PORT);
 
     // binds the socket to the address and port number
     bind(m_tcp_sock, reinterpret_cast<const struct sockaddr *>(&m_serverAddress), sizeof(m_serverAddress));
@@ -34,7 +63,7 @@ void DoIPServer::setupUdpSocket() {
 
     m_serverAddress.sin_family = AF_INET;
     m_serverAddress.sin_addr.s_addr = htonl(INADDR_ANY);
-    m_serverAddress.sin_port = htons(_ServerPort);
+    m_serverAddress.sin_port = htons(DOIP_SERVER_PORT);
 
     if (m_udp_sock < 0)
         std::cout << "Error setting up a udp socket" << '\n';
@@ -121,29 +150,15 @@ ssize_t DoIPServer::sendUdpMessage(const uint8_t *message, size_t messageLength)
     return result;
 }
 
+
 void DoIPServer::setEIDdefault() {
-    int fd;
-
-    struct ifreq ifr;
-    const char *iface = "ens33"; // eth0
-
-    fd = socket(AF_INET, SOCK_DGRAM, 0);
-
-    ifr.ifr_addr.sa_family = AF_INET;
-
-    strncpy(ifr.ifr_name, iface, IFNAMSIZ - 1);
-
-    ioctl(fd, SIOCGIFHWADDR, &ifr);
-
-    close(fd);
-
-    const uint8_t *mac = reinterpret_cast<const uint8_t *>(ifr.ifr_hwaddr.sa_data);
-
-    // memcpy(mac, (uint8_t *)ifr.ifr_hwaddr.sa_data, 48);
-
-    // for (int i = 0; i < 6; i++) {
-    //     m_EID[i] = mac[i];
-    // }
+    uint8_t mac[6] = {0};
+    if (!getMacAddress("en0", mac)) {
+        std::cerr << "Failed to get MAC address, using default EID" << '\n';
+        m_EID = DoIPEID::Zero;
+        return;
+    }
+    // Set EID based on MAC address (last 6 bytes)
     m_EID = DoIPEID(mac, m_EID.ID_LENGTH);
 }
 

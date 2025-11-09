@@ -23,7 +23,7 @@ namespace doip {
 
 using CloseConnectionCallback = std::function<void()>;
 
-const int _ServerPort = 13400;
+const int DOIP_SERVER_PORT = 13400;
 //const unsigned long _MaxDataSize = 4294967294;
 //const unsigned long _MaxDataSize = 0xFFFFFF;
 
@@ -39,30 +39,39 @@ public:
     void setupUdpSocket();
     int receiveUdpMessage();
 
+    void setAnnounceNum(int Num);
+    void setAnnounceInterval(unsigned int Interval);
+
     void closeTcpSocket();
     void closeUdpSocket();
+
+    void setLogicalGatewayAddress(const unsigned short inputLogAdd);
 
     ssize_t sendVehicleAnnouncement();
 
     void setEIDdefault();
     void setVIN(const std::string& VINString);
-    void setLogicalGatewayAddress(const unsigned short inputLogAdd);
+    const DoIPVIN& getVIN() const { return m_VIN; }
+
     void setEID(const uint64_t inputEID);
+    const DoIPEID& getEID() const { return m_EID; }
+
     void setGID(const uint64_t inputGID);
+    const DoIPGID& getGID() const { return m_GID; }
     void setFAR(DoIPFurtherAction inputFAR);
-    void setAnnounceNum(int Num);
-    void setAnnounceInterval(unsigned int Interval);
+
+
 
 private:
 
     int m_tcp_sock{-1};
     int m_udp_sock{-1};
-    struct sockaddr_in m_serverAddress;
-    struct sockaddr_in m_clientAddress;
+    struct sockaddr_in m_serverAddress{};
+    struct sockaddr_in m_clientAddress{};
     ByteArray m_receiveBuf{};
 
     DoIPVIN m_VIN;
-    DoIPAddress m_gatewayAddress = ZeroAddress;
+    DoIPAddress m_gatewayAddress = DoIPAddress::ZeroAddress;
     DoIPEID m_EID = DoIPEID::Zero;
     DoIPGID m_GID = DoIPGID::Zero;
     DoIPFurtherAction m_FurtherActionReq = DoIPFurtherAction::NoFurtherAction;
