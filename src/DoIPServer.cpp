@@ -10,7 +10,7 @@ using namespace doip;
 
 using MacAddress = std::array<uint8_t, 6>;
 
-bool getMacAddress(const char* ifname, uint8_t* mac) {
+bool getMacAddress(const char* ifname, MacAddress& mac) {
     struct ifaddrs *ifap, *ifaptr;
 
     if (getifaddrs(&ifap) != 0) {
@@ -22,7 +22,7 @@ bool getMacAddress(const char* ifname, uint8_t* mac) {
             ifaptr->ifa_addr->sa_family == AF_LINK) {
 
             struct sockaddr_dl* sdl = (struct sockaddr_dl*)ifaptr->ifa_addr;
-            memcpy(mac, LLADDR(sdl), 6);
+            memcpy(mac.data(), LLADDR(sdl), 6);
             freeifaddrs(ifap);
             return true;
         }
@@ -91,17 +91,17 @@ void DoIPServer::closeUdpSocket() {
  * @return      amount of bytes which were send back to client
  *              or -1 if error occurred
  */
-int DoIPServer::receiveUdpMessage() {
+size_t DoIPServer::receiveUdpMessage() {
 
     unsigned int length = sizeof(m_serverAddress);
-    ssize_t readBytes = recvfrom(m_udp_sock, m_receiveBuf.data(), m_receiveBuf.size(), 0, reinterpret_cast<struct sockaddr *>(&m_serverAddress), &length);
+    const ssize_t readBytes = recvfrom(m_udp_sock, m_receiveBuf.data(), m_receiveBuf.size(), 0, reinterpret_cast<struct sockaddr *>(&m_serverAddress), &length);
 
     if (readBytes < 0) {
         std::cerr << "Error receiving UDP message" << '\n';
         return -1;
     }
 
-    int sentBytes = reactToReceivedUdpMessage(static_cast<size_t>(readBytes));
+    size_t sentBytes = reactToReceivedUdpMessage(static_cast<size_t>(readBytes));
 
     return sentBytes;
 }
@@ -152,14 +152,14 @@ ssize_t DoIPServer::sendUdpMessage(const uint8_t *message, size_t messageLength)
 
 
 void DoIPServer::setEIDdefault() {
-    uint8_t mac[6] = {0};
+    MacAddress mac = {0};
     if (!getMacAddress("en0", mac)) {
         std::cerr << "Failed to get MAC address, using default EID" << '\n';
         m_EID = DoIPEID::Zero;
         return;
     }
     // Set EID based on MAC address (last 6 bytes)
-    m_EID = DoIPEID(mac, m_EID.ID_LENGTH);
+    m_EID = DoIPEID(mac.data(), m_EID.ID_LENGTH);
 }
 
 void DoIPServer::setVIN(const std::string &VINString) {

@@ -37,7 +37,7 @@ public:
     void setupTcpSocket();
     std::unique_ptr<DoIPConnection> waitForTcpConnection();
     void setupUdpSocket();
-    int receiveUdpMessage();
+    size_t receiveUdpMessage();
 
     void setAnnounceNum(int Num);
     void setAnnounceInterval(unsigned int Interval);
