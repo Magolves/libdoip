@@ -132,15 +132,16 @@ ssize_t DoIPServer::sendUdpMessage(const uint8_t *message, size_t messageLength)
 }
 
 
-void DoIPServer::setEIDdefault() {
+bool DoIPServer::setEIDdefault() {
     MacAddress mac = {0};
     if (!getFirstMacAddress(mac)) {
         std::cerr << "Failed to get MAC address, using default EID" << '\n';
         m_EID = DoIPEID::Zero;
-        return;
+        return false;
     }
     // Set EID based on MAC address (last 6 bytes)
     m_EID = DoIPEID(mac.data(), m_EID.ID_LENGTH);
+    return true;
 }
 
 void DoIPServer::setVIN(const std::string &VINString) {

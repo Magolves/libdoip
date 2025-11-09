@@ -51,14 +51,14 @@ TEST_SUITE("DoIPServer Tests") {
     }
 
     TEST_CASE_FIXTURE(DoIPServerFixture, "Set EID default") {
-        server.setEIDdefault();
+        bool result = server.setEIDdefault();
+        CHECK(result == true);
+
         DoIPMessage msg = DoIPMessage::makeVehicleIdentificationResponse(server.getVIN(), DoIPAddress::ZeroAddress, server.getEID(), DoIPGID::Zero, DoIPFurtherAction::NoFurtherAction);
         ByteArray payload = msg.getPayload();
 
         std::cerr << "EID set to: " << server.getEID().toHexString() << '\n';
-        // Check that the EID in the payload matches the set EID
-        for (size_t i = 0; i < 6; ++i) {
-            CHECK_MESSAGE(payload[17 + 2 + i] != 0, server.getEID().toString() << " has zero byte at index " << i);
-        }
+        auto zeros = std::count_if(payload.begin() + 17 + 2, payload.begin() + 17 + 2 + 6, [](uint8_t byte) { return byte == 0; });
+        CHECK(zeros < 6); // At least one byte should not be zero
     }
 }

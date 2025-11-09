@@ -53,7 +53,14 @@ public:
 
     ssize_t sendVehicleAnnouncement();
 
-    void setEIDdefault();
+    /**
+     * @brief Sets the EID to a default value based on the MAC address.
+     *
+     * @return true if the EID was successfully set to the default value.
+     * @return false if the default EID could not be set.
+     */
+    bool setEIDdefault();
+    
     void setVIN(const std::string& VINString);
     const DoIPVIN& getVIN() const { return m_VIN; }
 
