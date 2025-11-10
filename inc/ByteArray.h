@@ -13,6 +13,7 @@
 #include <iomanip>
 #include <ostream>
 #include <stdint.h>
+#include <type_traits>
 #include <vector>
 
 namespace doip {
@@ -147,6 +148,70 @@ struct ByteArray : std::vector<uint8_t> {
     }
 
     /**
+     * @brief Appends an enum class value as its underlying integral type
+     *
+     * Automatically detects the underlying type of the enum and writes it
+     * in big-endian format. Supports 8-bit, 16-bit, and 32-bit enums.
+     *
+     * @tparam E Enum class type
+     * @param value The enum value to append
+     *
+     * @example
+     * enum class Status : uint16_t { OK = 0x0100, ERROR = 0x0200 };
+     * ByteArray arr;
+     * arr.writeEnum(Status::OK); // Appends 0x01, 0x00
+     */
+    template<typename E>
+    void writeEnum(E value) {
+        static_assert(std::is_enum_v<E>, "writeEnum requires an enum type");
+
+        using UnderlyingType = std::underlying_type_t<E>;
+        auto integral_value = static_cast<UnderlyingType>(value);
+
+        if constexpr (sizeof(UnderlyingType) == 1) {
+            emplace_back(static_cast<uint8_t>(integral_value));
+        } else if constexpr (sizeof(UnderlyingType) == 2) {
+            writeU16(static_cast<uint16_t>(integral_value));
+        } else if constexpr (sizeof(UnderlyingType) == 4) {
+            writeU32(static_cast<uint32_t>(integral_value));
+        } else {
+            static_assert(sizeof(UnderlyingType) <= 4, "Enum underlying type too large (max 32-bit supported)");
+        }
+    }
+
+    /**
+     * @brief Writes an enum class value at a specific index as its underlying integral type
+     *
+     * Overwrites bytes starting at the specified index with the enum value
+     * converted to its underlying integral type in big-endian format.
+     *
+     * @tparam E Enum class type
+     * @param index Starting index where to write
+     * @param value The enum value to write
+     * @throws std::out_of_range if not enough space at index
+     */
+    template<typename E>
+    void writeEnumAt(size_t index, E value) {
+        static_assert(std::is_enum_v<E>, "writeEnumAt requires an enum type");
+
+        using UnderlyingType = std::underlying_type_t<E>;
+        auto integral_value = static_cast<UnderlyingType>(value);
+
+        if constexpr (sizeof(UnderlyingType) == 1) {
+            if (index >= this->size()) {
+                throw std::out_of_range("Index out of range for writeEnumAt");
+            }
+            (*this)[index] = static_cast<uint8_t>(integral_value);
+        } else if constexpr (sizeof(UnderlyingType) == 2) {
+            writeU16At(index, static_cast<uint16_t>(integral_value));
+        } else if constexpr (sizeof(UnderlyingType) == 4) {
+            writeU32At(index, static_cast<uint32_t>(integral_value));
+        } else {
+            static_assert(sizeof(UnderlyingType) <= 4, "Enum underlying type too large (max 32-bit supported)");
+        }
+    }
+
+    /**
      * @brief Reads a 16-bit unsigned integer in big-endian format from a specific index
      *
      * Reads 2 bytes starting at the specified index and interprets them as a
@@ -178,6 +243,42 @@ struct ByteArray : std::vector<uint8_t> {
             throw std::out_of_range("Index out of range for readU32BE");
         }
         return util::readU32BE(this->data(), index);
+    }
+
+    /**
+     * @brief Reads an enum class value from a specific index
+     *
+     * Reads bytes starting at the specified index and interprets them as
+     * the underlying integral type of the enum in big-endian format.
+     *
+     * @tparam E Enum class type to read
+     * @param index Starting index to read from
+     * @return E The enum value read from the array
+     * @throws std::out_of_range if not enough bytes available
+     *
+     * @example
+     * enum class Status : uint16_t { OK = 0x0100, ERROR = 0x0200 };
+     * ByteArray arr = {0x01, 0x00};
+     * auto status = arr.readEnum<Status>(0); // Returns Status::OK
+     */
+    template<typename E>
+    E readEnum(size_t index) const {
+        static_assert(std::is_enum_v<E>, "readEnum requires an enum type");
+
+        using UnderlyingType = std::underlying_type_t<E>;
+
+        if constexpr (sizeof(UnderlyingType) == 1) {
+            if (index >= this->size()) {
+                throw std::out_of_range("Index out of range for readEnum");
+            }
+            return static_cast<E>((*this)[index]);
+        } else if constexpr (sizeof(UnderlyingType) == 2) {
+            return static_cast<E>(readU16BE(index));
+        } else if constexpr (sizeof(UnderlyingType) == 4) {
+            return static_cast<E>(readU32BE(index));
+        } else {
+            static_assert(sizeof(UnderlyingType) <= 4, "Enum underlying type too large (max 32-bit supported)");
+        }
     }
 };
 
