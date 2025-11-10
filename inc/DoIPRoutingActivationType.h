@@ -16,6 +16,7 @@ constexpr std::optional<DoIPRoutingActivationType> toRoutingActivationType(uint8
     switch(value) {
         case 0: return DoIPRoutingActivationType::Default;
         case 0xE0: return DoIPRoutingActivationType::CentralSecurity;
+        default: break;
     }
 
     return std::nullopt;

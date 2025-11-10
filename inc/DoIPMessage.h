@@ -9,7 +9,7 @@
 
 #include "ByteArray.h"
 #include "DoIPAddress.h"
-#include "DoIPActivationType.h"
+#include "DoIPRoutingActivationType.h"
 #include "DoIPNegativeAck.h"
 #include "DoIPNegativeDiagnosticAck.h"
 #include "DoIPPayloadType.h"
@@ -78,58 +78,58 @@ public:
     /**
      * @brief Constructs a DoIP message with payload type and data.
      *
-     * @param pl_type The payload type for this message
+     * @param payloadType The payload type for this message
      * @param payload The payload data as a vector of bytes
      */
-    explicit DoIPMessage(DoIPPayloadType pl_type, const ByteArray &payload) {
-        buildMessage(pl_type, payload);
+    explicit DoIPMessage(DoIPPayloadType payloadType, const ByteArray &payload) {
+        buildMessage(payloadType, payload);
     }
 
     /**
      * @brief Constructs a DoIP message with payload type and data (move semantics).
      *
-     * @param pl_type The payload type for this message
+     * @param payloadType The payload type for this message
      * @param payload The payload data as a vector of bytes (moved)
      */
-    explicit DoIPMessage(DoIPPayloadType pl_type, ByteArray &&payload) {
-        buildMessage(pl_type, payload);
+    explicit DoIPMessage(DoIPPayloadType payloadType, ByteArray &&payload) {
+        buildMessage(payloadType, payload);
     }
 
     /**
      * @brief Constructs a DoIP message with payload type and initializer list.
      *
-     * @param pl_type The payload type for this message
+     * @param payloadType The payload type for this message
      * @param init_list Initializer list of bytes for the payload
      */
-    DoIPMessage(DoIPPayloadType pl_type, std::initializer_list<uint8_t> init_list) {
+    DoIPMessage(DoIPPayloadType payloadType, std::initializer_list<uint8_t> init_list) {
         ByteArray payload(init_list);
-        buildMessage(pl_type, payload);
+        buildMessage(payloadType, payload);
     }
 
     /**
      * @brief Constructs a DoIP message from raw byte array.
      *
-     * @param pl_type The payload type for this message
+     * @param payloadType The payload type for this message
      * @param data Pointer to raw payload byte data
      * @param size Number of bytes to copy from payload data
      */
-    explicit DoIPMessage(DoIPPayloadType pl_type, const uint8_t *data, size_t size) {
+    explicit DoIPMessage(DoIPPayloadType payloadType, const uint8_t *data, size_t size) {
         ByteArray payload(data, size);
-        buildMessage(pl_type, payload);
+        buildMessage(payloadType, payload);
     }
 
     /**
      * @brief Constructs a DoIP message from iterator range.
      *
      * @tparam Iterator Input iterator type
-     * @param pl_type The payload type for this message
+     * @param payloadType The payload type for this message
      * @param first Iterator to the beginning of the data range
      * @param last Iterator to the end of the data range
      */
     template <typename Iterator>
-    explicit DoIPMessage(DoIPPayloadType pl_type, Iterator first, Iterator last) {
+    explicit DoIPMessage(DoIPPayloadType payloadType, Iterator first, Iterator last) {
         ByteArray payload(first, last);
-        buildMessage(pl_type, payload);
+        buildMessage(payloadType, payload);
     }
 
     /**
@@ -339,10 +339,10 @@ protected:
     /**
      * @brief Builds the internal message representation.
      *
-     * @param pl_type The payload type
+     * @param payloadType The payload type
      * @param payload The payload data
      */
-    void buildMessage(DoIPPayloadType pl_type, const ByteArray &payload) {
+    void buildMessage(DoIPPayloadType payloadType, const ByteArray &payload) {
         m_data.clear();
         m_data.reserve(DOIP_HEADER_SIZE + payload.size());
 
@@ -351,12 +351,11 @@ protected:
         m_data.emplace_back(PROTOCOL_VERSION_INV);
 
         // Payload type (big-endian uint16_t)
-        uint16_t type_value = static_cast<uint16_t>(pl_type);
-        m_data.writeU16(type_value);
+        m_data.writeEnum(payloadType);
 
         // Payload length (big-endian uint32_t)
-        uint32_t payload_length = static_cast<uint32_t>(payload.size());
-        m_data.writeU32(payload_length);
+        uint32_t payloadLength = static_cast<uint32_t>(payload.size());
+        m_data.writeU32(payloadLength);
 
         // Payload data
         m_data.insert(m_data.end(), payload.begin(), payload.end());
@@ -430,12 +429,13 @@ namespace message {
         ByteArray payload;
         payload.reserve(vin.size() + logicalAddress.size() + entityType.size() + groupId.size() + 2);
 
-        vin.appendTo(payload);
-        logicalAddress.appendTo(payload);
-        entityType.appendTo(payload);
-        groupId.appendTo(payload);
-        payload.emplace_back(static_cast<uint8_t>(furtherAction));
-        payload.emplace_back(static_cast<uint8_t>(syncStatus));
+        payload.insert(payload.end(), vin.begin(), vin.end());
+        payload.writeU16(logicalAddress.toUint16());
+        payload.insert(payload.end(), entityType.begin(), entityType.end());
+        payload.insert(payload.end(), groupId.begin(), groupId.end());
+        payload.writeEnum(furtherAction);
+        payload.writeEnum(syncStatus);
+
 
         return DoIPMessage(DoIPPayloadType::VehicleIdentificationResponse, std::move(payload));
     }
@@ -473,7 +473,7 @@ namespace message {
         return DoIPMessage(DoIPPayloadType::DiagnosticMessage, std::move(payload));
     }
 
-    /**
+    /** void b
      * @brief Creates a diagnostic positive ACK message.
      *
      * @param sa the source address
@@ -540,9 +540,7 @@ namespace message {
      */
     inline DoIPMessage makeAliveCheckResponse(const DoIPAddress &sa) {
         ByteArray payload;
-        payload.reserve(sa.size());
-        sa.appendTo(payload);
-
+        payload.writeU16(sa.toUint16());
         return DoIPMessage(DoIPPayloadType::AliveCheckResponse, std::move(payload));
     }
 
@@ -555,12 +553,12 @@ namespace message {
      */
     inline DoIPMessage makeRoutingRequest(
         const DoIPAddress &ea,
-        DoIPActivationType actType = DoIPActivationType::Default) {
+        DoIPRoutingActivationType actType = DoIPRoutingActivationType::Default) {
 
         ByteArray payload;
         payload.reserve(ea.size() + 1 + 4);
-        ea.appendTo(payload);
-        payload.emplace_back(static_cast<uint8_t>(actType));
+        payload.writeU16(ea.toUint16());
+        payload.writeEnum(actType);
         // Reserved 4 bytes for future use
         payload.insert(payload.end(), {0, 0, 0, 0});
 
@@ -578,7 +576,7 @@ namespace message {
     inline DoIPMessage makeRoutingActivationResponse(
         const DoIPMessage &routingReq,
         const DoIPAddress &ea,
-        DoIPActivationType actType = DoIPActivationType::Default) {
+        DoIPRoutingActivationType actType = DoIPRoutingActivationType::Default) {
 
         ByteArray payload;
         payload.reserve(ea.size() + 1 + 4);
