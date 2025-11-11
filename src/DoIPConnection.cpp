@@ -51,7 +51,7 @@ int DoIPConnection::receiveTcpMessage() {
 
 
         if (payloadLength > 0) {
-            DOIP_LOG_INFO("Waiting for {} bytes of payload...", payloadLength);
+            DOIP_LOG_DEBUG("Waiting for {} bytes of payload...", payloadLength);
             unsigned int receivedPayloadBytes = receiveFixedNumberOfBytesFromTCP(m_receiveBuf.data(), payloadLength);
             if (receivedPayloadBytes < payloadLength) {
                 DOIP_LOG_ERROR("DoIP message completely incomplete");
@@ -59,7 +59,9 @@ int DoIPConnection::receiveTcpMessage() {
                 closeSocket();
                 return sentBytes;
             }
-            DOIP_LOG_INFO("DoIP message completely received");
+
+            DoIPMessage msg = DoIPMessage(plType, m_receiveBuf.data(), receivedPayloadBytes);
+            DOIP_LOG_INFO("RX: {}", fmt::streamed(msg));
         }
 
         // if alive check timouts should be possible, reset timer when message received
@@ -118,7 +120,7 @@ int DoIPConnection::reactOnReceivedTcpMessage(const DoIPMessage &message) {
 
     case DoIPPayloadType::AliveCheckRequest: {
         // Handle Alive Check Request
-        DoIPMessage response = message::makeAliveCheckResponse(m_m_gatewayAddress);
+        DoIPMessage response = message::makeAliveCheckResponse(m_gatewayAddress);
         sentBytes = sendMessage(response.data(), response.size());
         break;
     }
@@ -138,7 +140,7 @@ int DoIPConnection::reactOnReceivedTcpMessage(const DoIPMessage &message) {
         }
 
         m_routedClientAddress = optSourceAddress.value();
-        DoIPMessage response = message::makeRoutingActivationResponse(message, m_m_gatewayAddress);
+        DoIPMessage response = message::makeRoutingActivationResponse(message, m_gatewayAddress);
         sentBytes = sendMessage(response.data(), response.size());
 
         break;

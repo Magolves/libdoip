@@ -29,8 +29,8 @@ const size_t MAX_ISOTP_MTU = 4095;
 class DoIPConnection {
 
 public:
-    DoIPConnection(int tcpSocket, const DoIPAddress& m_gatewayAddress):
-        m_tcpSocket(tcpSocket), m_m_gatewayAddress(m_gatewayAddress) { m_receiveBuf.reserve(MAX_ISOTP_MTU); };
+    DoIPConnection(int tcpSocket, const DoIPAddress& gatewayAddress):
+        m_tcpSocket(tcpSocket), m_gatewayAddress(gatewayAddress) { };
 
     int receiveTcpMessage();
     size_t receiveFixedNumberOfBytesFromTCP(uint8_t *receivedData, size_t payloadLength);
@@ -48,7 +48,7 @@ public:
     void setGeneralInactivityTime(const uint16_t seconds);
 
 private:
-    ByteArray m_receiveBuf{};
+    std::array<uint8_t, MAX_ISOTP_MTU> m_receiveBuf{};
 
     int m_tcpSocket;
 
@@ -58,7 +58,7 @@ private:
     DiagnosticMessageNotification m_notify_application;
 
     DoIPAddress m_routedClientAddress;
-    DoIPAddress m_m_gatewayAddress;
+    DoIPAddress m_gatewayAddress;
 
     void closeSocket();
 
