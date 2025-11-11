@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <memory>
 
+#include "AnsiColors.h"
 #include "ByteArray.h"
 #include "DoIPAddress.h"
 #include "DoIPRoutingActivationType.h"
@@ -606,19 +607,21 @@ namespace message {
  * @return std::ostream& Reference to the output stream
  */
 inline std::ostream& operator<<(std::ostream& os, const DoIPMessage& msg) {
-    os << "V"
-       << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
-       << static_cast<unsigned int>(PROTOCOL_VERSION) << std::dec
-       << "|" << msg.getPayloadType()
-       << "|L" << msg.getPayloadSize() << " bytes"
+    os << ansi::dim <<
+       "V" << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
+       << static_cast<unsigned int>(PROTOCOL_VERSION) << std::dec << ansi::reset
+       << "|" << ansi::cyan << msg.getPayloadType() << ansi::reset
+       << "|L" << msg.getPayloadSize()
        << "| Payload: ";
 
     auto payload = msg.getPayload();
+    os << ansi::bold_white;
     for (size_t i = 0; i < payload.second; ++i) {
         if (i > 0) os << '.';
         os << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
            << static_cast<unsigned int>(payload.first[i]);
     }
+    os << ansi::reset;
     os << std::dec;
 
     return os;

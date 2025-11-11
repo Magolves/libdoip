@@ -1,6 +1,7 @@
 #include "DoIPConnection.h"
 #include "DoIPMessage.h"
 #include "DoIPPayloadType.h"
+#include "Logger.h"
 
 #include <iomanip>
 #include <iostream>
@@ -11,7 +12,7 @@ using namespace doip;
  * Closes the connection by closing the sockets
  */
 void DoIPConnection::aliveCheckTimeout() {
-    std::cout << "Alive Check Timeout. Close Connection" << '\n';
+    DOIP_LOG_ERROR("Alive Check Timeout. Close Connection");
     closeSocket();
     m_close_connection();
 }
@@ -30,11 +31,11 @@ void DoIPConnection::closeSocket() {
  *              or -1 if error occurred
  */
 int DoIPConnection::receiveTcpMessage() {
-    std::cout << "Waiting for DoIP Header..." << '\n';
+    DOIP_LOG_INFO("Waiting for DoIP Header...");
     uint8_t genericHeader[DOIP_HEADER_SIZE];
     unsigned int readBytes = receiveFixedNumberOfBytesFromTCP(genericHeader, DOIP_HEADER_SIZE);
     if (readBytes == DOIP_HEADER_SIZE && !m_aliveCheckTimer.hasTimeout()) {
-        std::cout << "Received DoIP Header." << '\n';
+        DOIP_LOG_INFO("Received DoIP Header.");
 
         auto optHeader = DoIPMessage::tryParseHeader(genericHeader, DOIP_HEADER_SIZE);
         if (!optHeader.has_value()) {
@@ -46,19 +47,19 @@ int DoIPConnection::receiveTcpMessage() {
         auto plType = optHeader->first;
         auto payloadLength = optHeader->second;
 
-        std::cout << "Payload Type: " << plType << ", Payload Length: " << payloadLength << '\n';
+        DOIP_LOG_INFO("Payload Type: {}, length: {} ", fmt::streamed(plType), payloadLength);
 
 
         if (payloadLength > 0) {
-            std::cout << "Waiting for " << payloadLength << " bytes of payload..." << '\n';
+            DOIP_LOG_INFO("Waiting for {} bytes of payload...", payloadLength);
             unsigned int receivedPayloadBytes = receiveFixedNumberOfBytesFromTCP(m_receiveBuf.data(), payloadLength);
             if (receivedPayloadBytes < payloadLength) {
-                std::cerr << "DoIP message completely incomplete" << '\n';
+                DOIP_LOG_ERROR("DoIP message completely incomplete");
                 auto sentBytes = sendNegativeAck(DoIPNegativeAck::InvalidPayloadLength);
                 closeSocket();
                 return sentBytes;
             }
-            std::cout << "DoIP message completely received" << '\n';
+            DOIP_LOG_INFO("DoIP message completely received");
         }
 
         // if alive check timouts should be possible, reset timer when message received
@@ -166,7 +167,7 @@ int DoIPConnection::reactOnReceivedTcpMessage(const DoIPMessage &message) {
     }
 
     default: {
-        std::cerr << "Received message with unhandled payload type: " << +static_cast<uint8_t>(message.getPayloadType()) << '\n';
+        DOIP_LOG_ERROR("Received message with unhandled payload type: {}", static_cast<uint8_t>(message.getPayloadType()));
         return -1;
     }
     }
@@ -175,7 +176,7 @@ int DoIPConnection::reactOnReceivedTcpMessage(const DoIPMessage &message) {
 }
 
 void DoIPConnection::triggerDisconnection() {
-    std::cout << "Application requested to disconnect Client from Server" << '\n';
+    DOIP_LOG_INFO("Application requested to disconnect Client from Server");
     closeSocket();
 }
 
@@ -212,11 +213,7 @@ void DoIPConnection::setGeneralInactivityTime(uint16_t seconds) {
  */
 void DoIPConnection::sendDiagnosticPayload(const DoIPAddress &sourceAddress, const ByteArray &payload) {
 
-    std::cout << "Sending diagnostic data: ";
-    for (auto byte : payload) {
-        std::cout << std::hex << std::setw(2) << std::setfill('0') << byte << " ";
-    }
-    std::cout << '\n';
+    DOIP_LOG_INFO("Sending diagnostic data: {}", fmt::streamed(payload));
 
     // uint8_t* message = createDiagnosticMessage(sourceAddress, m_routedClientAddress, data, length);
     DoIPMessage msg = message::makeDiagnosticMessage(sourceAddress, m_routedClientAddress, payload);
