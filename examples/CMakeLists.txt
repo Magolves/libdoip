@@ -22,8 +22,7 @@ target_link_libraries(exampleDoIPClient
     ${DOIP_NAME}
 )
 
-
-# Set properties for the example
+# Set properties for the client example
 set_target_properties(exampleDoIPClient PROPERTIES
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
