@@ -12,7 +12,36 @@ using namespace std;
 DoIPClient client;
 
 
-int main() {
+static void printUsage(const char* progName) {
+    cout << "Usage: " << progName << " [OPTIONS]\n";
+    cout << "Options:\n";
+    cout << "  --loopback            Use loopback (127.0.0.1) instead of multicast\n";
+    cout << "  --server <ip>         Connect to specific server IP\n";
+    cout << "  --help                Show this help message\n";
+}
+
+int main(int argc, char* argv[]) {
+    string serverAddress = "224.0.0.2";  // Default multicast address
+
+    // Parse command line arguments
+    for (int i = 1; i < argc; i++) {
+        string arg = argv[i];
+        if (arg == "--loopback") {
+            serverAddress = "127.0.0.1";
+            DOIP_LOG_INFO("Loopback mode enabled - using 127.0.0.1");
+        } else if (arg == "--server" && i + 1 < argc) {
+            serverAddress = argv[++i];
+            DOIP_LOG_INFO("Using custom server address: {}", serverAddress);
+        } else if (arg == "--help") {
+            printUsage(argv[0]);
+            return 0;
+        } else {
+            cout << "Unknown argument: " << arg << endl;
+            printUsage(argv[0]);
+            return 1;
+        }
+    }
+
     DOIP_LOG_INFO("Starting DoIP Client");
 
     // Start UDP connections (don't start TCP yet)
@@ -23,8 +52,8 @@ int main() {
     DOIP_LOG_INFO("Listening for Vehicle Announcements...");
     client.receiveVehicleAnnouncement();
 
-    // Send Vehicle Identification Request to DoIP multicast address
-    if (client.sendVehicleIdentificationRequest("224.0.0.2") > 0) {
+    // Send Vehicle Identification Request to configured address
+    if (client.sendVehicleIdentificationRequest(serverAddress.c_str()) > 0) {
         DOIP_LOG_INFO("Vehicle Identification Request sent successfully");
         client.receiveUdpMessage();
     }

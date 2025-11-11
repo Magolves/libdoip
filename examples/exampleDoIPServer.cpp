@@ -5,6 +5,7 @@
 #include<iostream>
 #include<iomanip>
 #include<thread>
+#include<chrono>
 
 using namespace doip;
 using namespace std;
@@ -82,7 +83,11 @@ void CloseConnection() {
 void listenUdp() {
 
     while(serverActive) {
-        server.receiveUdpMessage();
+        ssize_t result = server.receiveUdpMessage();
+        // If timeout (result == 0), sleep briefly to prevent CPU spinning
+        if (result == 0) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
     }
 }
 
@@ -122,12 +127,42 @@ void ConfigureDoipServer() {
 
 }
 
-int main() {
+static void printUsage(const char* progName) {
+    cout << "Usage: " << progName << " [OPTIONS]\n";
+    cout << "Options:\n";
+    cout << "  --loopback    Use loopback (127.0.0.1) for announcements instead of broadcast\n";
+    cout << "  --help        Show this help message\n";
+}
+
+int main(int argc, char* argv[]) {
+    bool useLoopback = false;
+
+    // Parse command line arguments
+    for (int i = 1; i < argc; i++) {
+        string arg = argv[i];
+        if (arg == "--loopback") {
+            useLoopback = true;
+            DOIP_LOG_INFO("Loopback mode enabled");
+        } else if (arg == "--help") {
+            printUsage(argv[0]);
+            return 0;
+        } else {
+            cout << "Unknown argument: " << arg << endl;
+            printUsage(argv[0]);
+            return 1;
+        }
+    }
+
     // Configure logging
     doip::Logger::setLevel(spdlog::level::debug);
     DOIP_LOG_INFO("Starting DoIP Server Example");
 
     ConfigureDoipServer();
+
+    // Configure server based on mode
+    if (useLoopback) {
+        server.setAnnouncementMode(true);  // We'll add this method
+    }
 
     server.setupUdpSocket();
 

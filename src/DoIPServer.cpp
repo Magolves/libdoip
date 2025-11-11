@@ -132,8 +132,16 @@ ssize_t DoIPServer::receiveUdpMessage() {
         }
     }
 
-    UDP_LOG_INFO("Received {} bytes from {}:{}", readBytes,
-                inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
+    // Don't log if no data received (can happen with some socket configurations)
+    if (readBytes > 0) {
+        UDP_LOG_INFO("Received {} bytes from {}:{}", readBytes,
+                    inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
+    } else {
+        // For debugging: log zero-byte messages at debug level
+        UDP_LOG_DEBUG("Received 0 bytes from {}:{}",
+                     inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
+        return 0;  // Return early for zero-byte messages
+    }
 
     // Store client address for response
     m_clientAddress = clientAddr;
@@ -228,6 +236,15 @@ void DoIPServer::setAnnounceInterval(unsigned int Interval) {
     m_announceInterval = Interval;
 }
 
+void DoIPServer::setAnnouncementMode(bool useLoopback) {
+    m_useLoopbackAnnouncements = useLoopback;
+    if (useLoopback) {
+        DOIP_LOG_INFO("Vehicle announcements will use loopback (127.0.0.1)");
+    } else {
+        DOIP_LOG_INFO("Vehicle announcements will use broadcast (255.255.255.255)");
+    }
+}
+
 void DoIPServer::setMulticastGroup(const char *address) {
     int loop = 1;
 
@@ -253,7 +270,8 @@ void DoIPServer::setMulticastGroup(const char *address) {
 
 ssize_t DoIPServer::sendVehicleAnnouncement() {
 
-    const char *address = "255.255.255.255";
+    // Choose address based on mode
+    const char *address = m_useLoopbackAnnouncements ? "127.0.0.1" : "255.255.255.255";
 
     // setting the destination port for the Announcement to 13401
     m_clientAddress.sin_port = htons(13401);
@@ -261,13 +279,16 @@ ssize_t DoIPServer::sendVehicleAnnouncement() {
     int setAddressError = inet_aton(address, &(m_clientAddress.sin_addr));
 
     if (setAddressError != 0) {
-        DOIP_LOG_INFO("Broadcast address set successfully");
+        DOIP_LOG_INFO("{} address set successfully: {}",
+                     m_useLoopbackAnnouncements ? "Loopback" : "Broadcast", address);
     }
 
-    int socketError = setsockopt(m_udp_sock, SOL_SOCKET, SO_BROADCAST, &m_broadcast, sizeof(m_broadcast));
-
-    if (socketError == 0) {
-        DOIP_LOG_INFO("Broadcast Option set successfully");
+    if (!m_useLoopbackAnnouncements) {
+        // Only set broadcast option for broadcast mode
+        int socketError = setsockopt(m_udp_sock, SOL_SOCKET, SO_BROADCAST, &m_broadcast, sizeof(m_broadcast));
+        if (socketError == 0) {
+            DOIP_LOG_INFO("Broadcast Option set successfully");
+        }
     }
 
     ssize_t sentBytes = -1;
