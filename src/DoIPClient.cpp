@@ -1,10 +1,9 @@
-#include "Logger.h"
 #include "DoIPClient_h.h"
 #include "DoIPMessage.h"
 #include "DoIPPayloadType.h"
+#include "Logger.h"
 #include <cerrno>  // for errno
 #include <cstring> // for strerror
-
 
 using namespace doip;
 
@@ -106,38 +105,9 @@ void DoIPClient::reconnectServer() {
     startTcpConnection();
 }
 
-const DoIPRequest DoIPClient::buildRoutingActivationRequest() {
-
-    //std::pair<int, uint8_t *> *rareqWithLength = new std::pair<int, uint8_t *>();
-    size_t rareqLength = 15;
-    uint8_t *rareq = new uint8_t[rareqLength];
-
-    // Generic Header
-    rareq[0] = 0x02; // Protocol Version
-    rareq[1] = 0xFD; // Inverse Protocol Version
-    rareq[2] = 0x00; // Payload-Type
-    rareq[3] = 0x05;
-    rareq[4] = 0x00; // Payload-Length
-    rareq[5] = 0x00;
-    rareq[6] = 0x00;
-    rareq[7] = 0x07;
-
-    // Payload-Type specific message-content
-    rareq[8] = 0x0E; // Source DoIPAddress
-    rareq[9] = 0x00;
-    rareq[10] = 0x00; // Activation-Type
-    rareq[11] = 0x00; // Reserved ISO(default)
-    rareq[12] = 0x00;
-    rareq[13] = 0x00;
-    rareq[14] = 0x00;
-
-    return std::make_pair(rareqLength, rareq);
-}
-
 ssize_t DoIPClient::sendRoutingActivationRequest() {
-
-    const DoIPRequest rareqWithLength = buildRoutingActivationRequest();
-    return write(_sockFd, rareqWithLength.second, rareqWithLength.first);
+    DoIPMessage routingActReq = message::makeRoutingActivationRequest(m_sourceAddress);
+    return write(_sockFd, routingActReq.data(), routingActReq.size());
 }
 
 ssize_t DoIPClient::sendDiagnosticMessage(const DoIPAddress &targetAddress, const ByteArray &payload) {
@@ -228,12 +198,13 @@ void DoIPClient::receiveVehicleAnnouncement() {
 
     // Set socket to non-blocking mode for timeout
     struct timeval timeout;
-    timeout.tv_sec = 2;  // 2 second timeout
+    timeout.tv_sec = 2; // 2 second timeout
     timeout.tv_usec = 0;
     setsockopt(_sockFd_announcement, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 
     bytesRead = recvfrom(_sockFd_announcement, _receivedData, _maxDataSize, 0,
-                        reinterpret_cast<struct sockaddr *>(&_announcementAddr), &length);    if (bytesRead < 0) {
+                         reinterpret_cast<struct sockaddr *>(&_announcementAddr), &length);
+    if (bytesRead < 0) {
         if (errno == EAGAIN) {
             UDP_LOG_WARN("Timeout waiting for Vehicle Announcement");
         } else {
@@ -258,23 +229,6 @@ void DoIPClient::receiveVehicleAnnouncement() {
     }
 }
 
-const DoIPRequest DoIPClient::buildVehicleIdentificationRequest() {
-    size_t rareqLength = 8;
-    uint8_t *rareq = new uint8_t[rareqLength];
-
-    // Generic Header
-    rareq[0] = 0x02; // Protocol Version
-    rareq[1] = 0xFD; // Inverse Protocol Version
-    rareq[2] = 0x00; // Payload-Type
-    rareq[3] = 0x01;
-    rareq[4] = 0x00; // Payload-Length
-    rareq[5] = 0x00;
-    rareq[6] = 0x00;
-    rareq[7] = 0x00;
-
-    return std::make_pair(rareqLength, rareq);
-}
-
 ssize_t DoIPClient::sendVehicleIdentificationRequest(const char *inet_address) {
 
     int setAddressError = inet_aton(inet_address, &(_serverAddr.sin_addr));
@@ -291,9 +245,9 @@ ssize_t DoIPClient::sendVehicleIdentificationRequest(const char *inet_address) {
         UDP_LOG_INFO("Broadcast Option set successfully");
     }
 
-    const DoIPRequest rareqWithLength = buildVehicleIdentificationRequest();
+    DoIPMessage vehicleIdReq = message::makeVehicleIdentificationRequest();
 
-    ssize_t bytesSent = sendto(_sockFd_udp, rareqWithLength.second, rareqWithLength.first, 0, reinterpret_cast<struct sockaddr *>(&_serverAddr), sizeof(_serverAddr));
+    ssize_t bytesSent = sendto(_sockFd_udp, vehicleIdReq.data(), vehicleIdReq.size(), 0, reinterpret_cast<struct sockaddr *>(&_serverAddr), sizeof(_serverAddr));
 
     if (bytesSent > 0) {
         DOIP_LOG_INFO("Sending Vehicle Identification Request");
@@ -334,7 +288,7 @@ void DoIPClient::parseVIResponseInformation(const uint8_t *data) {
     }
 
     // Logical Adress
-    LogicalAddressResult.update(data, 25);
+    m_logicalAddress.update(data, 25);
 
     // EID
     j = 0;
@@ -372,20 +326,20 @@ void DoIPClient::displayVIResponseInformation() {
     // output LogicalAddress
     ss = std::ostringstream{};
     ss << "LogicalAddress: ";
-    ss << LogicalAddressResult;
+    ss << m_logicalAddress;
     DOIP_LOG_INFO(ss.str());
 
     // output EID
     ss = std::ostringstream{};
     ss << "EID: ";
     if (Logger::colorsSupported()) {
-    ss << ansi::bold_green;
+        ss << ansi::bold_green;
     }
     for (int i = 0; i < 6; i++) {
         ss << std::hex << std::setfill('0') << std::setw(2) << +EIDResult[i] << std::dec;
     }
     if (Logger::colorsSupported()) {
-    ss << ansi::reset;
+        ss << ansi::reset;
     }
     DOIP_LOG_INFO(ss.str());
 
@@ -402,5 +356,4 @@ void DoIPClient::displayVIResponseInformation() {
     ss << "FurtherActionRequest: ";
     ss << std::hex << std::setfill('0') << std::setw(2) << FurtherActionReqResult << std::dec;
     DOIP_LOG_INFO(ss.str());
-
 }

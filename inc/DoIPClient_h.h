@@ -60,19 +60,14 @@ class DoIPClient {
     int _sockFd{-1}, _sockFd_udp{-1}, _sockFd_announcement{-1}, _connected{-1};
     int m_broadcast = 1;
     struct sockaddr_in _serverAddr, _clientAddr, _announcementAddr;
-    DoIPAddress m_sourceAddress = DoIPAddress::ZeroAddress;
+    DoIPAddress m_sourceAddress = DoIPAddress(0xE0, 0x00); // HACK
 
     uint8_t VINResult[17] = {0};
-    DoIPAddress LogicalAddressResult = DoIPAddress::ZeroAddress;
+    DoIPAddress m_logicalAddress = DoIPAddress::ZeroAddress;
     uint8_t EIDResult[6] = {0};
     uint8_t GIDResult[6] = {0};
     uint8_t FurtherActionReqResult = 0x00;
 
-    /*
-     *Build the Routing-Activation-Request for server
-     */
-    const DoIPRequest buildRoutingActivationRequest();
-    const DoIPRequest buildVehicleIdentificationRequest();
     void parseVIResponseInformation(const uint8_t *data);
 
     int emptyMessageCounter = 0;

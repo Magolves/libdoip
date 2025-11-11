@@ -68,6 +68,8 @@ constexpr size_t DOIP_HEADER_SIZE = 8;
  * [2-3]    Payload Type (big-endian uint16_t)
  * [4-7]    Payload Length (big-endian uint32_t)
  * [8...]   Payload data
+ *
+ * The message types are listed in table 17.
  */
 class DoIPMessage {
 public:
@@ -235,6 +237,9 @@ public:
     std::optional<DoIPAddress> getSourceAddress() const {
         auto payloadRef = getPayload();
         if (getPayloadType() == DoIPPayloadType::DiagnosticMessage && payloadRef.second >= 2) {
+            return DoIPAddress(payloadRef.first, 0);
+        }
+        if (getPayloadType() == DoIPPayloadType::RoutingActivationRequest && payloadRef.second >= 2) {
             return DoIPAddress(payloadRef.first, 0);
         }
         return std::nullopt;
@@ -552,7 +557,7 @@ namespace message {
      * @param actType the activation type
      * @return DoIPMessage the activation request message
      */
-    inline DoIPMessage makeRoutingRequest(
+    inline DoIPMessage makeRoutingActivationRequest(
         const DoIPAddress &ea,
         DoIPRoutingActivationType actType = DoIPRoutingActivationType::Default) {
 
