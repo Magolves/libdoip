@@ -126,6 +126,7 @@ int DoIPConnection::reactOnReceivedTcpMessage(const DoIPMessage &message) {
     case DoIPPayloadType::RoutingActivationRequest: {
         auto optSourceAddress = message.getSourceAddress();
         if (!optSourceAddress.has_value()) {
+            DOIP_LOG_WARN("No address in routing request: {}", fmt::streamed(message));
             sentBytes = sendNegativeAck(DoIPNegativeAck::InvalidPayloadLength);
             closeSocket();
             return sentBytes;
@@ -249,6 +250,7 @@ void DoIPConnection::sendDiagnosticNegativeAck(const DoIPAddress &sourceAddress,
  */
 int DoIPConnection::sendNegativeAck(DoIPNegativeAck ackCode) {
     DoIPMessage msg = message::makeNegativeAckMessage(ackCode);
+    DOIP_LOG_WARN("NACK: {}", fmt::streamed(msg));
     int sentBytes = sendMessage(msg.data(), msg.size());
     return sentBytes;
 }

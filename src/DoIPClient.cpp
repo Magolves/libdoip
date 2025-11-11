@@ -362,7 +362,7 @@ void DoIPClient::displayVIResponseInformation() {
         ss << ansi::bold_green;
     }
     for (int i = 0; i < 17; i++) {
-        ss << +VINResult[i];
+        ss << VINResult[i];
     }
     if (Logger::colorsSupported()) {
         ss << ansi::reset;
@@ -378,9 +378,14 @@ void DoIPClient::displayVIResponseInformation() {
     // output EID
     ss = std::ostringstream{};
     ss << "EID: ";
+    if (Logger::colorsSupported()) {
     ss << ansi::bold_green;
+    }
     for (int i = 0; i < 6; i++) {
-        ss << std::hex << std::setfill('0') << std::setw(2) << EIDResult[i] << std::dec;
+        ss << std::hex << std::setfill('0') << std::setw(2) << +EIDResult[i] << std::dec;
+    }
+    if (Logger::colorsSupported()) {
+    ss << ansi::reset;
     }
     DOIP_LOG_INFO(ss.str());
 
@@ -388,7 +393,7 @@ void DoIPClient::displayVIResponseInformation() {
     ss = std::ostringstream{};
     ss << "GID: ";
     for (int i = 0; i < 6; i++) {
-        ss << std::hex << std::setfill('0') << std::setw(2) << GIDResult[i] << std::dec;
+        ss << std::hex << std::setfill('0') << std::setw(2) << +GIDResult[i] << std::dec;
     }
     DOIP_LOG_INFO(ss.str());
 

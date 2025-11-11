@@ -134,11 +134,11 @@ ssize_t DoIPServer::receiveUdpMessage() {
 
     // Don't log if no data received (can happen with some socket configurations)
     if (readBytes > 0) {
-        UDP_LOG_INFO("Received {} bytes from {}:{}", readBytes,
+        UDP_LOG_INFO("RX {} bytes from {}:{}", readBytes,
                     inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
     } else {
         // For debugging: log zero-byte messages at debug level
-        UDP_LOG_DEBUG("Received 0 bytes from {}:{}",
+        UDP_LOG_DEBUG("RX 0 bytes from {}:{}",
                      inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
         return 0;  // Return early for zero-byte messages
     }
@@ -168,11 +168,11 @@ ssize_t DoIPServer::reactToReceivedUdpMessage(size_t bytesRead) {
 
     auto plType = optHeader->first;
     // auto payloadLength = optHeader->second;
-    UDP_LOG_INFO("Received UDP message: {}", fmt::streamed(plType));
+    UDP_LOG_INFO("RX: {}", fmt::streamed(plType));
     switch (plType) {
     case DoIPPayloadType::VehicleIdentificationRequest: {
         DoIPMessage msg = message::makeVehicleIdentificationResponse(m_VIN, m_gatewayAddress, m_EID, m_GID);
-        DOIP_LOG_PROTOCOL("Send {}", fmt::streamed(msg));
+        DOIP_LOG_PROTOCOL("TX {}", fmt::streamed(msg));
         ssize_t sendedBytes = sendUdpMessage(msg.data(), DOIP_HEADER_SIZE + msg.size());
 
         return static_cast<int>(sendedBytes);
