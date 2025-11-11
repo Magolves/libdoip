@@ -11,7 +11,7 @@ TEST_SUITE("RoutingActivation") {
 
 		RoutingActivationFixture() : request{{
 			0x01, 0xFE, 0x00, 0x05, 0x00,
-			0x00, 0x00, 0x07, 0x0F, 0x12,
+			0x00, 0x00, 0x07, 0xE0, 0x12,
 			0x00, 0x00, 0x00, 0x00, 0x00
 		}} {}
 
@@ -23,7 +23,7 @@ TEST_SUITE("RoutingActivation") {
 	* Checks if parsing a valid address will be found in the list of valid addresses
 	*/
 	TEST_CASE_FIXTURE(RoutingActivationFixture, "Valid DoIPAddress Parsing") {
-		uint16_t expectedValue = 3858; // 0x0F12
+		uint16_t expectedValue = 0xE012; // 0xE000 - 0xE3FF
 		DoIPAddress address(data(), 8);
 
 		CHECK_MESSAGE(address.toUint16() == expectedValue, "Converting address to uint failed");
