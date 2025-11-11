@@ -45,6 +45,7 @@ public:
 
     void setAnnounceNum(int Num);
     void setAnnounceInterval(unsigned int Interval);
+    void setAnnouncementMode(bool useLoopback);
 
     void closeTcpSocket();
     void closeUdpSocket();
@@ -60,7 +61,7 @@ public:
      * @return false if the default EID could not be set.
      */
     bool setEIDdefault();
-    
+
     void setVIN(const std::string& VINString);
     const DoIPVIN& getVIN() const { return m_VIN; }
 
@@ -89,6 +90,7 @@ private:
 
     int m_announceNum = 3;    //Default Value = 3
     unsigned int m_announceInterval = 500; //Default Value = 500ms
+    bool m_useLoopbackAnnouncements = false; // Default: use broadcast
 
     int m_broadcast = 1;
 

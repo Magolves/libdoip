@@ -22,15 +22,18 @@ target_link_libraries(exampleDoIPClient
     ${DOIP_NAME}
 )
 
-
-# Set properties for the example
+# Set properties for the client example
 set_target_properties(exampleDoIPClient PROPERTIES
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
     CXX_EXTENSIONS OFF
 )
 
-# Install example (optional)
-install(TARGETS exampleDoIPServer
+# Disable switch-default warning for examples using spdlog
+target_compile_options(exampleDoIPServer PRIVATE -Wno-switch-default)
+target_compile_options(exampleDoIPClient PRIVATE -Wno-switch-default)
+
+# Install examples (optional)
+install(TARGETS exampleDoIPServer exampleDoIPClient
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/examples
 )

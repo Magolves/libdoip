@@ -14,6 +14,7 @@
 namespace doip {
 
 const int _serverPortNr = 13400;
+const int _announcementPortNr = 13401;
 const int _maxDataSize = 64;
 
 using DoIPRequest = std::pair<size_t, const uint8_t *>;
@@ -23,10 +24,12 @@ class DoIPClient {
   public:
     void startTcpConnection();
     void startUdpConnection();
+    void startAnnouncementListener();
     ssize_t sendRoutingActivationRequest();
     ssize_t sendVehicleIdentificationRequest(const char *inet_address);
     void receiveRoutingActivationResponse();
     void receiveUdpMessage();
+    void receiveVehicleAnnouncement();
     /*
      * Send the builded request over the tcp-connection to server
      */
@@ -54,9 +57,9 @@ class DoIPClient {
 
   private:
     uint8_t _receivedData[_maxDataSize] = {0};
-    int _sockFd{-1}, _sockFd_udp{-1}, _connected{-1};
+    int _sockFd{-1}, _sockFd_udp{-1}, _sockFd_announcement{-1}, _connected{-1};
     int m_broadcast = 1;
-    struct sockaddr_in _serverAddr, _clientAddr;
+    struct sockaddr_in _serverAddr, _clientAddr, _announcementAddr;
     DoIPAddress m_sourceAddress = DoIPAddress::ZeroAddress;
 
     uint8_t VINResult[17] = {0};
