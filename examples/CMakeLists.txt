@@ -30,7 +30,11 @@ set_target_properties(exampleDoIPClient PROPERTIES
     CXX_EXTENSIONS OFF
 )
 
-# Install example (optional)
-install(TARGETS exampleDoIPServer
+# Disable switch-default warning for examples using spdlog
+target_compile_options(exampleDoIPServer PRIVATE -Wno-switch-default)
+target_compile_options(exampleDoIPClient PRIVATE -Wno-switch-default)
+
+# Install examples (optional)
+install(TARGETS exampleDoIPServer exampleDoIPClient
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/examples
 )

@@ -1,6 +1,9 @@
 #include "DoIPServer.h"
 #include "DoIPMessage.h"
 #include "MacAddress.h"
+#include "Logger.h"
+#include <cstring>  // for strerror
+#include <cerrno>   // for errno
 
 using namespace doip;
 
@@ -17,28 +20,51 @@ const char* DEFAULT_IFACE = "en0";
  * Set up a tcp socket, so the socket is ready to accept a connection
  */
 void DoIPServer::setupTcpSocket() {
+    DOIP_LOG_DEBUG("Setting up TCP socket on port {}", DOIP_SERVER_PORT);
 
     m_tcp_sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (m_tcp_sock < 0) {
+        DOIP_LOG_ERROR("Failed to create TCP socket: {}", strerror(errno));
+        return;
+    }
 
     m_serverAddress.sin_family = AF_INET;
     m_serverAddress.sin_addr.s_addr = htonl(INADDR_ANY);
     m_serverAddress.sin_port = htons(DOIP_SERVER_PORT);
 
     // binds the socket to the address and port number
-    bind(m_tcp_sock, reinterpret_cast<const struct sockaddr *>(&m_serverAddress), sizeof(m_serverAddress));
+    if (bind(m_tcp_sock, reinterpret_cast<const struct sockaddr *>(&m_serverAddress), sizeof(m_serverAddress)) < 0) {
+        DOIP_LOG_ERROR("Failed to bind TCP socket: {}", strerror(errno));
+        return;
+    }
+
+    DOIP_LOG_INFO("TCP socket successfully bound to port {}", DOIP_SERVER_PORT);
 }
 
 /*
  *  Wait till a client attempts a connection and accepts it
  */
 std::unique_ptr<DoIPConnection> DoIPServer::waitForTcpConnection() {
+    DOIP_LOG_DEBUG("Waiting for TCP connection...");
+
     // waits till client approach to make connection
-    listen(m_tcp_sock, 5);
+    if (listen(m_tcp_sock, 5) < 0) {
+        DOIP_LOG_ERROR("Failed to listen on TCP socket: {}", strerror(errno));
+        return nullptr;
+    }
+
     int tcpSocket = accept(m_tcp_sock, nullptr, nullptr);
+    if (tcpSocket < 0) {
+        DOIP_LOG_ERROR("Failed to accept TCP connection: {}", strerror(errno));
+        return nullptr;
+    }
+
+    DOIP_LOG_INFO("TCP connection accepted, socket: {}", tcpSocket);
     return std::unique_ptr<DoIPConnection>(new DoIPConnection(tcpSocket, m_gatewayAddress));
 }
 
 void DoIPServer::setupUdpSocket() {
+    DOIP_LOG_DEBUG("Setting up UDP socket on port {}", DOIP_SERVER_PORT);
 
     m_udp_sock = socket(AF_INET, SOCK_DGRAM, 0);
 
@@ -46,14 +72,20 @@ void DoIPServer::setupUdpSocket() {
     m_serverAddress.sin_addr.s_addr = htonl(INADDR_ANY);
     m_serverAddress.sin_port = htons(DOIP_SERVER_PORT);
 
-    if (m_udp_sock < 0)
-        std::cout << "Error setting up a udp socket" << '\n';
+    if (m_udp_sock < 0) {
+        DOIP_LOG_ERROR("Failed to create UDP socket: {}", strerror(errno));
+        return;
+    }
 
     // binds the socket to any IP DoIPAddress and the Port Number 13400
-    bind(m_udp_sock, reinterpret_cast<const struct sockaddr *>(&m_serverAddress), sizeof(m_serverAddress));
+    if (bind(m_udp_sock, reinterpret_cast<const struct sockaddr *>(&m_serverAddress), sizeof(m_serverAddress)) < 0) {
+        DOIP_LOG_ERROR("Failed to bind UDP socket: {}", strerror(errno));
+        return;
+    }
 
     // setting the IP DoIPAddress for Multicast
     setMulticastGroup("224.0.0.2");
+    DOIP_LOG_INFO("UDP socket successfully bound to port {} with multicast group", DOIP_SERVER_PORT);
 }
 
 /*

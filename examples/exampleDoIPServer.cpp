@@ -1,5 +1,6 @@
 #include "DoIPServer.h"
 #include "DoIPAddress.h"
+#include "Logger.h"
 
 #include<iostream>
 #include<iomanip>
@@ -122,17 +123,24 @@ void ConfigureDoipServer() {
 }
 
 int main() {
+    // Configure logging
+    doip::Logger::setLevel(spdlog::level::debug);
+    DOIP_LOG_INFO("Starting DoIP Server Example");
+
     ConfigureDoipServer();
 
     server.setupUdpSocket();
 
     serverActive = true;
+    DOIP_LOG_INFO("Starting UDP and TCP listener threads");
     doipReceiver.push_back(thread(&listenUdp));
     doipReceiver.push_back(thread(&listenTcp));
 
     server.sendVehicleAnnouncement();
+    DOIP_LOG_INFO("Vehicle announcement sent");
 
     doipReceiver.at(0).join();
     doipReceiver.at(1).join();
+    DOIP_LOG_INFO("DoIP Server Example terminated");
     return 0;
 }
