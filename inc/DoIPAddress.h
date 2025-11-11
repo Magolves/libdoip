@@ -193,9 +193,9 @@ struct DoIPAddress {
         return MIN_SOURCE_ADDRESS <= addr_value && MAX_SOURCE_ADDRESS >= addr_value;
     }
 
-    // ?? Nothing found in ISO 13400-2 ??
-    static constexpr uint16_t MIN_SOURCE_ADDRESS = 3584; // 0x0E00
-    static constexpr uint16_t MAX_SOURCE_ADDRESS = 4095; // 0x0FFF
+    // Table 13
+    static constexpr uint16_t MIN_SOURCE_ADDRESS = 0xE000;
+    static constexpr uint16_t MAX_SOURCE_ADDRESS = 0xE3FF;
 
     /**
      * @brief Constant for a DoIP zero address (0x0000).
