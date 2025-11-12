@@ -9,8 +9,6 @@
 #include <string.h>
 #include <net/if.h>
 #include <unistd.h>
-#include "RoutingActivationHandler.h"
-#include "RoutingActivationHandler.h"
 #include "DiagnosticMessageHandler.h"
 #include "AliveCheckTimer.h"
 #include "DoIPMessage.h"

@@ -5,9 +5,8 @@ add_executable(${DOIP_NAME}_tests
     DoIPServer_Test.cpp
     Main_Test.cpp
     MacAddress_Test.cpp
-    RoutingActivationHandler_Test.cpp
     Identifiers_Test.cpp
-    VehicleIdentificationHandler_Test.cpp
+    VehicleIdentification_Test.cpp
 )
 
 target_link_libraries(${DOIP_NAME}_tests

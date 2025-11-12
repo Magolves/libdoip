@@ -65,7 +65,6 @@ set(SOURCES
     src/DoIPServer.cpp
     src/Logger.cpp
     src/MacAddress.cpp
-    src/RoutingActivationHandler.cpp
 )
 
 

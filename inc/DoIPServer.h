@@ -11,9 +11,6 @@
 #include <net/if.h>
 #include <unistd.h>
 #include <memory>
-#include "RoutingActivationHandler.h"
-
-#include "RoutingActivationHandler.h"
 #include "DiagnosticMessageHandler.h"
 #include "AliveCheckTimer.h"
 #include "DoIPConnection.h"
