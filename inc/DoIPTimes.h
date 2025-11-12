@@ -52,7 +52,7 @@ constexpr uint32_t VehicleAnnouncementInterval = 500;
  * @brief Number of vehicle announcements to be send.
  * @note tA_DoIP_Announce_Num
  */
-constexpr uint8_t VehicleAnnouncementNumber;
+constexpr uint8_t VehicleAnnouncementNumber = 3;
 
 /**
  * @brief Maximum inactivity time in ms after a TCP connection was accepted. If no

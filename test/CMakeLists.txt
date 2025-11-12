@@ -6,6 +6,7 @@ add_executable(${DOIP_NAME}_tests
     Main_Test.cpp
     MacAddress_Test.cpp
     Identifiers_Test.cpp
+    TimerManager_Test.cpp
     VehicleIdentification_Test.cpp
 )
 

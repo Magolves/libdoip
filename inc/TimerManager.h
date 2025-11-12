@@ -33,8 +33,7 @@ private:
     TimerId m_nextId = 1;
 
 public:
-    TimerManager() {
-        m_running = true;
+    TimerManager() : m_running(true) {
         m_thread = std::thread([this]() { run(); });
     }
 
