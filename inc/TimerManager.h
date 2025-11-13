@@ -11,6 +11,8 @@
 
 #include "DoIPTimes.h"
 
+namespace doip {
+
 class TimerManager {
 public:
     using TimerId = int;
@@ -261,3 +263,5 @@ private:
         }
     }
 };
+
+} // namespace doip

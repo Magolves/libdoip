@@ -16,6 +16,7 @@
 #include "DoIPConnection.h"
 #include "DoIPFurtherAction.h"
 #include "MacAddress.h"
+#include "TimerManager.h"
 
 namespace doip {
 
@@ -32,6 +33,7 @@ class DoIPServer {
 
 public:
     DoIPServer() {
+        m_stateMachine(&m_timerManager);
         m_receiveBuf.reserve(MAX_ISOTP_MTU);
     };
 
@@ -84,6 +86,8 @@ private:
     DoIPEID m_EID = DoIPEID::Zero;
     DoIPGID m_GID = DoIPGID::Zero;
     DoIPFurtherAction m_FurtherActionReq = DoIPFurtherAction::NoFurtherAction;
+    DoIPServerStateMachine m_stateMachine;
+    TimerManager m_timerManager{};
 
     int m_announceNum = 3;    //Default Value = 3
     unsigned int m_announceInterval = 500; //Default Value = 500ms

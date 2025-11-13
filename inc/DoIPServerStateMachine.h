@@ -7,6 +7,7 @@
 
 #include "DoIPTimes.h"
 #include "DoIPServer.h"
+#include "TimerManager.h"
 
 namespace doip {
 
@@ -65,7 +66,7 @@ public:
     using StateHandler = std::function<void(DoIPEvent, const DoIPMessage*)>;
     using TransitionCallback = std::function<void(DoIPState, DoIPState)>;
 
-    explicit DoIPServerStateMachine(const DoIPServer& server);
+    explicit DoIPServerStateMachine(TimerManager& timer) : m_timerManager(timer) {}
     ~DoIPServerStateMachine();
 
     // Main interface
@@ -78,7 +79,8 @@ public:
     bool isRoutingActivated() const { return m_state == DoIPState::Routing_activated; }
 
     // Configuration
-    void setConfig(const DoIPServer& server) { config_ = config; }
+    void setConfig()  {}
+
     void setTransitionCallback(TransitionCallback callback) {
         m_transition_callback = callback;
     }
@@ -109,11 +111,11 @@ private:
 
     // State and configuration
     DoIPState m_state;
-    DoIPServer& m_server;
 
     // Callbacks
     TransitionCallback m_transition_callback;
     SendMessageCallback send_message_callback_;
+    TimerManager& m_timerManager;
 
     // Runtime data
     uint16_t active_source_address_;

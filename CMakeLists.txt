@@ -63,6 +63,7 @@ set(SOURCES
     src/DoIPClient.cpp
     src/DoIPConnection.cpp
     src/DoIPServer.cpp
+    src/DoIPServerStateMachine.cpp
     src/Logger.cpp
     src/MacAddress.cpp
 )
@@ -141,9 +142,6 @@ install(TARGETS ${DOIP_NAME}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
-
-message(STATUS "Lib dir ${CMAKE_INSTALL_LIBDIR}")
-message(STATUS "Inc dir ${CMAKE_INSTALL_INCLUDEDIR}")
 
 # Install headers
 install(DIRECTORY inc/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/{DOIP_NAME})
