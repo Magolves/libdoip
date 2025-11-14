@@ -1,6 +1,7 @@
 #include <doctest/doctest.h>
 #include "MacAddress.h"
 #include <iostream>
+#include <sstream>
 #include <iomanip>
 
 using namespace doip;
