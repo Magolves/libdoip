@@ -86,7 +86,7 @@ private:
     DoIPEID m_EID = DoIPEID::Zero;
     DoIPGID m_GID = DoIPGID::Zero;
     DoIPFurtherAction m_FurtherActionReq = DoIPFurtherAction::NoFurtherAction;
-    DoIPServerStateMachine m_stateMachine;
+    
     TimerManager m_timerManager{};
 
     int m_announceNum = 3;    //Default Value = 3

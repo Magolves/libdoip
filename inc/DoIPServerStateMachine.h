@@ -13,10 +13,10 @@ namespace doip {
 
 // DoIP Protocol States
 enum class DoIPState {
-    Socket_initialized,           // Initial state after socket creation
-    Wait_routing_activation,      // Waiting for routing activation request
-    Routing_activated,            // Routing is active, ready for diagnostics
-    Wait_alive_check_response,    //D& config  Waiting for alive check response
+    SocketInitialized,           // Initial state after socket creation
+    WaitRoutingActivation,      // Waiting for routing activation request
+    RoutingActivated,            // Routing is active, ready for diagnostics
+    WaitAliveCheckResponse,    //D& config  Waiting for alive check response
     Finalize,                     // Cleanup state
     Closed                        // Connection closed
 };
@@ -66,7 +66,7 @@ public:
     using StateHandler = std::function<void(DoIPEvent, const DoIPMessage*)>;
     using TransitionCallback = std::function<void(DoIPState, DoIPState)>;
 
-    explicit DoIPServerStateMachine(TimerManager& timer) : m_timerManager(timer) {}
+    explicit DoIPServerStateMachine(TimerManager& timer = TimerManager::getInstance()) : m_timerManager(timer) {}
     ~DoIPServerStateMachine();
 
     // Main interface
@@ -79,8 +79,6 @@ public:
     bool isRoutingActivated() const { return m_state == DoIPState::Routing_activated; }
 
     // Configuration
-    void setConfig()  {}
-
     void setTransitionCallback(TransitionCallback callback) {
         m_transition_callback = callback;
     }

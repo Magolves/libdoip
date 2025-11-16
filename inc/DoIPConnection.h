@@ -14,6 +14,7 @@
 #include "DoIPMessage.h"
 #include "DoIPNegativeAck.h"
 #include "DoIPNegativeDiagnosticAck.h"
+#include "DoIPServerStateMachine.h"
 
 namespace doip {
 
@@ -49,6 +50,7 @@ private:
     std::array<uint8_t, MAX_ISOTP_MTU> m_receiveBuf{};
 
     int m_tcpSocket;
+    DoIPServerStateMachine m_stateMachine;
 
     AliveCheckTimer m_aliveCheckTimer;
     DiagnosticCallback m_diag_callback;
