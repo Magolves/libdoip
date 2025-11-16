@@ -66,7 +66,7 @@ public:
     using StateHandler = std::function<void(DoIPEvent, const DoIPMessage*)>;
     using TransitionCallback = std::function<void(DoIPState, DoIPState)>;
 
-    explicit DoIPServerStateMachine(TimerManager& timer) : m_timerManager(timer) {}
+    explicit DoIPServerStateMachine(TimerManager& timer = TimerManager::getInstance()) : m_timerManager(timer) {}
     ~DoIPServerStateMachine();
 
     // Main interface
