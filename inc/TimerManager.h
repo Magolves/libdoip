@@ -17,6 +17,12 @@ class TimerManager {
 public:
     using TimerId = int;
 
+    // Singleton access
+    static TimerManager& getInstance() {
+        static TimerManager instance;
+        return instance;
+    }
+
 private:
     struct TimerEntry {
         std::chrono::steady_clock::time_point expiry;
@@ -34,7 +40,6 @@ private:
     std::atomic<bool> m_running{false};
     TimerId m_nextId = 1;
 
-public:
     TimerManager() : m_running(true) {
         m_thread = std::thread([this]() { run(); });
     }
@@ -43,8 +48,11 @@ public:
         stop();
     }
 
+    // Singleton: delete copy/move
     TimerManager(const TimerManager&) = delete;
     TimerManager& operator=(const TimerManager&) = delete;
+    TimerManager(TimerManager&&) = delete;
+    TimerManager& operator=(TimerManager&&) = delete;
 
     /**
      * @brief Add a timer.
