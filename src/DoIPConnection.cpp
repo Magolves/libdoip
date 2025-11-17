@@ -8,6 +8,13 @@
 
 using namespace doip;
 
+DoIPConnection::DoIPConnection(int tcpSocket, const DoIPAddress& gatewayAddress):
+        m_tcpSocket(tcpSocket),
+        m_gatewayAddress(gatewayAddress),
+        m_stateMachine([this]() { closeSocket(); }) {
+
+        }
+
 /**
  * Closes the connection by closing the sockets
  */

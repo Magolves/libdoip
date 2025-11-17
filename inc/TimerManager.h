@@ -1,29 +1,28 @@
 
-#include <thread>
-#include <mutex>
-#include <condition_variable>
-#include <map>
-#include <vector>
-#include <chrono>
-#include <functional>
 #include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <functional>
+#include <map>
+#include <mutex>
 #include <optional>
+#include <thread>
+#include <vector>
 
 #include "DoIPTimes.h"
 
 namespace doip {
 
 class TimerManager {
-public:
+  public:
     using TimerId = int;
 
     // Singleton access
-    static TimerManager& getInstance() {
+    static TimerManager &getInstance() {
         static TimerManager instance;
         return instance;
     }
 
-private:
     struct TimerEntry {
         std::chrono::steady_clock::time_point expiry;
         std::function<void()> callback;
@@ -40,19 +39,11 @@ private:
     std::atomic<bool> m_running{false};
     TimerId m_nextId = 1;
 
-    TimerManager() : m_running(true) {
-        m_thread = std::thread([this]() { run(); });
-    }
-
-    ~TimerManager() {
-        stop();
-    }
-
     // Singleton: delete copy/move
-    TimerManager(const TimerManager&) = delete;
-    TimerManager& operator=(const TimerManager&) = delete;
-    TimerManager(TimerManager&&) = delete;
-    TimerManager& operator=(TimerManager&&) = delete;
+    TimerManager(const TimerManager &) = delete;
+    TimerManager &operator=(const TimerManager &) = delete;
+    TimerManager(TimerManager &&) = delete;
+    TimerManager &operator=(TimerManager &&) = delete;
 
     /**
      * @brief Add a timer.
@@ -205,7 +196,15 @@ private:
         }
     }
 
-private:
+  private:
+    TimerManager() : m_running(true) {
+        m_thread = std::thread([this]() { run(); });
+    }
+
+    ~TimerManager() {
+        stop();
+    }
+
     void run() {
         while (m_running) {
             std::unique_lock<std::mutex> lock(m_mutex);
@@ -220,7 +219,7 @@ private:
             auto now = std::chrono::steady_clock::now();
             auto nextExpiry = std::chrono::steady_clock::time_point::max();
 
-            for (const auto& [id, timer] : m_timers) {
+            for (const auto &[id, timer] : m_timers) {
                 if (timer.enabled && timer.expiry < nextExpiry) {
                     nextExpiry = timer.expiry;
                 }
@@ -234,7 +233,7 @@ private:
             }
 
             std::vector<TimerId> expired;
-            for (const auto& [id, timer] : m_timers) {
+            for (const auto &[id, timer] : m_timers) {
                 if (timer.enabled && timer.expiry <= now) {
                     expired.push_back(id);
                 }

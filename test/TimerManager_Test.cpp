@@ -8,10 +8,11 @@
 #include "TimerManager.h"
 
 using namespace std::chrono_literals;
+using namespace doip;
 
 TEST_SUITE("TimerManager") {
     TEST_CASE("Basic timer creation and execution") {
-        TimerManager manager;
+        auto& manager = TimerManager::getInstance();
         std::atomic<bool> callbackExecuted{false};
 
         auto callback = [&callbackExecuted]() noexcept {
@@ -32,7 +33,7 @@ TEST_SUITE("TimerManager") {
     }
 
     TEST_CASE("Periodic timer") {
-        TimerManager manager;
+        auto& manager = TimerManager::getInstance();
         std::atomic<int> executionCount{0};
 
         auto callback = [&executionCount]() noexcept {
@@ -57,7 +58,7 @@ TEST_SUITE("TimerManager") {
     }
 
     TEST_CASE("Timer removal") {
-        TimerManager manager;
+        auto& manager = TimerManager::getInstance();
         std::atomic<bool> callbackExecuted{false};
 
         auto callback = [&callbackExecuted]() noexcept {
@@ -86,7 +87,7 @@ TEST_SUITE("TimerManager") {
     }
 
     TEST_CASE("Timer restart") {
-        TimerManager manager;
+        auto& manager = TimerManager::getInstance();
         std::atomic<bool> callbackExecuted{false};
 
         auto callback = [&callbackExecuted]() noexcept {
@@ -116,7 +117,7 @@ TEST_SUITE("TimerManager") {
     }
 
     TEST_CASE("Timer update duration") {
-        TimerManager manager;
+        auto& manager = TimerManager::getInstance();
         std::atomic<bool> callbackExecuted{false};
 
         auto callback = [&callbackExecuted]() noexcept {
@@ -143,7 +144,7 @@ TEST_SUITE("TimerManager") {
     TEST_CASE("Timer enable/disable") {
         // Test 1: Disable functionality
         {
-            TimerManager manager;
+            auto& manager = TimerManager::getInstance();
             std::atomic<bool> callbackExecuted{false};
 
             auto callback = [&callbackExecuted]() noexcept {
@@ -165,7 +166,7 @@ TEST_SUITE("TimerManager") {
 
         // Test 2: Basic enable/disable API
         {
-            TimerManager manager;
+            auto& manager = TimerManager::getInstance();
 
             // Try enable/disable non-existent timer
             bool disabledNonExistent = manager.disableTimer(999);
@@ -177,7 +178,7 @@ TEST_SUITE("TimerManager") {
     }
 
     TEST_CASE("Multiple timers") {
-        TimerManager manager;
+        auto& manager = TimerManager::getInstance();
         std::atomic<int> counter1{0};
         std::atomic<int> counter2{0};
         std::atomic<int> counter3{0};
@@ -212,7 +213,7 @@ TEST_SUITE("TimerManager") {
     }
 
     TEST_CASE("Null callback handling") {
-        TimerManager manager;
+        auto& manager = TimerManager::getInstance();
 
         // Try to add timer with null callback
         auto timerId = manager.addTimer(50ms, nullptr);
@@ -221,7 +222,7 @@ TEST_SUITE("TimerManager") {
     }
 
     TEST_CASE("Exception handling in callback") {
-        TimerManager manager;
+        auto& manager = TimerManager::getInstance();
         std::atomic<bool> normalCallbackExecuted{false};
 
         // Add timer that throws exception
@@ -246,30 +247,8 @@ TEST_SUITE("TimerManager") {
         CHECK(normalCallbackExecuted);
     }
 
-    TEST_CASE("Timer manager destruction") {
-        std::atomic<bool> callbackExecuted{false};
-
-        {
-            TimerManager manager;
-            auto callback = [&callbackExecuted]() noexcept {
-                callbackExecuted = true;
-            };
-
-            auto timerId = manager.addTimer(200ms, callback);
-
-            REQUIRE(timerId.has_value());
-            CHECK(manager.timerCount() == 1);
-
-            // Manager goes out of scope here and should stop cleanly
-        }
-
-        // Wait to ensure callback doesn't execute after destruction
-        std::this_thread::sleep_for(250ms);
-        CHECK_FALSE(callbackExecuted);
-    }
-
     TEST_CASE("Basic functionality verification") {
-        TimerManager manager;
+        auto& manager = TimerManager::getInstance();
         std::atomic<int> totalExecutions{0};
         constexpr int timerCount = 5; // Reduced from 50 for faster testing
         std::vector<TimerManager::TimerId> timerIds;

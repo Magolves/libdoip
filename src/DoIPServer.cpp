@@ -1,4 +1,5 @@
 #include "DoIPServer.h"
+#include "DoIPConnection.h"
 #include "DoIPMessage.h"
 #include "Logger.h"
 #include "MacAddress.h"

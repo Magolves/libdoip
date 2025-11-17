@@ -13,12 +13,16 @@
 #include <memory>
 #include "DiagnosticMessageHandler.h"
 #include "AliveCheckTimer.h"
-#include "DoIPConnection.h"
 #include "DoIPFurtherAction.h"
+#include "DoIPConnection.h"
 #include "MacAddress.h"
-#include "TimerManager.h"
+#include "DoIPIdentifiers.h"
+#include "DoIPNegativeAck.h"
+#include "ByteArray.h"
 
 namespace doip {
+
+
 
 using CloseConnectionCallback = std::function<void()>;
 
@@ -33,8 +37,7 @@ class DoIPServer {
 
 public:
     DoIPServer() {
-        m_stateMachine(&m_timerManager);
-        m_receiveBuf.reserve(MAX_ISOTP_MTU);
+        m_receiveBuf.reserve(DoIPConnection::MAX_ISOTP_MTU);
     };
 
     void setupTcpSocket();
@@ -86,8 +89,6 @@ private:
     DoIPEID m_EID = DoIPEID::Zero;
     DoIPGID m_GID = DoIPGID::Zero;
     DoIPFurtherAction m_FurtherActionReq = DoIPFurtherAction::NoFurtherAction;
-    
-    TimerManager m_timerManager{};
 
     int m_announceNum = 3;    //Default Value = 3
     unsigned int m_announceInterval = 500; //Default Value = 500ms

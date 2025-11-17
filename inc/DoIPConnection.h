@@ -23,13 +23,12 @@ using CloseConnectionCallback = std::function<void()>;
 const unsigned long _MaxDataSize = 0xFFFFFF;
 
 /** Maximum size of the ISO-TP message - used as initial value for RX buffer to avoid reallocs */
-const size_t MAX_ISOTP_MTU = 4095;
 
 class DoIPConnection {
+    public:
+    static constexpr size_t MAX_ISOTP_MTU = 4095;
 
-public:
-    DoIPConnection(int tcpSocket, const DoIPAddress& gatewayAddress):
-        m_tcpSocket(tcpSocket), m_gatewayAddress(gatewayAddress) { };
+    DoIPConnection(int tcpSocket, const DoIPAddress& gatewayAddress);
 
     int receiveTcpMessage();
     size_t receiveFixedNumberOfBytesFromTCP(uint8_t *receivedData, size_t payloadLength);
@@ -50,6 +49,7 @@ private:
     std::array<uint8_t, MAX_ISOTP_MTU> m_receiveBuf{};
 
     int m_tcpSocket;
+    DoIPAddress m_gatewayAddress;
     DoIPServerStateMachine m_stateMachine;
 
     AliveCheckTimer m_aliveCheckTimer;
@@ -58,7 +58,6 @@ private:
     DiagnosticMessageNotification m_notify_application;
 
     DoIPAddress m_routedClientAddress;
-    DoIPAddress m_gatewayAddress;
 
     void closeSocket();
 
