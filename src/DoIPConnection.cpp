@@ -8,12 +8,10 @@
 
 using namespace doip;
 
-DoIPConnection::DoIPConnection(int tcpSocket, const DoIPAddress& gatewayAddress):
-        m_tcpSocket(tcpSocket),
-        m_gatewayAddress(gatewayAddress),
-        m_stateMachine([this]() { closeSocket(); }) {
-
-        }
+DoIPConnection::DoIPConnection(int tcpSocket, const DoIPAddress &gatewayAddress) : m_tcpSocket(tcpSocket),
+                                                                                   m_gatewayAddress(gatewayAddress),
+                                                                                   m_stateMachine([this]() { closeSocket(); }) {
+}
 
 /**
  * Closes the connection by closing the sockets
@@ -21,15 +19,15 @@ DoIPConnection::DoIPConnection(int tcpSocket, const DoIPAddress& gatewayAddress)
 void DoIPConnection::aliveCheckTimeout() {
     DOIP_LOG_ERROR("Alive Check Timeout. Close Connection");
     closeSocket();
-    m_close_connection();
 }
 
 /*
  * Closes the socket for this server
  */
 void DoIPConnection::closeSocket() {
-    close(m_tcpSocket);
     m_tcpSocket = 0;
+    if (m_close_connection)
+        m_close_connection();
 }
 
 /*
@@ -55,7 +53,6 @@ int DoIPConnection::receiveTcpMessage() {
         auto payloadLength = optHeader->second;
 
         DOIP_LOG_INFO("Payload Type: {}, length: {} ", fmt::streamed(plType), payloadLength);
-
 
         if (payloadLength > 0) {
             DOIP_LOG_DEBUG("Waiting for {} bytes of payload...", payloadLength);
@@ -152,7 +149,7 @@ int DoIPConnection::reactOnReceivedTcpMessage(const DoIPMessage &message) {
 
         break;
     }
-    case DoIPPayloadType::DiagnosticMessage : {
+    case DoIPPayloadType::DiagnosticMessage: {
         auto optTargetAddress = message.getTargetAddress();
         if (!optTargetAddress.has_value()) {
             sentBytes = sendNegativeAck(DoIPNegativeAck::InvalidPayloadLength);
