@@ -18,8 +18,6 @@
 
 namespace doip {
 
-using CloseConnectionCallback = std::function<void()>;
-
 const unsigned long _MaxDataSize = 0xFFFFFF;
 
 /** Maximum size of the ISO-TP message - used as initial value for RX buffer to avoid reallocs */
@@ -42,7 +40,7 @@ class DoIPConnection {
     void sendDiagnosticNegativeAck(const DoIPAddress& sourceAddress, DoIPNegativeDiagnosticAck ackCode);
     int sendNegativeAck(DoIPNegativeAck ackCode);
 
-    void setCallback(DiagnosticCallback dc, DiagnosticMessageNotification dmn, CloseConnectionCallback ccb);
+    void setCallback(DiagnosticCallback dc, DiagnosticMessageNotification dmn, CloseConnectionHandler ccb);
     void setGeneralInactivityTime(const uint16_t seconds);
 
 private:
@@ -54,7 +52,7 @@ private:
 
     AliveCheckTimer m_aliveCheckTimer;
     DiagnosticCallback m_diag_callback;
-    CloseConnectionCallback m_close_connection;
+    CloseConnectionHandler m_close_connection;
     DiagnosticMessageNotification m_notify_application;
 
     DoIPAddress m_routedClientAddress;

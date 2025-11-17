@@ -24,7 +24,7 @@ namespace doip {
 
 
 
-using CloseConnectionCallback = std::function<void()>;
+using CloseConnectionHandler = std::function<void()>;
 
 const int DOIP_SERVER_PORT = 13400;
 

@@ -9,87 +9,100 @@ DoIPServerStateMachine::~DoIPServerStateMachine() {
     stopAllTimers();
 }
 
-void DoIPServerStateMachine::processMessage(const DoIPMessage& message) {
+void DoIPServerStateMachine::processMessage(const DoIPMessage &message) {
     // Map message type to event
     DoIPEvent event;
 
     switch (message.getPayloadType()) {
-        case DoIPPayloadType::RoutingActivationRequest:
-            event = DoIPEvent::RoutingActivationReceived;
-            break;
-        case DoIPPayloadType::AliveCheckResponse:
-            event = DoIPEvent::AliveCheckResponseReceived;
-            break;
-        case DoIPPayloadType::DiagnosticMessage:
-            event = DoIPEvent::DiagnosticMessageReceived;
-            break;
-        default:
-            event = DoIPEvent::Invalid_message;
-            break;
+    case DoIPPayloadType::RoutingActivationRequest:
+        event = DoIPEvent::RoutingActivationReceived;
+        break;
+    case DoIPPayloadType::AliveCheckResponse:
+        event = DoIPEvent::AliveCheckResponseReceived;
+        break;
+    case DoIPPayloadType::DiagnosticMessage:
+        event = DoIPEvent::DiagnosticMessageReceived;
+        break;
+    default:
+        event = DoIPEvent::InvalidMessage;
+        break;
     }
 
     processEvent(event);
 
     // Process based on current state
     switch (m_state) {
-        case DoIPState::SocketInitialized:
-            handleSocketInitialized(event, &message);
-            break;
-        case DoIPState::WaitRoutingActivation:
-            handleWaitRoutingActivation(event, &message);
-            break;
-        case DoIPState::RoutingActivated:
-            handleRoutingActivated(event, &message);
-            break;
-        case DoIPState::WaitAliveCheckResponse:
-            handleWaitAliveCheckResponse(event, &message);
-            break;
-        case DoIPState::Finalize:
-            handleFinalize(event, &message);
-            break;
-        case DoIPState::Closed:
-            // No processing in closed state
-            break;
+    case DoIPState::SocketInitialized:
+        handleSocketInitialized(event, &message);
+        break;
+    case DoIPState::WaitRoutingActivation:
+        handleWaitRoutingActivation(event, &message);
+        break;
+    case DoIPState::RoutingActivated:
+        handleRoutingActivated(event, &message);
+        break;
+    case DoIPState::WaitAliveCheckResponse:
+        handleWaitAliveCheckResponse(event, &message);
+        break;
+    case DoIPState::Finalize:
+        handleFinalize(event, &message);
+        break;
+    case DoIPState::Closed:
+        // No processing in closed state
+        break;
     }
 }
 
 void DoIPServerStateMachine::processEvent(DoIPEvent event) {
+    DOIP_LOG_INFO("processEvent {} in state {}", fmt::streamed(event), fmt::streamed(m_state));
+
+    switch(event) {
+        case DoIPEvent::Alive_check_timeout:
+        case DoIPEvent::Initial_inactivity_timeout:
+        case DoIPEvent::General_inactivity_timeout:
+            transitionTo(DoIPState::Finalize);
+        default:
+            break;
+    }
+
     // Process events based on current state
     switch (m_state) {
-        case DoIPState::SocketInitialized:
-            handleSocketInitialized(event, nullptr);
-            break;
-        case DoIPState::WaitRoutingActivation:
-            handleWaitRoutingActivation(event, nullptr);
-            break;
-        case DoIPState::RoutingActivated:
-            handleRoutingActivated(event, nullptr);
-            break;
-        case DoIPState::WaitAliveCheckResponse:
-            handleWaitAliveCheckResponse(event, nullptr);
-            break;
-        case DoIPState::Finalize:
-            handleFinalize(event, nullptr);
-            break;
-        case DoIPState::Closed:
-            // No processing in closed state
-            break;
+    case DoIPState::SocketInitialized:
+        handleSocketInitialized(event, nullptr);
+        break;
+    case DoIPState::WaitRoutingActivation:
+        handleWaitRoutingActivation(event, nullptr);
+        break;
+    case DoIPState::RoutingActivated:
+        handleRoutingActivated(event, nullptr);
+        break;
+    case DoIPState::WaitAliveCheckResponse:
+        handleWaitAliveCheckResponse(event, nullptr);
+        break;
+    case DoIPState::Finalize:
+        handleFinalize(event, nullptr);
+        break;
+    case DoIPState::Closed:
+        // No processing in closed state
+        break;
     }
 }
 
 void DoIPServerStateMachine::handleTimeout(TimerID timer_id) {
-    DoIPEvent event = DoIPEvent::Socket_error; // Default value
+    DoIPEvent event = DoIPEvent::SocketError; // Default value
+
+    DOIP_LOG_WARN("Timeout '{}'", fmt::streamed(timer_id));
 
     switch (timer_id) {
-        case TimerID::InitialInactivity:
-            event = DoIPEvent::Initial_inactivity_timeout;
-            break;
-        case TimerID::GeneralInactivity:
-            event = DoIPEvent::General_inactivity_timeout;
-            break;
-        case TimerID::AliveCheck:
-            event = DoIPEvent::Alive_check_timeout;
-            break;
+    case TimerID::InitialInactivity:
+        event = DoIPEvent::Initial_inactivity_timeout;
+        break;
+    case TimerID::GeneralInactivity:
+        event = DoIPEvent::General_inactivity_timeout;
+        break;
+    case TimerID::AliveCheck:
+        event = DoIPEvent::Alive_check_timeout;
+        break;
     }
 
     processEvent(event);
@@ -97,183 +110,190 @@ void DoIPServerStateMachine::handleTimeout(TimerID timer_id) {
 
 // State Handlers
 
-void DoIPServerStateMachine::handleSocketInitialized(DoIPEvent event, const DoIPMessage* msg) {
+void DoIPServerStateMachine::handleSocketInitialized(DoIPEvent event, const DoIPMessage *msg) {
     switch (event) {
-        case DoIPEvent::RoutingActivationReceived:
-            if (msg) {
-                // Extract source address from message
-                auto sourceAddress = msg->getSourceAddress();
-                if (sourceAddress.has_value()) {
-                    m_activeSourceAddress = sourceAddress.value().toUint16();
+    case DoIPEvent::RoutingActivationReceived:
+        if (msg) {
+            // Extract source address from message
+            auto sourceAddress = msg->getSourceAddress();
+            if (sourceAddress.has_value()) {
+                m_activeSourceAddress = sourceAddress.value().toUint16();
 
-                    // Send routing activation response (success)
-                    sendRoutingActivationResponse(DoIPAddress(m_activeSourceAddress), 0x10);
+                // Send routing activation response (success)
+                sendRoutingActivationResponse(DoIPAddress(m_activeSourceAddress), 0x10);
 
-                    // Start general inactivity timer
-                    stopTimer(TimerID::InitialInactivity);
-                    startTimer(TimerID::GeneralInactivity,
-                              std::chrono::milliseconds(times::server::GeneralInactivityTimeout));
+                // Start general inactivity timer
+                stopTimer(TimerID::InitialInactivity);
+                startTimer(TimerID::GeneralInactivity,
+                           std::chrono::milliseconds(times::server::GeneralInactivityTimeout));
 
-                    transitionTo(DoIPState::RoutingActivated);
-                } else {
-                    // Invalid message - no source address
-                    sendRoutingActivationResponse(DoIPAddress(static_cast<uint8_t>(0x00), static_cast<uint8_t>(0x00)), 0x00); // Unknown source address
-                }
-            }
-            break;
-
-        case DoIPEvent::Initial_inactivity_timeout:
-            DOIP_LOG_WARN("Initial inactivity timeout in SocketInitialized state");
-            transitionTo(DoIPState::Finalize);
-            break;
-
-        case DoIPEvent::Invalid_message:
-        case DoIPEvent::Socket_error:
-            transitionTo(DoIPState::Finalize);
-            break;
-
-        default:
-            // Unexpected event in this state
-            DOIP_LOG_WARN("Unexpected event in SocketInitialized state");
-            break;
-    }
-}
-
-void DoIPServerStateMachine::handleWaitRoutingActivation(DoIPEvent event, const DoIPMessage* msg) {
-    switch (event) {
-        case DoIPEvent::RoutingActivationReceived:
-            if (msg) {
-                auto sourceAddress = msg->getSourceAddress();
-                if (sourceAddress.has_value()) {
-                    m_activeSourceAddress = sourceAddress.value().toUint16();
-
-                    // Send routing activation response
-                    sendRoutingActivationResponse(DoIPAddress(m_activeSourceAddress), 0x10);
-
-                    // Reset inactivity timer
-                    stopTimer(TimerID::InitialInactivity);
-                    startTimer(TimerID::GeneralInactivity,
-                              std::chrono::milliseconds(times::server::GeneralInactivityTimeout));
-
-                    transitionTo(DoIPState::RoutingActivated);
-                }
-            }
-            break;
-
-        case DoIPEvent::Initial_inactivity_timeout:
-            DOIP_LOG_WARN("Initial inactivity timeout - closing connection");
-            transitionTo(DoIPState::Finalize);
-            break;
-
-        case DoIPEvent::Socket_error:
-        case DoIPEvent::Invalid_message:
-            transitionTo(DoIPState::Finalize);
-            break;
-
-        default:
-            break;
-    }
-}
-
-void DoIPServerStateMachine::handleRoutingActivated(DoIPEvent event, const DoIPMessage* msg) {
-    switch (event) {
-        case DoIPEvent::DiagnosticMessageReceived:
-            if (msg) {
-                auto sourceAddress = msg->getSourceAddress();
-                if (sourceAddress.has_value()) {
-                    // Send diagnostic message acknowledgment
-                    sendDiagnosticMessageAck(sourceAddress.value());
-
-                    // Reset general inactivity timer
-                    stopTimer(TimerID::GeneralInactivity);
-                    startTimer(TimerID::GeneralInactivity,
-                              std::chrono::milliseconds(times::server::GeneralInactivityTimeout));
-                }
-            }
-            break;
-
-        case DoIPEvent::General_inactivity_timeout:
-            DOIP_LOG_INFO("General inactivity timeout - sending alive check");
-            sendAliveCheckRequest();
-            m_aliveCheckRetryCount = 0;
-            startTimer(TimerID::AliveCheck,
-                      std::chrono::milliseconds(times::server::AliveCheckResponseTimeout));
-            transitionTo(DoIPState::WaitAliveCheckResponse);
-            break;
-
-        case DoIPEvent::CloseRequestReceived:
-            transitionTo(DoIPState::Finalize);
-            break;
-
-        case DoIPEvent::Socket_error:
-            transitionTo(DoIPState::Finalize);
-            break;
-
-        default:
-            break;
-    }
-}
-
-void DoIPServerStateMachine::handleWaitAliveCheckResponse(DoIPEvent event, const DoIPMessage* msg) {
-    switch (event) {
-        case DoIPEvent::AliveCheckResponseReceived:
-            DOIP_LOG_INFO("Alive check response received");
-            stopTimer(TimerID::AliveCheck);
-
-            // Restart general inactivity timer
-            startTimer(TimerID::GeneralInactivity,
-                      std::chrono::milliseconds(times::server::GeneralInactivityTimeout));
-
-            transitionTo(DoIPState::RoutingActivated);
-            break;
-
-        case DoIPEvent::Alive_check_timeout:
-            m_aliveCheckRetryCount++;
-
-            if (m_aliveCheckRetryCount >= times::server::VehicleAnnouncementNumber) {
-                DOIP_LOG_WARN("Alive check max retries reached - closing connection");
-                transitionTo(DoIPState::Finalize);
+                transitionTo(DoIPState::RoutingActivated);
             } else {
-                DOIP_LOG_INFO("Alive check timeout - retry "
-                        + std::to_string(static_cast<unsigned int>(m_aliveCheckRetryCount)));
-                sendAliveCheckRequest();
-                startTimer(TimerID::AliveCheck,
-                          std::chrono::milliseconds(times::server::AliveCheckResponseTimeout));
+                // Invalid message - no source address
+                sendRoutingActivationResponse(DoIPAddress(static_cast<uint8_t>(0x00), static_cast<uint8_t>(0x00)), 0x00); // Unknown source address
             }
-            break;
+        }
+        break;
 
-        case DoIPEvent::DiagnosticMessageReceived:
-            // Diagnostic message acts as alive check response
-            DOIP_LOG_INFO("Diagnostic message received - treating as alive check response");
-            stopTimer(TimerID::AliveCheck);
+    case DoIPEvent::Initial_inactivity_timeout:
+        DOIP_LOG_WARN("Initial inactivity timeout in SocketInitialized state");
+        transitionTo(DoIPState::Finalize);
+        break;
 
-            if (msg) {
-                auto sourceAddress = msg->getSourceAddress();
-                if (sourceAddress.has_value()) {
-                    sendDiagnosticMessageAck(sourceAddress.value());
-                }
-            }
+    case DoIPEvent::InvalidMessage:
+    case DoIPEvent::SocketError:
+        transitionTo(DoIPState::Finalize);
+        break;
 
-            startTimer(TimerID::GeneralInactivity,
-                      std::chrono::milliseconds(times::server::GeneralInactivityTimeout));
-            transitionTo(DoIPState::RoutingActivated);
-            break;
-
-        case DoIPEvent::Socket_error:
-            transitionTo(DoIPState::Finalize);
-            break;
-
-        default:
-            break;
+    default:
+        // Unexpected event in this state
+        DOIP_LOG_WARN("Unexpected event in SocketInitialized state");
+        break;
     }
 }
 
-void DoIPServerStateMachine::handleFinalize(DoIPEvent event, const DoIPMessage* msg) {
-    (void)event;  // Unused parameter
-    (void)msg;    // Unused parameter
+void DoIPServerStateMachine::handleWaitRoutingActivation(DoIPEvent event, const DoIPMessage *msg) {
+    switch (event) {
+    case DoIPEvent::RoutingActivationReceived:
+        if (msg) {
+            auto sourceAddress = msg->getSourceAddress();
+            if (sourceAddress.has_value()) {
+                m_activeSourceAddress = sourceAddress.value().toUint16();
+
+                // Send routing activation response
+                sendRoutingActivationResponse(DoIPAddress(m_activeSourceAddress), 0x10);
+
+                // Reset inactivity timer
+                stopTimer(TimerID::InitialInactivity);
+                startTimer(TimerID::GeneralInactivity,
+                           std::chrono::milliseconds(times::server::GeneralInactivityTimeout));
+
+                transitionTo(DoIPState::RoutingActivated);
+            }
+        }
+        break;
+
+    case DoIPEvent::Initial_inactivity_timeout:
+        DOIP_LOG_WARN("Initial inactivity timeout - closing connection");
+        transitionTo(DoIPState::Finalize);
+        break;
+
+    case DoIPEvent::SocketError:
+    case DoIPEvent::InvalidMessage:
+        transitionTo(DoIPState::Finalize);
+        break;
+
+    default:
+        break;
+    }
+}
+
+void DoIPServerStateMachine::handleRoutingActivated(DoIPEvent event, const DoIPMessage *msg) {
+    switch (event) {
+    case DoIPEvent::DiagnosticMessageReceived:
+        if (msg) {
+            auto sourceAddress = msg->getSourceAddress();
+            if (sourceAddress.has_value()) {
+                // Send diagnostic message acknowledgment
+                sendDiagnosticMessageAck(sourceAddress.value());
+
+                // Reset general inactivity timer
+                stopTimer(TimerID::GeneralInactivity);
+                startTimer(TimerID::GeneralInactivity,
+                           std::chrono::milliseconds(times::server::GeneralInactivityTimeout));
+            }
+        }
+        break;
+
+    case DoIPEvent::General_inactivity_timeout:
+        DOIP_LOG_INFO("General inactivity timeout - sending alive check");
+        sendAliveCheckRequest();
+        m_aliveCheckRetryCount = 0;
+        startTimer(TimerID::AliveCheck,
+                   std::chrono::milliseconds(times::server::AliveCheckResponseTimeout));
+        transitionTo(DoIPState::WaitAliveCheckResponse);
+        break;
+
+    case DoIPEvent::CloseRequestReceived:
+        transitionTo(DoIPState::Finalize);
+        break;
+
+    case DoIPEvent::SocketError:
+        transitionTo(DoIPState::Finalize);
+        break;
+
+    default:
+        break;
+    }
+}
+
+void DoIPServerStateMachine::handleWaitAliveCheckResponse(DoIPEvent event, const DoIPMessage *msg) {
+    switch (event) {
+    case DoIPEvent::AliveCheckResponseReceived:
+        DOIP_LOG_INFO("Alive check response received");
+        stopTimer(TimerID::AliveCheck);
+
+        // Restart general inactivity timer
+        startTimer(TimerID::GeneralInactivity,
+                   std::chrono::milliseconds(times::server::GeneralInactivityTimeout));
+
+        transitionTo(DoIPState::RoutingActivated);
+        break;
+
+    case DoIPEvent::Alive_check_timeout:
+        m_aliveCheckRetryCount++;
+
+        if (m_aliveCheckRetryCount >= times::server::VehicleAnnouncementNumber) {
+            DOIP_LOG_WARN("Alive check max retries reached - closing connection");
+            transitionTo(DoIPState::Finalize);
+        } else {
+            DOIP_LOG_INFO("Alive check timeout - retry " + std::to_string(static_cast<unsigned int>(m_aliveCheckRetryCount)));
+            sendAliveCheckRequest();
+            startTimer(TimerID::AliveCheck,
+                       std::chrono::milliseconds(times::server::AliveCheckResponseTimeout));
+        }
+        break;
+
+    case DoIPEvent::DiagnosticMessageReceived:
+        // Diagnostic message acts as alive check response
+        DOIP_LOG_INFO("Diagnostic message received - treating as alive check response");
+        stopTimer(TimerID::AliveCheck);
+
+        if (msg) {
+            auto sourceAddress = msg->getSourceAddress();
+            if (sourceAddress.has_value()) {
+                sendDiagnosticMessageAck(sourceAddress.value());
+            }
+        }
+
+        startTimer(TimerID::GeneralInactivity,
+                   std::chrono::milliseconds(times::server::GeneralInactivityTimeout));
+        transitionTo(DoIPState::RoutingActivated);
+        break;
+
+    case DoIPEvent::SocketError:
+        transitionTo(DoIPState::Finalize);
+        break;
+
+    default:
+        break;
+    }
+}
+
+void DoIPServerStateMachine::handleFinalize(DoIPEvent event, const DoIPMessage *msg) {
+    (void)event; // Unused parameter
+    (void)msg;   // Unused parameter
+
+    DOIP_LOG_INFO("Closing connection...");
 
     // Stop all timers
     stopAllTimers();
+
+    if (m_closeConnectionCallback) {
+        m_closeConnectionCallback();
+    } else {
+        DOIP_LOG_WARN("No callback for 'close connection' set");
+    }
 
     // Transition to closed state
     transitionTo(DoIPState::Closed);
@@ -289,8 +309,7 @@ void DoIPServerStateMachine::transitionTo(DoIPState new_state) {
     DoIPState old_state = m_state;
     m_state = new_state;
 
-    DOIP_LOG_INFO("State transition: " + std::to_string(static_cast<int>(old_state))
-            + " -> " + std::to_string(static_cast<int>(new_state)));
+    DOIP_LOG_INFO("State transition: {} -> {}", fmt::streamed(old_state), fmt::streamed(new_state));
 
     // Call transition callback if set
     if (m_transitionCallback) {
@@ -299,35 +318,36 @@ void DoIPServerStateMachine::transitionTo(DoIPState new_state) {
 
     // State entry actions
     switch (new_state) {
-        case DoIPState::SocketInitialized:
-            // Start initial inactivity timer
-            startTimer(TimerID::InitialInactivity,
-                      std::chrono::milliseconds(times::server::InitialInactivityTimeout));
-            break;
+    case DoIPState::SocketInitialized:
+        // Start initial inactivity timer
+        startTimer(TimerID::InitialInactivity,
+                   std::chrono::milliseconds(times::server::InitialInactivityTimeout));
+        transitionTo(DoIPState::WaitRoutingActivation);
+        break;
 
-        case DoIPState::WaitRoutingActivation:
-            // Start initial inactivity timer
-            startTimer(TimerID::InitialInactivity,
-                      std::chrono::milliseconds(times::server::InitialInactivityTimeout));
-            break;
+    case DoIPState::WaitRoutingActivation:
+        // Start initial inactivity timer
+        startTimer(TimerID::InitialInactivity,
+                   std::chrono::milliseconds(times::server::InitialInactivityTimeout));
+        break;
 
-        case DoIPState::RoutingActivated:
-            // Start general inactivity timer
-            startTimer(TimerID::GeneralInactivity,
-                      std::chrono::milliseconds(times::server::GeneralInactivityTimeout));
-            break;
+    case DoIPState::RoutingActivated:
+        // Start general inactivity timer
+        startTimer(TimerID::GeneralInactivity,
+                   std::chrono::milliseconds(times::server::GeneralInactivityTimeout));
+        break;
 
-        case DoIPState::WaitAliveCheckResponse:
-            // Timer already started before transition
-            break;
+    case DoIPState::WaitAliveCheckResponse:
+        // Timer already started before transition
+        break;
 
-        case DoIPState::Finalize:
-            stopAllTimers();
-            break;
+    case DoIPState::Finalize:
+        stopAllTimers();
+        break;
 
-        case DoIPState::Closed:
-            stopAllTimers();
-            break;
+    case DoIPState::Closed:
+        stopAllTimers();
+        break;
     }
 }
 
@@ -344,8 +364,7 @@ void DoIPServerStateMachine::startTimer(TimerID timer_id, std::chrono::milliseco
     auto timerId = m_timerManager.addTimer(duration, callback, false);
 
     if (timerId.has_value()) {
-        DOIP_LOG_DEBUG("Started timer " + std::to_string(static_cast<int>(timer_id))
-                 + " for " + std::to_string(duration.count()) + "ms");
+        DOIP_LOG_DEBUG("Started timer " + std::to_string(static_cast<int>(timer_id)) + " for " + std::to_string(duration.count()) + "ms");
     } else {
         DOIP_LOG_ERROR("Failed to start timer " + std::to_string(static_cast<int>(timer_id)));
     }
@@ -371,7 +390,7 @@ void DoIPServerStateMachine::sendRoutingActivationResponse(DoIPAddress source_ad
     }
 
     // Create routing activation response message
-    DoIPAddress serverAddr(0x0E, 0x80);  // Default server address (0x0E80)
+    DoIPAddress serverAddr(0x0E, 0x80); // Default server address (0x0E80)
 
     // Build response payload manually
     ByteArray payload;
@@ -384,9 +403,7 @@ void DoIPServerStateMachine::sendRoutingActivationResponse(DoIPAddress source_ad
     DoIPMessage response(DoIPPayloadType::RoutingActivationResponse, std::move(payload));
     m_sendMessageCallback(response);
 
-    DOIP_LOG_INFO("Sent routing activation response: code="
-            + std::to_string(static_cast<unsigned int>(response_code))
-            + " to address=" + std::to_string(static_cast<unsigned int>(source_address.toUint16())));
+    DOIP_LOG_INFO("Sent routing activation response: code=" + std::to_string(static_cast<unsigned int>(response_code)) + " to address=" + std::to_string(static_cast<unsigned int>(source_address.toUint16())));
 }
 
 void DoIPServerStateMachine::sendAliveCheckRequest() {
@@ -413,7 +430,7 @@ void DoIPServerStateMachine::sendDiagnosticMessageAck(DoIPAddress source_address
     auto ack = message::makeDiagnosticPositiveResponse(
         sourceAddr,
         targetAddr,
-        ByteArray{}  // Empty payload for ACK
+        ByteArray{} // Empty payload for ACK
     );
 
     m_sendMessageCallback(ack);
@@ -434,14 +451,12 @@ void DoIPServerStateMachine::sendDiagnosticMessageNack(DoIPAddress source_addres
         sourceAddr,
         targetAddr,
         static_cast<DoIPNegativeDiagnosticAck>(nack_code),
-        ByteArray{}  // Empty payload
+        ByteArray{} // Empty payload
     );
 
     m_sendMessageCallback(nack);
 
-    DOIP_LOG_INFO("Sent diagnostic message NACK: code="
-            + std::to_string(static_cast<unsigned int>(nack_code))
-            + " to address=" + std::to_string(static_cast<unsigned int>(source_address.toUint16())));
+    DOIP_LOG_INFO("Sent diagnostic message NACK: code=" + std::to_string(static_cast<unsigned int>(nack_code)) + " to address=" + std::to_string(static_cast<unsigned int>(source_address.toUint16())));
 }
 
 } // namespace doip

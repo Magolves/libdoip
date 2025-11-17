@@ -233,7 +233,7 @@ void DoIPConnection::sendDiagnosticPayload(const DoIPAddress &sourceAddress, con
  * @dmn     Callback which notifies the application of receiving a diagnostic message
  * @ccb     Callback for application function when the library closes the connection
  */
-void DoIPConnection::setCallback(DiagnosticCallback dc, DiagnosticMessageNotification dmn, CloseConnectionCallback ccb) {
+void DoIPConnection::setCallback(DiagnosticCallback dc, DiagnosticMessageNotification dmn, CloseConnectionHandler ccb) {
     m_diag_callback = dc;
     m_notify_application = dmn;
     m_close_connection = ccb;

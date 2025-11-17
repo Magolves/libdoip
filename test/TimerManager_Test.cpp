@@ -12,7 +12,7 @@ using namespace doip;
 
 TEST_SUITE("TimerManager") {
     TEST_CASE("Basic timer creation and execution") {
-        auto& manager = TimerManager::getInstance();
+        TimerManager manager;
         std::atomic<bool> callbackExecuted{false};
 
         auto callback = [&callbackExecuted]() noexcept {
@@ -33,7 +33,7 @@ TEST_SUITE("TimerManager") {
     }
 
     TEST_CASE("Periodic timer") {
-        auto& manager = TimerManager::getInstance();
+        TimerManager manager;
         std::atomic<int> executionCount{0};
 
         auto callback = [&executionCount]() noexcept {
@@ -58,7 +58,7 @@ TEST_SUITE("TimerManager") {
     }
 
     TEST_CASE("Timer removal") {
-        auto& manager = TimerManager::getInstance();
+        TimerManager manager;
         std::atomic<bool> callbackExecuted{false};
 
         auto callback = [&callbackExecuted]() noexcept {
@@ -87,7 +87,7 @@ TEST_SUITE("TimerManager") {
     }
 
     TEST_CASE("Timer restart") {
-        auto& manager = TimerManager::getInstance();
+        TimerManager manager;
         std::atomic<bool> callbackExecuted{false};
 
         auto callback = [&callbackExecuted]() noexcept {
@@ -117,7 +117,7 @@ TEST_SUITE("TimerManager") {
     }
 
     TEST_CASE("Timer update duration") {
-        auto& manager = TimerManager::getInstance();
+        TimerManager manager;
         std::atomic<bool> callbackExecuted{false};
 
         auto callback = [&callbackExecuted]() noexcept {
@@ -144,7 +144,7 @@ TEST_SUITE("TimerManager") {
     TEST_CASE("Timer enable/disable") {
         // Test 1: Disable functionality
         {
-            auto& manager = TimerManager::getInstance();
+            TimerManager manager;
             std::atomic<bool> callbackExecuted{false};
 
             auto callback = [&callbackExecuted]() noexcept {
@@ -166,7 +166,7 @@ TEST_SUITE("TimerManager") {
 
         // Test 2: Basic enable/disable API
         {
-            auto& manager = TimerManager::getInstance();
+            TimerManager manager;
 
             // Try enable/disable non-existent timer
             bool disabledNonExistent = manager.disableTimer(999);
@@ -178,7 +178,7 @@ TEST_SUITE("TimerManager") {
     }
 
     TEST_CASE("Multiple timers") {
-        auto& manager = TimerManager::getInstance();
+        TimerManager manager;
         std::atomic<int> counter1{0};
         std::atomic<int> counter2{0};
         std::atomic<int> counter3{0};
@@ -213,7 +213,7 @@ TEST_SUITE("TimerManager") {
     }
 
     TEST_CASE("Null callback handling") {
-        auto& manager = TimerManager::getInstance();
+        TimerManager manager;
 
         // Try to add timer with null callback
         auto timerId = manager.addTimer(50ms, nullptr);
@@ -222,7 +222,7 @@ TEST_SUITE("TimerManager") {
     }
 
     TEST_CASE("Exception handling in callback") {
-        auto& manager = TimerManager::getInstance();
+        TimerManager manager;
         std::atomic<bool> normalCallbackExecuted{false};
 
         // Add timer that throws exception
@@ -248,7 +248,7 @@ TEST_SUITE("TimerManager") {
     }
 
     TEST_CASE("Basic functionality verification") {
-        auto& manager = TimerManager::getInstance();
+        TimerManager manager;
         std::atomic<int> totalExecutions{0};
         constexpr int timerCount = 5; // Reduced from 50 for faster testing
         std::vector<TimerManager::TimerId> timerIds;

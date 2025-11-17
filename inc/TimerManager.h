@@ -17,12 +17,6 @@ class TimerManager {
   public:
     using TimerId = int;
 
-    // Singleton access
-    static TimerManager &getInstance() {
-        static TimerManager instance;
-        return instance;
-    }
-
     struct TimerEntry {
         std::chrono::steady_clock::time_point expiry;
         std::function<void()> callback;
@@ -32,18 +26,13 @@ class TimerManager {
         bool enabled = true;
     };
 
-    std::map<TimerId, TimerEntry> m_timers;
-    mutable std::mutex m_mutex;
-    std::condition_variable m_cv;
-    std::thread m_thread;
-    std::atomic<bool> m_running{false};
-    TimerId m_nextId = 1;
+    TimerManager() : m_running(true) {
+        m_thread = std::thread([this]() { run(); });
+    }
 
-    // Singleton: delete copy/move
-    TimerManager(const TimerManager &) = delete;
-    TimerManager &operator=(const TimerManager &) = delete;
-    TimerManager(TimerManager &&) = delete;
-    TimerManager &operator=(TimerManager &&) = delete;
+    ~TimerManager() {
+        stop();
+    }
 
     /**
      * @brief Add a timer.
@@ -197,13 +186,12 @@ class TimerManager {
     }
 
   private:
-    TimerManager() : m_running(true) {
-        m_thread = std::thread([this]() { run(); });
-    }
-
-    ~TimerManager() {
-        stop();
-    }
+    std::map<TimerId, TimerEntry> m_timers;
+    mutable std::mutex m_mutex;
+    std::condition_variable m_cv;
+    std::thread m_thread;
+    std::atomic<bool> m_running{false};
+    TimerId m_nextId = 1;
 
     void run() {
         while (m_running) {

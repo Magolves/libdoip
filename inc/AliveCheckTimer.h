@@ -9,7 +9,7 @@
 
 namespace doip {
 
-using CloseConnectionCallback = std::function<void()>;
+using CloseConnectionHandler = std::function<void()>;
 
 class AliveCheckTimer {
 public:
@@ -21,13 +21,13 @@ public:
     bool isDisabled() const { return disabled; }
     bool isActive() const { return active; }
     bool hasTimeout() const { return timeout; }
-    CloseConnectionCallback getCloseConnectionHandler() const { return closeConnectionHandler; }
+    CloseConnectionHandler getCloseConnectionHandler() const { return closeConnectionHandler; }
 
     // Setters
     void setDisabled(bool value) { disabled = value; }
     void setActive(bool value) { active = value; }
     void setTimeout(bool value) { timeout = value; }
-    void setCloseConnectionHandler(const CloseConnectionCallback& handler) { closeConnectionHandler = handler; }
+    void setCloseConnectionHandler(const CloseConnectionHandler& handler) { closeConnectionHandler = handler; }
 
     ~AliveCheckTimer();
 
@@ -35,7 +35,7 @@ private:
     bool disabled = false;
     bool active = false;
     bool timeout = false;
-    CloseConnectionCallback closeConnectionHandler;
+    CloseConnectionHandler closeConnectionHandler;
 
     std::vector<std::thread> timerThreads;
     void waitForResponse();

@@ -1,81 +1,67 @@
 #pragma once
 
-#include <spdlog/spdlog.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/fmt/fmt.h>
-#include <spdlog/fmt/ostr.h>  // For fmt::streamed() support
+#include "AnsiColors.h"
+#include <cstdlib>
 #include <memory>
 #include <mutex>
-#include <cstdlib>
+#include <spdlog/fmt/fmt.h>
+#include <spdlog/fmt/ostr.h> // For fmt::streamed() support
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/spdlog.h>
 #include <string>
-#include "AnsiColors.h"
 
 namespace doip {
 
-constexpr const char* DEFAULT_PATTERN = "[%H:%M:%S.%e] [%n] [%^%l%$] %v";
+constexpr const char *DEFAULT_PATTERN = "[%H:%M:%S.%e] [%n] [%^%l%$] %v";
 
 /**
  * @brief Pattern for short output without timestamp
  *
  */
-constexpr const char* SHORT_PATTERN = "[%n] [%^%l%$] %v";
+constexpr const char *SHORT_PATTERN = "[%n] [%^%l%$] %v";
 
 /**
  * @brief Centralized logger for the DoIP library
  */
 class Logger {
-public:
-    static std::shared_ptr<spdlog::logger> get() {
-        static std::once_flag once_flag;
-        std::call_once(once_flag, []() {
-            m_log = spdlog::stdout_color_mt("doip");
-            m_log->set_level(spdlog::level::info);
-            m_log->set_pattern(DEFAULT_PATTERN);
-        });
-        return m_log;
+  public:
+    static std::shared_ptr<spdlog::logger> get(const std::string &name = "doip", spdlog::level::level_enum level = spdlog::level::info) {
+        static std::mutex mutex;
+        std::lock_guard<std::mutex> lock(mutex);
+
+        if (auto it = m_loggers.find(name); it != m_loggers.end()) {
+            return it->second;
+        }
+
+        auto new_log = spdlog::stdout_color_mt(name);
+        new_log->set_level(level);
+        new_log->set_pattern(DEFAULT_PATTERN);
+        m_loggers.emplace(name, new_log);
+        return new_log;
     }
 
     static std::shared_ptr<spdlog::logger> getUdp() {
-        static std::once_flag once_flag;
-        std::call_once(once_flag, []() {
-            m_udpLog = spdlog::stdout_color_mt("udp ");
-            m_udpLog->set_level(spdlog::level::info);
-            m_udpLog->set_pattern(DEFAULT_PATTERN);
-        });
-        return m_udpLog;
+        return get("udp ");
     }
 
     static std::shared_ptr<spdlog::logger> getTcp() {
-        static std::once_flag once_flag;
-        std::call_once(once_flag, []() {
-            m_tcpLog = spdlog::stdout_color_mt("tcp ");
-            m_tcpLog->set_level(spdlog::level::info);
-            m_tcpLog->set_pattern(DEFAULT_PATTERN);
-        });
-        return m_tcpLog;
+        return get("tcp ");
     }
 
     static void setLevel(spdlog::level::level_enum level) {
         get()->set_level(level);
     }
 
-    static void setUdpLevel(spdlog::level::level_enum level) {
-        getUdp()->set_level(level);
-    }
-
-    static void setTcpLevel(spdlog::level::level_enum level) {
-        getUdp()->set_level(level);
-    }
-
-    static void setPattern(const std::string& pattern) {
+    static void setPattern(const std::string &pattern) {
         get()->set_pattern(pattern);
     }
 
     static bool colorsSupported() {
-        const char* term = std::getenv("TERM");
-        const char* colorterm = std::getenv("COLORTERM");
+        const char *term = std::getenv("TERM");
+        const char *colorterm = std::getenv("COLORTERM");
 
-        if (term == nullptr) return false;
+        if (term == nullptr)
+            return false;
 
         std::string termStr(term);
         return termStr.find("color") != std::string::npos ||
@@ -84,36 +70,34 @@ public:
                colorterm != nullptr;
     }
 
-private:
-    static std::shared_ptr<spdlog::logger> m_log;
-    static std::shared_ptr<spdlog::logger> m_udpLog;
-    static std::shared_ptr<spdlog::logger> m_tcpLog;
+  private:
+    static std::unordered_map<std::string, std::shared_ptr<spdlog::logger>> m_loggers;
 };
 
-}
+} // namespace doip
 
 // Logging macros
-#define DOIP_LOG_TRACE(...)    doip::Logger::get()->trace(__VA_ARGS__)
-#define DOIP_LOG_DEBUG(...)    doip::Logger::get()->debug(__VA_ARGS__)
-#define DOIP_LOG_INFO(...)     doip::Logger::get()->info(__VA_ARGS__)
-#define DOIP_LOG_WARN(...)     doip::Logger::get()->warn(__VA_ARGS__)
-#define DOIP_LOG_ERROR(...)    doip::Logger::get()->error(__VA_ARGS__)
+#define DOIP_LOG_TRACE(...) doip::Logger::get()->trace(__VA_ARGS__)
+#define DOIP_LOG_DEBUG(...) doip::Logger::get()->debug(__VA_ARGS__)
+#define DOIP_LOG_INFO(...) doip::Logger::get()->info(__VA_ARGS__)
+#define DOIP_LOG_WARN(...) doip::Logger::get()->warn(__VA_ARGS__)
+#define DOIP_LOG_ERROR(...) doip::Logger::get()->error(__VA_ARGS__)
 #define DOIP_LOG_CRITICAL(...) doip::Logger::get()->critical(__VA_ARGS__)
 
 // Logging macros for UDP socket
-#define UDP_LOG_TRACE(...)    doip::Logger::getUdp()->trace(__VA_ARGS__)
-#define UDP_LOG_DEBUG(...)    doip::Logger::getUdp()->debug(__VA_ARGS__)
-#define UDP_LOG_INFO(...)     doip::Logger::getUdp()->info(__VA_ARGS__)
-#define UDP_LOG_WARN(...)     doip::Logger::getUdp()->warn(__VA_ARGS__)
-#define UDP_LOG_ERROR(...)    doip::Logger::getUdp()->error(__VA_ARGS__)
+#define UDP_LOG_TRACE(...) doip::Logger::getUdp()->trace(__VA_ARGS__)
+#define UDP_LOG_DEBUG(...) doip::Logger::getUdp()->debug(__VA_ARGS__)
+#define UDP_LOG_INFO(...) doip::Logger::getUdp()->info(__VA_ARGS__)
+#define UDP_LOG_WARN(...) doip::Logger::getUdp()->warn(__VA_ARGS__)
+#define UDP_LOG_ERROR(...) doip::Logger::getUdp()->error(__VA_ARGS__)
 #define UDP_LOG_CRITICAL(...) doip::Logger::getUdp()->critical(__VA_ARGS__)
 
 // Logging macros for TCP socket
-#define TCP_LOG_TRACE(...)    doip::Logger::getTcp()->trace(__VA_ARGS__)
-#define TCP_LOG_DEBUG(...)    doip::Logger::getTcp()->debug(__VA_ARGS__)
-#define TCP_LOG_INFO(...)     doip::Logger::getTcp()->info(__VA_ARGS__)
-#define TCP_LOG_WARN(...)     doip::Logger::getTcp()->warn(__VA_ARGS__)
-#define TCP_LOG_ERROR(...)    doip::Logger::getTcp()->error(__VA_ARGS__)
+#define TCP_LOG_TRACE(...) doip::Logger::getTcp()->trace(__VA_ARGS__)
+#define TCP_LOG_DEBUG(...) doip::Logger::getTcp()->debug(__VA_ARGS__)
+#define TCP_LOG_INFO(...) doip::Logger::getTcp()->info(__VA_ARGS__)
+#define TCP_LOG_WARN(...) doip::Logger::getTcp()->warn(__VA_ARGS__)
+#define TCP_LOG_ERROR(...) doip::Logger::getTcp()->error(__VA_ARGS__)
 #define TCP_LOG_CRITICAL(...) doip::Logger::getTcp()->critical(__VA_ARGS__)
 
 // Colored logging macros
@@ -134,10 +118,10 @@ private:
 
 // Convenience macros for types with stream operators (using fmt::streamed)
 // These automatically wrap arguments with fmt::streamed() for seamless logging of DoIP types
-#define DOIP_LOG_STREAM_INFO(obj, ...)     DOIP_LOG_INFO(fmt::format("{} " __VA_ARGS__, fmt::streamed(obj)))
-#define DOIP_LOG_STREAM_DEBUG(obj, ...)    DOIP_LOG_DEBUG(fmt::format("{} " __VA_ARGS__, fmt::streamed(obj)))
-#define DOIP_LOG_STREAM_WARN(obj, ...)     DOIP_LOG_WARN(fmt::format("{} " __VA_ARGS__, fmt::streamed(obj)))
-#define DOIP_LOG_STREAM_ERROR(obj, ...)    DOIP_LOG_ERROR(fmt::format("{} " __VA_ARGS__, fmt::streamed(obj)))
+#define DOIP_LOG_STREAM_INFO(obj, ...) DOIP_LOG_INFO(fmt::format("{} " __VA_ARGS__, fmt::streamed(obj)))
+#define DOIP_LOG_STREAM_DEBUG(obj, ...) DOIP_LOG_DEBUG(fmt::format("{} " __VA_ARGS__, fmt::streamed(obj)))
+#define DOIP_LOG_STREAM_WARN(obj, ...) DOIP_LOG_WARN(fmt::format("{} " __VA_ARGS__, fmt::streamed(obj)))
+#define DOIP_LOG_STREAM_ERROR(obj, ...) DOIP_LOG_ERROR(fmt::format("{} " __VA_ARGS__, fmt::streamed(obj)))
 
 // Colored stream logging macros for DoIP types
 #define DOIP_LOG_STREAM_SUCCESS(obj, ...) \
