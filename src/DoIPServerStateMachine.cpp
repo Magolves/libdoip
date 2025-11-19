@@ -378,7 +378,7 @@ void DoIPServerStateMachine::stopAllTimers() {
     DOIP_LOG_DEBUG("Stopped all timers");
 }
 
-void DoIPServerStateMachine::sendRoutingActivationResponse(DoIPAddress source_address, uint8_t response_code) {
+void DoIPServerStateMachine::sendRoutingActivationResponse(const DoIPAddress &source_address, uint8_t response_code) {
     if (!m_sendMessageCallback) {
         DOIP_LOG_ERROR("Send message callback not set");
         return;
@@ -409,7 +409,7 @@ void DoIPServerStateMachine::sendAliveCheckRequest() {
     DOIP_LOG_INFO("Sent alive check request");
 }
 
-void DoIPServerStateMachine::sendDiagnosticMessageAck(DoIPAddress source_address) {
+void DoIPServerStateMachine::sendDiagnosticMessageAck(const DoIPAddress &source_address) {
     if (!m_sendMessageCallback) {
         DOIP_LOG_ERROR("Send message callback not set");
         return;
@@ -429,7 +429,7 @@ void DoIPServerStateMachine::sendDiagnosticMessageAck(DoIPAddress source_address
     DOIP_LOG_INFO("Sent diagnostic message ACK to address=" + std::to_string(static_cast<unsigned int>(source_address.toUint16())));
 }
 
-void DoIPServerStateMachine::sendDiagnosticMessageNack(DoIPAddress source_address, uint8_t nack_code) {
+void DoIPServerStateMachine::sendDiagnosticMessageNack(const DoIPAddress &source_address, uint8_t nack_code) {
     if (!m_sendMessageCallback) {
         DOIP_LOG_ERROR("Send message callback not set");
         return;

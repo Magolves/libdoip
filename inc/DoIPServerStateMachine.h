@@ -251,10 +251,10 @@ class DoIPServerStateMachine {
     void startTimer(TimerID timer_id, std::chrono::milliseconds duration);
     void stopTimer(TimerID timer_id);
     void stopAllTimers();
-    void sendRoutingActivationResponse(DoIPAddress sourceAddress, uint8_t response_code);
+    void sendRoutingActivationResponse(const DoIPAddress& sourceAddress, uint8_t response_code);
     void sendAliveCheckRequest();
-    void sendDiagnosticMessageAck(DoIPAddress sourceAddress);
-    void sendDiagnosticMessageNack(DoIPAddress sourceAddress, uint8_t nack_code);
+    void sendDiagnosticMessageAck(const DoIPAddress& sourceAddress);
+    void sendDiagnosticMessageNack(const DoIPAddress& sourceAddress, uint8_t nack_code);
 
     // Helper function to forward messages
     void notifyMessage(const DoIPMessage &msg);

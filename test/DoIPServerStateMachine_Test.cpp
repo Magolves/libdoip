@@ -81,12 +81,12 @@ TEST_SUITE("Server state machine") {
 
       private:
         DoIPEvent m_lastEvent{};
-        const DoIPMessage *m_lastMsg;
+        const DoIPMessage *m_lastMsg{nullptr};
         DoIPState m_lastFrom{DoIPState::SocketInitialized};
         DoIPState m_lastTo{DoIPState::SocketInitialized};
         bool m_ConnectionClosed{};
-        DoIPPayloadType m_recvPayloadType;
-        DoIPPayloadType m_sentPayloadType;
+        DoIPPayloadType m_recvPayloadType{};
+        DoIPPayloadType m_sentPayloadType{};
         std::shared_ptr<spdlog::logger> m_log = Logger::get("test");
     };
 
