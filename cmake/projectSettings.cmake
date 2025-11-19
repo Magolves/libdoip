@@ -185,9 +185,6 @@ if(ENABLE_STATIC_ANALYSIS)
             --quiet;
             --suppress=missingIncludeSystem;
             --suppress=unusedFunction;
-            --suppress=*:*/_deps/*;
-            --suppress=*:*/build/_deps/*;
-            --suppress=*:*/spdlog/*;
             -i${CMAKE_BINARY_DIR}/_deps;
         )
         message(STATUS "cppcheck found: ${CPPCHECK_EXE}")
