@@ -7,7 +7,7 @@
 [![CMake](https://img.shields.io/badge/CMake-3.15+-blue.svg)](https://cmake.org/)
 [![doctest](https://img.shields.io/badge/Tests-doctest-green.svg)](https://github.com/doctest/doctest)
 
-C/C++ library for Diagnostics over IP (DoIP) (fork from https://github.com/GerritRiesch94/libdoip)
+C/C++ library for Diagnostics over IP (DoIP) (fork from https://github.com/AVL-DiTEST-DiagDev/libdoip)
 
 **CAUTION** The current API is under construction any may change at any time.
 
@@ -25,12 +25,6 @@ sudo apt install libspdlog-dev
 ```
 
 See [Logging](./doc/LOGGING.md) for details.
-
-## Documentation
-
-📚 **[Online Documentation](https://magolves.github.io/libdoip/)** - Full API documentation generated with Doxygen
-
-The documentation is automatically generated from source code comments and deployed to GitHub Pages on every push to the main branch.
 
 ### Building Documentation Locally
 
