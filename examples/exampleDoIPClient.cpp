@@ -1,4 +1,5 @@
 #include "DoIPClient.h"
+#include "DoIPMessage.h"
 #include "Logger.h"
 
 #include<iostream>
@@ -68,6 +69,9 @@ int main(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
     }
 
+    client.receiveMessage();
+
+    client.sendDiagnosticMessage({0x22, 0xF1, 0x90}); // Example: Read Data by Identifier (0xF190 = VIN)
     client.receiveMessage();
 
     client.closeTcpConnection();

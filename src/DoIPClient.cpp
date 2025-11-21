@@ -110,9 +110,8 @@ ssize_t DoIPClient::sendRoutingActivationRequest() {
     return write(_sockFd, routingActReq.data(), routingActReq.size());
 }
 
-ssize_t DoIPClient::sendDiagnosticMessage(const DoIPAddress &targetAddress, const ByteArray &payload) {
-    DoIPAddress sourceAddress(0x0E, 0x00);
-    DoIPMessage msg = message::makeDiagnosticMessage(sourceAddress, targetAddress, payload);
+ssize_t DoIPClient::sendDiagnosticMessage(const ByteArray &payload) {
+    DoIPMessage msg = message::makeDiagnosticMessage(m_sourceAddress, m_logicalAddress, payload);
 
     return write(_sockFd, msg.data(), msg.size());
 }
