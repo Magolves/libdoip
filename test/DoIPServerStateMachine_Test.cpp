@@ -16,7 +16,7 @@ static auto extraDelay = std::chrono::milliseconds(50);
 #define WAIT_FOR_STATE(s, max)                                                \
     {                                                                         \
         int counter = 0;                                                      \
-        while (sm.getState() != (s) && counter < (max)) {                     \
+        while (sm.getState() != (s) && ++counter < (max)) {                     \
             std::this_thread::sleep_for(10ms);                                \
         };                                                                    \
         std::stringstream ss;                                                 \
@@ -55,12 +55,12 @@ TEST_SUITE("Server state machine") {
             m_sentPayloadType = msg.getPayloadType();
         }
 
-        DoIPServerStateMachine::CloseConnectionHandler onConnectionClosed = [this]() { handleConnectionClosed(); };
+        DoIPServerStateMachine::CloseSessionHandler onSessionClosed = [this]() { handleConnectionClosed(); };
         DoIPServerStateMachine::StateHandler onEvent = [this](DoIPEvent ev, const DoIPMessage *m) { handleEvent(ev, m); };
         DoIPServerStateMachine::TransitionHandler onStateChanged = [this](DoIPState from, DoIPState to) { handleStateChanged(from, to); };
         DoIPServerStateMachine::SendMessageHandler onMessageSent = [this](const DoIPMessage &msg) { handleMessage(msg); };
 
-        DoIPServerStateMachine sm{onConnectionClosed};
+        DoIPServerStateMachine sm{};
 
         DoIPEvent getLastEvent() const { return m_lastEvent; }
         const DoIPMessage *getLastMsg() const { return m_lastMsg; }
@@ -73,6 +73,7 @@ TEST_SUITE("Server state machine") {
         bool isConnectionClosed() const { return m_ConnectionClosed; }
 
         ServerStateMachineFixture() {
+            sm.setCloseSessionCallback(onSessionClosed);
             sm.setSendMessageCallback(onMessageSent);
             sm.setTransitionCallback(onStateChanged);
         }
@@ -116,6 +117,7 @@ TEST_SUITE("Server state machine") {
     }
 
     TEST_CASE_FIXTURE(ServerStateMachineFixture, "Alive check with response") {
+        Logger::get()->set_level(spdlog::level::debug); // to increase log level
         auto generalInactivityTimeout = std::chrono::milliseconds(std::uniform_int_distribution<>(500, 2000)(gen));
         sm.setGeneralInactivityTimeout(generalInactivityTimeout);
 

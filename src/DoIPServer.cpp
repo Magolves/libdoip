@@ -1,6 +1,7 @@
 #include "DoIPServer.h"
 #include "DoIPConnection.h"
 #include "DoIPMessage.h"
+#include "DoIPServerModel.h"
 #include "Logger.h"
 #include "MacAddress.h"
 #include <cerrno>  // for errno
@@ -66,7 +67,20 @@ std::unique_ptr<DoIPConnection> DoIPServer::waitForTcpConnection() {
     }
 
     TCP_LOG_INFO("TCP connection accepted, socket: {}", tcpSocket);
-    return std::unique_ptr<DoIPConnection>(new DoIPConnection(tcpSocket, m_gatewayAddress));
+
+    // Create a default server model with the gateway address
+    DoIPServerModel model;
+    model.serverAddress = m_gatewayAddress;
+    model.onCloseConnection = []() noexcept {};
+    model.onDiagnosticMessage = [](const DoIPMessage &msg) noexcept -> DoIPDiagnosticAck {
+        (void)msg;
+        return std::nullopt;
+    };
+    model.onDiagnosticNotification = [](DoIPDiagnosticAck ack) noexcept {
+        (void)ack;
+    };
+
+    return std::unique_ptr<DoIPConnection>(new DoIPConnection(tcpSocket, model));
 }
 
 void DoIPServer::setupUdpSocket() {

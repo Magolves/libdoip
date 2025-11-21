@@ -18,55 +18,18 @@ std::vector<std::thread> doipReceiver;
 bool serverActive = false;
 
 void ReceiveFromLibrary(const DoIPAddress& address, const uint8_t* data, size_t length);
-bool DiagnosticMessageReceived(const DoIPAddress& targetAddress);
+DoIPDiagnosticAck DiagnosticMessageReceived(const DoIPMessage &message);
+
 void CloseConnection();
 void listenUdp();
 void listenTcp();
 void ConfigureDoipServer();
 
-/**
- * Is called when the doip library receives a diagnostic message.
- * @param address   logical address of the ecu
- * @param data      message which was received
- * @param length    length of the message
- */
-void ReceiveFromLibrary(const DoIPAddress& address, const uint8_t* data, size_t length) {
-    cout << "DoIP Message received from 0x" << hex << address << ": ";
-    for(size_t i = 0; i < length; i++) {
-        cout << hex << setw(2) << +data[i] << " ";
-    }
-    cout << endl;
 
-    if(length > 2 && data[0] == 0x22)  {
-        cout << "-> Send diagnostic message positive response" << endl;
-        ByteArray responseData{ 0x62, data[1], data[2], 0x01, 0x02, 0x03, 0x04};
-        connection->sendDiagnosticPayload(LOGICAL_ADDRESS, responseData);
-    } else {
-        cout << "-> Send diagnostic message negative response" << endl;
-        ByteArray responseData{ 0x7F, data[0], 0x11};
-        connection->sendDiagnosticPayload(LOGICAL_ADDRESS, responseData);
-    }
+DoIPDiagnosticAck DiagnosticMessageReceived(const DoIPMessage &message) {
+    cout << "Received Diagnostic message" << message << '\n';
 
-
-}
-
-/**
- * Will be called when the doip library receives a diagnostic message.
- * The library notifies the application about the message.
- * Checks if there is a ecu with the logical address
- * @param targetAddress     logical address to the ecu
- * @return                  If a positive or negative ACK should be send to the client
- */
-bool DiagnosticMessageReceived(const DoIPAddress& targetAddress) {
-    (void)targetAddress;
-
-    cout << "Received Diagnostic message" << endl;
-
-    //send positiv ack
-    cout << "-> Send positive diagnostic message ack" << endl;
-    connection->sendDiagnosticAck(LOGICAL_ADDRESS);
-
-    return true;
+    return std::nullopt;
 }
 
 /**
@@ -100,8 +63,16 @@ void listenTcp() {
 
     while(true) {
         connection = server.waitForTcpConnection();
-        connection->setCallback(ReceiveFromLibrary, DiagnosticMessageReceived, CloseConnection);
-        connection->setGeneralInactivityTime(50000);
+
+        DoIPServerModel model;
+        model.serverAddress = LOGICAL_ADDRESS;
+        model.onCloseConnection = CloseConnection;
+        model.onDiagnosticMessage = DiagnosticMessageReceived;
+        model.onDiagnosticNotification = [](DoIPDiagnosticAck ack) noexcept {
+            (void)ack;
+        };
+
+        connection->setServerModel(model);
 
          while(connection->isSocketActive()) {
              connection->receiveTcpMessage();

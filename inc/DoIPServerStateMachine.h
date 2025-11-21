@@ -10,8 +10,9 @@
 #include <queue>
 
 #include "DoIPTimes.h"
+#include "DoIPState.h"
+#include "DoIPEvent.h"
 #include "TimerManager.h"
-#include "DoIPIdentifiers.h"
 #include "DoIPIdentifiers.h"
 
 namespace doip {
@@ -19,69 +20,21 @@ namespace doip {
 // Forward declarations
 class DoIPAddress;
 
-// DoIP Protocol States
-// Figure 26
-enum class DoIPState {
-    SocketInitialized,      // Initial state after socket creation
-    WaitRoutingActivation,  // Waiting for routing activation request
-    RoutingActivated,       // Routing is active, ready for diagnostics
-    WaitAliveCheckResponse, // D& config  Waiting for alive check response
-    Finalize,               // Cleanup state
-    Closed                  // Connection closed
-};
-
-// Stream operator for DoIPState
-inline std::ostream& operator<<(std::ostream& os, DoIPState state) {
-    switch (state) {
-        case DoIPState::SocketInitialized:      return os << "SocketInitialized";
-        case DoIPState::WaitRoutingActivation:  return os << "WaitRoutingActivation";
-        case DoIPState::RoutingActivated:       return os << "RoutingActivated";
-        case DoIPState::WaitAliveCheckResponse: return os << "WaitAliveCheckResponse";
-        case DoIPState::Finalize:               return os << "Finalize";
-        case DoIPState::Closed:                 return os << "Closed";
-        default:                                return os << "Unknown(" << static_cast<int>(state) << ")";
-    }
-}
-
-// DoIP Events
-enum class DoIPEvent {
-    // Message events
-    RoutingActivationReceived,
-    AliveCheckResponseReceived,
-    DiagnosticMessageReceived,
-    CloseRequestReceived,
-
-    // Timer events
-    Initial_inactivity_timeout,
-    GeneralInactivityTimeout,
-    AliveCheckTimeout,
-
-    // Error events
-    InvalidMessage,
-    SocketError
-};
-
-// Stream operator for DoIPEvent
-inline std::ostream& operator<<(std::ostream& os, DoIPEvent event) {
-    switch (event) {
-        case DoIPEvent::RoutingActivationReceived:   return os << "RoutingActivationReceived";
-        case DoIPEvent::AliveCheckResponseReceived:  return os << "AliveCheckResponseReceived";
-        case DoIPEvent::DiagnosticMessageReceived:   return os << "DiagnosticMessageReceived";
-        case DoIPEvent::CloseRequestReceived:        return os << "CloseRequestReceived";
-        case DoIPEvent::Initial_inactivity_timeout:  return os << "Initial_inactivity_timeout";
-        case DoIPEvent::GeneralInactivityTimeout:  return os << "GeneralInactivityTimeout";
-        case DoIPEvent::AliveCheckTimeout:         return os << "AliveCheckTimeout";
-        case DoIPEvent::InvalidMessage:              return os << "InvalidMessage";
-        case DoIPEvent::SocketError:                 return os << "SocketError";
-        default:                                     return os << "Unknown(" << static_cast<int>(event) << ")";
-    }
-}
 
 // Timer IDsD& config
-enum class TimerID {
+enum class TimerID : uint8_t{
     InitialInactivity, // T_TCP_Initial_Inactivity (default: 2s)
     GeneralInactivity, // T_TCP_General_Inactivity (default: 5min)
     AliveCheck         // T_TCP_Alive_Check (default: 500ms)
+};
+
+enum class CloseReason : uint8_t {
+    None,
+    InitialInactivityTimeout,
+    GeneralInactivityTimeout,
+    AliveCheckTimeout,
+    SocketError,
+    InvalidMessage
 };
 
 inline std::ostream& operator<<(std::ostream& os, TimerID tid) {
@@ -107,16 +60,15 @@ class DoIPServerStateMachine {
   public:
     using StateHandler = std::function<void(DoIPEvent, const DoIPMessage *)>;
     using TransitionHandler = std::function<void(DoIPState, DoIPState)>;
-    using CloseConnectionHandler = std::function<void()>;
     using SendMessageHandler = std::function<void(const DoIPMessage &)>;
+    using CloseSessionHandler = std::function<void()>;
 
     /**
      * @brief Constructs a new DoIP Server State Machine
      * @param onClose Callback function to be invoked when the connection should be closed
      */
-    explicit DoIPServerStateMachine(CloseConnectionHandler onClose) : m_closeConnectionCallback(onClose) {
+    explicit DoIPServerStateMachine()  {
         transitionTo(DoIPState::WaitRoutingActivation);
-        m_timerManager.addTimer(std::chrono::milliseconds(times::server::InitialInactivityTimeout), onClose);
     }
 
     /**
@@ -174,6 +126,22 @@ class DoIPServerStateMachine {
      */
     void setSendMessageCallback(SendMessageHandler callback) {
         m_sendMessageCallback = callback;
+    }
+
+    /**
+     * @brief Sets the callback for closing the session
+     * @param callback Function to be called when the session needs to be closed
+     */
+    void setCloseSessionCallback(CloseSessionHandler callback) {
+        m_closeSessionCallback = callback;
+    }
+
+    /**
+     * @brief Gets the close session callback
+     * @return The current close session callback function
+     */
+    CloseSessionHandler getCloseSessionCallback() const {
+        return m_closeSessionCallback;
     }
 
     /**
@@ -274,7 +242,7 @@ class DoIPServerStateMachine {
     DoIPState m_state;
 
     // Callbacks
-    CloseConnectionHandler m_closeConnectionCallback;
+    CloseSessionHandler m_closeSessionCallback;
     TransitionHandler m_transitionCallback;
     SendMessageHandler m_sendMessageCallback;
 

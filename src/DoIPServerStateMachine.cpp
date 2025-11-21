@@ -280,13 +280,13 @@ void DoIPServerStateMachine::handleFinalize(DoIPEvent event, const DoIPMessage *
     (void)event; // Unused parameter
     (void)msg;   // Unused parameter
 
-    DOIP_LOG_INFO("Closing connection...");
+    DOIP_LOG_INFO("Closing session...");
 
     // Stop all timers
     stopAllTimers();
 
-    if (m_closeConnectionCallback) {
-        m_closeConnectionCallback();
+    if (m_closeSessionCallback) {
+        m_closeSessionCallback();
     } else {
         DOIP_LOG_WARN("No callback for 'close connection' set");
     }
@@ -366,15 +366,18 @@ void DoIPServerStateMachine::startTimer(TimerID timer_id, std::chrono::milliseco
 }
 
 void DoIPServerStateMachine::stopTimer(TimerID timer_id) {
-    m_timerManager.disableTimer(static_cast<int>(timer_id));
-    DOIP_LOG_DEBUG("Stopped timer " + std::to_string(static_cast<int>(timer_id)));
+    if (m_timerManager.disableTimer(static_cast<int>(timer_id))) {
+        DOIP_LOG_DEBUG("Stopped timer " + std::to_string(static_cast<int>(timer_id)));
+    }
 }
 
 void DoIPServerStateMachine::stopAllTimers() {
     // Stop all known timers
-    m_timerManager.disableTimer(static_cast<int>(TimerID::InitialInactivity));
-    m_timerManager.disableTimer(static_cast<int>(TimerID::GeneralInactivity));
-    m_timerManager.disableTimer(static_cast<int>(TimerID::AliveCheck));
+    m_timerManager.removeTimer(static_cast<int>(TimerID::InitialInactivity));
+    m_timerManager.removeTimer(static_cast<int>(TimerID::GeneralInactivity));
+    m_timerManager.removeTimer(static_cast<int>(TimerID::AliveCheck));
+
+
     DOIP_LOG_DEBUG("Stopped all timers");
 }
 

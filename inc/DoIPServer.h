@@ -37,7 +37,7 @@ class DoIPServer {
 
 public:
     DoIPServer() {
-        m_receiveBuf.reserve(DoIPConnection::MAX_ISOTP_MTU);
+        m_receiveBuf.reserve(MAX_ISOTP_MTU);
     };
 
     void setupTcpSocket();
