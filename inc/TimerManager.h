@@ -42,6 +42,7 @@ class TimerManager {
      * @param periodic true, if timer should start again when expired
      * @return std::optional<TimerId>
      */
+    [[nodiscard]]
     std::optional<TimerId> addTimer(std::chrono::milliseconds duration,
                                     std::function<void()> callback,
                                     bool periodic = false) {
@@ -78,6 +79,7 @@ class TimerManager {
         return m_timers.erase(id) > 0;
     }
 
+    [[nodiscard]]
     bool restartTimer(TimerId id) {
         std::lock_guard<std::mutex> lock(m_mutex);
         auto it = m_timers.find(id);
@@ -99,6 +101,7 @@ class TimerManager {
      * @return true timer was updated
      * @return false timer with given id does not exist
      */
+    [[nodiscard]]
     bool updateTimer(TimerId id, std::chrono::milliseconds newDuration) {
         std::lock_guard<std::mutex> lock(m_mutex);
         auto it = m_timers.find(id);
@@ -137,6 +140,7 @@ class TimerManager {
      * @return true timer was enabled
      * @return false timer with given id does not exist
      */
+    [[nodiscard]]
     bool enableTimer(TimerId id) {
         std::lock_guard<std::mutex> lock(m_mutex);
         auto it = m_timers.find(id);
@@ -158,6 +162,7 @@ class TimerManager {
      * @return true timer exists
      * @return false timer with given id does not exist
      */
+    [[nodiscard]]
     bool hasTimer(TimerId id) const {
         std::lock_guard<std::mutex> lock(m_mutex);
         return m_timers.find(id) != m_timers.end();
@@ -168,6 +173,7 @@ class TimerManager {
      *
      * @return size_t number of timers.
      */
+    [[nodiscard]]
     size_t timerCount() const {
         std::lock_guard<std::mutex> lock(m_mutex);
         return m_timers.size();
