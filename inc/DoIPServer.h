@@ -11,10 +11,15 @@
 #include <net/if.h>
 #include <unistd.h>
 #include <memory>
+#include <functional>
+#include <atomic>
+#include <thread>
+#include <vector>
 #include "DiagnosticMessageHandler.h"
 #include "AliveCheckTimer.h"
 #include "DoIPFurtherAction.h"
 #include "DoIPConnection.h"
+#include "DoIPServerModel.h"
 #include "MacAddress.h"
 #include "DoIPIdentifiers.h"
 #include "DoIPNegativeAck.h"
@@ -22,16 +27,23 @@
 
 namespace doip {
 
-
-
-using CloseConnectionHandler = std::function<void()>;
-
 const int DOIP_SERVER_PORT = 13400;
 
+/**
+ * @brief Callback invoked when a new TCP connection is established
+ * @param connection The newly created DoIPConnection
+ * @return DoIPServerModel to use for this connection, or std::nullopt to reject
+ */
+using ConnectionAcceptedHandler = std::function<std::optional<DoIPServerModel>(DoIPConnection*)>;
 
 /**
  * @brief DoIP Server class to handle incoming DoIP connections and UDP messages.
  *
+ * This class manages the low-level TCP/UDP socket handling and provides a clean
+ * callback-based interface for application logic. The server can operate in two modes:
+ *
+ * 1. Manual mode: User calls waitForTcpConnection() and manages the receive loop
+ * 2. Automatic mode: User calls start() with a callback, server manages everything
  */
 class DoIPServer {
 
@@ -40,10 +52,42 @@ public:
         m_receiveBuf.reserve(MAX_ISOTP_MTU);
     };
 
+    ~DoIPServer();
+
+    // === Low-level API (manual mode) ===
     void setupTcpSocket();
     std::unique_ptr<DoIPConnection> waitForTcpConnection();
     void setupUdpSocket();
     ssize_t receiveUdpMessage();
+
+    // === High-level API (automatic mode) ===
+    /**
+     * @brief Start the DoIP server with automatic connection handling
+     *
+     * This method sets up TCP and UDP sockets, spawns background threads to handle
+     * UDP messages and TCP connections, and returns immediately. The server continues
+     * running until stop() is called.
+     *
+     * @param onConnectionAccepted Callback invoked when a new client connects.
+     *                             Return a DoIPServerModel to accept the connection,
+     *                             or std::nullopt to reject it.
+     * @param sendAnnouncements If true, send vehicle announcements on startup
+     * @return true if server started successfully, false otherwise
+     */
+    bool start(ConnectionAcceptedHandler onConnectionAccepted, bool sendAnnouncements = true);
+
+    /**
+     * @brief Stop the DoIP server and wait for all threads to terminate
+     *
+     * This gracefully shuts down all active connections and background threads.
+     * Blocks until all cleanup is complete.
+     */
+    void stop();
+
+    /**
+     * @brief Check if the server is currently running
+     */
+    bool isRunning() const { return m_running.load(); }
 
     void setAnnounceNum(int Num);
     void setAnnounceInterval(unsigned int Interval);
@@ -72,6 +116,7 @@ public:
 
     void setGID(const uint64_t inputGID);
     const DoIPGID& getGID() const { return m_GID; }
+
     void setFAR(DoIPFurtherAction inputFAR);
 
 
@@ -96,12 +141,22 @@ private:
 
     int m_broadcast = 1;
 
+    // Automatic mode state
+    std::atomic<bool> m_running{false};
+    std::vector<std::thread> m_workerThreads;
+    ConnectionAcceptedHandler m_connectionHandler;
+
     ssize_t reactToReceivedUdpMessage(size_t bytesRead);
     ssize_t sendUdpMessage(const uint8_t* message, size_t messageLength);
 
     void setMulticastGroup(const char* address);
 
     ssize_t sendNegativeUdpAck(DoIPNegativeAck ackCode);
+
+    // Worker thread functions
+    void udpListenerThread();
+    void tcpListenerThread();
+    void connectionHandlerThread(std::unique_ptr<DoIPConnection> connection);
 
 };
 
