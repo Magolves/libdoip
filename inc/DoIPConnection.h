@@ -16,6 +16,7 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include "DoIPServerStateMachine.h"
 
 namespace doip {
 

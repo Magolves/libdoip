@@ -134,6 +134,7 @@ private:
     DoIPEID m_EID = DoIPEID::Zero;
     DoIPGID m_GID = DoIPGID::Zero;
     DoIPFurtherAction m_FurtherActionReq = DoIPFurtherAction::NoFurtherAction;
+    TimerManager m_timerManager{};
 
     int m_announceNum = 3;    //Default Value = 3
     unsigned int m_announceInterval = 500; //Default Value = 500ms
