@@ -285,11 +285,8 @@ void DoIPServerStateMachine::handleFinalize(DoIPEvent event, const DoIPMessage *
     // Stop all timers
     stopAllTimers();
 
-    if (m_closeSessionCallback) {
-        m_closeSessionCallback();
-    } else {
-        DOIP_LOG_WARN("No callback for 'close connection' set");
-    }
+    // Close connection via interface
+    m_context.closeConnection(CloseReason::GeneralInactivityTimeout);
 
     // Transition to closed state
     transitionTo(DoIPState::Closed);
@@ -382,13 +379,8 @@ void DoIPServerStateMachine::stopAllTimers() {
 }
 
 void DoIPServerStateMachine::sendRoutingActivationResponse(const DoIPAddress &source_address, uint8_t response_code) {
-    if (!m_sendMessageCallback) {
-        DOIP_LOG_ERROR("Send message callback not set");
-        return;
-    }
-
     // Create routing activation response message
-    DoIPAddress serverAddr(0x0E, 0x80); // Default server address (0x0E80)
+    DoIPAddress serverAddr = m_context.getServerAddress();
 
     // Build response payload manually
     ByteArray payload;
@@ -399,25 +391,19 @@ void DoIPServerStateMachine::sendRoutingActivationResponse(const DoIPAddress &so
     payload.insert(payload.end(), {0x00, 0x00, 0x00, 0x00});
 
     DoIPMessage response(DoIPPayloadType::RoutingActivationResponse, std::move(payload));
-    notifyMessage(response);
+    m_context.sendProtocolMessage(response);
 
     DOIP_LOG_INFO("Sent routing activation response: code=" + std::to_string(static_cast<unsigned int>(response_code)) + " to address=" + std::to_string(static_cast<unsigned int>(source_address.toUint16())));
 }
 
 void DoIPServerStateMachine::sendAliveCheckRequest() {
-
     auto request = message::makeAliveCheckRequest();
-    notifyMessage(request);
+    m_context.sendProtocolMessage(request);
 
     DOIP_LOG_INFO("Sent alive check request");
 }
 
 void DoIPServerStateMachine::sendDiagnosticMessageAck(const DoIPAddress &source_address) {
-    if (!m_sendMessageCallback) {
-        DOIP_LOG_ERROR("Send message callback not set");
-        return;
-    }
-
     DoIPAddress sourceAddr = source_address;
     DoIPAddress targetAddr(m_activeSourceAddress);
 
@@ -433,11 +419,6 @@ void DoIPServerStateMachine::sendDiagnosticMessageAck(const DoIPAddress &source_
 }
 
 void DoIPServerStateMachine::sendDiagnosticMessageNack(const DoIPAddress &source_address, uint8_t nack_code) {
-    if (!m_sendMessageCallback) {
-        DOIP_LOG_ERROR("Send message callback not set");
-        return;
-    }
-
     DoIPAddress sourceAddr = source_address;
     DoIPAddress targetAddr(m_activeSourceAddress);
 
@@ -454,11 +435,7 @@ void DoIPServerStateMachine::sendDiagnosticMessageNack(const DoIPAddress &source
 }
 
 void DoIPServerStateMachine::notifyMessage(const DoIPMessage &msg) {
-    if (m_sendMessageCallback) {
-        m_sendMessageCallback(msg);
-    } else {
-        DOIP_LOG_ERROR("Send message callback not set");
-    }
+    m_context.sendProtocolMessage(msg);
 }
 
 } // namespace doip

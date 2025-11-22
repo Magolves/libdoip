@@ -3,6 +3,7 @@
 
 #include "DoIPConnection.h"
 #include "DoIPServerStateMachine.h"
+#include "IConnectionContext.h"
 #include "Logger.h"
 
 using namespace doip;
@@ -26,83 +27,100 @@ static auto extraDelay = std::chrono::milliseconds(50);
         REQUIRE(sm.getState() == (s));                                        \
     }
 
+// Mock implementation of IConnectionContext for testing
+class MockConnectionContext : public IConnectionContext {
+public:
+    // Captured data
+    std::vector<DoIPMessage> sentMessages;
+    CloseReason closeReason = CloseReason::None;
+    DoIPAddress serverAddress{0x0E, 0x80};
+    uint16_t activeSourceAddress = 0;
+    bool connectionClosed = false;
+    DoIPDiagnosticAck diagnosticResponse = std::nullopt;
+
+    // Callbacks for test verification
+    std::function<void(DoIPState, DoIPState)> transitionCallback;
+
+    // IConnectionContext implementation
+    void sendProtocolMessage(const DoIPMessage &msg) override {
+        sentMessages.push_back(msg);
+    }
+
+    void closeConnection(CloseReason reason) override {
+        closeReason = reason;
+        connectionClosed = true;
+    }
+
+    DoIPAddress getServerAddress() const override {
+        return serverAddress;
+    }
+
+    uint16_t getActiveSourceAddress() const override {
+        return activeSourceAddress;
+    }
+
+    void setActiveSourceAddress(uint16_t address) override {
+        activeSourceAddress = address;
+    }
+
+    DoIPDiagnosticAck handleDiagnosticMessage(const DoIPMessage &msg) override {
+        (void)msg;
+        return diagnosticResponse;
+    }
+
+    void notifyConnectionClosed(CloseReason reason) override {
+        (void)reason;
+    }
+
+    void notifyDiagnosticAckSent(DoIPDiagnosticAck ack) override {
+        (void)ack;
+    }
+
+    // Test helpers
+    void clearSentMessages() {
+        sentMessages.clear();
+    }
+
+    DoIPPayloadType getLastSentMessageType() const {
+        if (sentMessages.empty()) {
+            return DoIPPayloadType::NegativeAck;
+        }
+        return sentMessages.back().getPayloadType();
+    }
+};
+
 TEST_SUITE("Server state machine") {
     struct ServerStateMachineFixture {
-        // use Logger::get()->set_level(spdlog::level::debug); to increase log level
-
-        void handleEvent(DoIPEvent ev, const DoIPMessage *msg) {
-            m_log->info("Event {} with msg ", fmt::streamed(ev), fmt::streamed(msg));
-            m_lastEvent = ev;
-            m_lastMsg = msg;
-            m_recvPayloadType = msg->getPayloadType();
-        }
+        MockConnectionContext mockContext;
+        DoIPServerStateMachine sm{mockContext};
+        std::shared_ptr<spdlog::logger> m_log = Logger::get("test");
 
         void handleStateChanged(DoIPState from, DoIPState to) {
             INFO("State changed from ", from, " to ", to);
             m_log->info("State changed from {} to {}", fmt::streamed(from), fmt::streamed(to));
             REQUIRE(from != to);
-            m_lastFrom = from;
-            m_lastTo = to;
         }
-
-        void handleConnectionClosed() {
-            m_log->info("Connection closed");
-            m_ConnectionClosed = true;
-        }
-
-        void handleMessage(const DoIPMessage &msg) {
-            m_log->info("Want send {} ", fmt::streamed(msg));
-            m_sentPayloadType = msg.getPayloadType();
-        }
-
-        DoIPServerStateMachine::CloseSessionHandler onSessionClosed = [this]() { handleConnectionClosed(); };
-        DoIPServerStateMachine::StateHandler onEvent = [this](DoIPEvent ev, const DoIPMessage *m) { handleEvent(ev, m); };
-        DoIPServerStateMachine::TransitionHandler onStateChanged = [this](DoIPState from, DoIPState to) { handleStateChanged(from, to); };
-        DoIPServerStateMachine::SendMessageHandler onMessageSent = [this](const DoIPMessage &msg) { handleMessage(msg); };
-
-        DoIPServerStateMachine sm{};
-
-        DoIPEvent getLastEvent() const { return m_lastEvent; }
-        const DoIPMessage *getLastMsg() const { return m_lastMsg; }
-        DoIPState getLastFrom() const { return m_lastFrom; }
-        DoIPState getLastTo() const { return m_lastTo; }
-
-        DoIPPayloadType getRecvPayloadType() const { return m_recvPayloadType; }
-        DoIPPayloadType getSentPayloadType() const { return m_sentPayloadType; }
-
-        bool isConnectionClosed() const { return m_ConnectionClosed; }
 
         ServerStateMachineFixture() {
-            sm.setCloseSessionCallback(onSessionClosed);
-            sm.setSendMessageCallback(onMessageSent);
-            sm.setTransitionCallback(onStateChanged);
+            sm.setTransitionCallback([this](DoIPState from, DoIPState to) {
+                handleStateChanged(from, to);
+            });
         }
 
         ~ServerStateMachineFixture() {}
-
-      private:
-        DoIPEvent m_lastEvent{};
-        const DoIPMessage *m_lastMsg{nullptr};
-        DoIPState m_lastFrom{DoIPState::SocketInitialized};
-        DoIPState m_lastTo{DoIPState::SocketInitialized};
-        bool m_ConnectionClosed{};
-        DoIPPayloadType m_recvPayloadType{};
-        DoIPPayloadType m_sentPayloadType{};
-        std::shared_ptr<spdlog::logger> m_log = Logger::get("test");
     };
 
     TEST_CASE_FIXTURE(ServerStateMachineFixture, "Normal state flow") {
         REQUIRE(sm.getState() == DoIPState::WaitRoutingActivation);
         sm.processMessage(message::makeRoutingActivationRequest(DoIPAddress(0xE0, 0x00)));
-        REQUIRE(getLastEvent() == DoIPEvent::RoutingActivationReceived);
         REQUIRE(sm.getState() == DoIPState::RoutingActivated);
-        REQUIRE(getSentPayloadType() == DoIPPayloadType::RoutingActivationResponse);
+        REQUIRE(mockContext.getLastSentMessageType() == DoIPPayloadType::RoutingActivationResponse);
 
         sm.processMessage(message::makeDiagnosticMessage(
             DoIPAddress(0xE0, 0x00),
             DoIPAddress(0xE0, 0x01),
             ByteArray{0x03, 0x22, 0xFD, 0x11}));
-        REQUIRE(getSentPayloadType() == DoIPPayloadType::DiagnosticMessageAck);
+        REQUIRE(mockContext.getLastSentMessageType() == DoIPPayloadType::DiagnosticMessageAck);
 
         REQUIRE(sm.getState() == DoIPState::RoutingActivated);
     }
@@ -113,7 +131,7 @@ TEST_SUITE("Server state machine") {
         std::this_thread::sleep_for(extraDelay);
 
         REQUIRE(sm.getState() == DoIPState::Closed);
-        REQUIRE(isConnectionClosed());
+        REQUIRE(mockContext.connectionClosed);
     }
 
     TEST_CASE_FIXTURE(ServerStateMachineFixture, "Alive check with response") {
@@ -124,15 +142,14 @@ TEST_SUITE("Server state machine") {
         // Activate routing
         REQUIRE(sm.getState() == DoIPState::WaitRoutingActivation);
         sm.processMessage(message::makeRoutingActivationRequest(DoIPAddress(0xE0, 0x00)));
-        REQUIRE(getLastEvent() == DoIPEvent::RoutingActivationReceived);
         REQUIRE(sm.getState() == DoIPState::RoutingActivated);
-        REQUIRE(getSentPayloadType() == DoIPPayloadType::RoutingActivationResponse);
+        REQUIRE(mockContext.getLastSentMessageType() == DoIPPayloadType::RoutingActivationResponse);
 
         REQUIRE(sm.getState() == DoIPState::RoutingActivated);
         WAIT_FOR_STATE(DoIPState::WaitAliveCheckResponse, 300);
 
         REQUIRE(sm.getState() == DoIPState::WaitAliveCheckResponse);
-        REQUIRE(getSentPayloadType() == DoIPPayloadType::AliveCheckRequest);
+        REQUIRE(mockContext.getLastSentMessageType() == DoIPPayloadType::AliveCheckRequest);
 
         // Send check alive response
         sm.processMessage(message::makeAliveCheckResponse(
@@ -148,9 +165,8 @@ TEST_SUITE("Server state machine") {
         // Activate routing
         REQUIRE(sm.getState() == DoIPState::WaitRoutingActivation);
         sm.processMessage(message::makeRoutingActivationRequest(DoIPAddress(0xE0, 0x00)));
-        REQUIRE(getLastEvent() == DoIPEvent::RoutingActivationReceived);
         REQUIRE(sm.getState() == DoIPState::RoutingActivated);
-        REQUIRE(getSentPayloadType() == DoIPPayloadType::RoutingActivationResponse);
+        REQUIRE(mockContext.getLastSentMessageType() == DoIPPayloadType::RoutingActivationResponse);
 
         REQUIRE(sm.getState() == DoIPState::RoutingActivated);
 

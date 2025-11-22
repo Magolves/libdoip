@@ -8,30 +8,18 @@
 
 namespace doip {
 
-DoIPConnection::DoIPConnection(int tcpSocket, const DoIPServerModel &model) : m_tcpSocket(tcpSocket),
-                                                                              m_serverModel(model),
-                                                                              m_stateMachine() {
-
-    m_stateMachine.setSendMessageCallback(
-        [this](const DoIPMessage &message) {
-            handleMessage(message);
-        });
-
-    m_stateMachine.setCloseSessionCallback(
-        [this]() {
-            closeSocket();
-        });
+DoIPConnection::DoIPConnection(int tcpSocket, const DoIPServerModel &model)
+    : m_tcpSocket(tcpSocket),
+      m_serverModel(model),
+      m_stateMachine(*this) {  // Pass interface reference - no callback setup needed!
+    // State machine now uses IConnectionContext interface to call back into this connection
 }
 
 /*
- * Closes the socket for this server
+ * Closes the socket for this server (private method)
  */
 void DoIPConnection::closeSocket() {
-    m_stateMachine.processEvent(DoIPEvent::CloseRequestReceived);
-    m_tcpSocket = 0;
-    if (m_serverModel.onCloseConnection) {
-        m_serverModel.onCloseConnection();
-    }
+    closeConnection(CloseReason::ApplicationRequest);
 }
 
 /*
@@ -115,15 +103,6 @@ void DoIPConnection::triggerDisconnection() {
     closeSocket();
 }
 
-void DoIPConnection::handleMessage(const DoIPMessage &message) {
-    ssize_t sentBytes = sendMessage(message.data(), message.size());
-    if (sentBytes < 0) {
-        DOIP_LOG_ERROR("Error sending message to client: {}", fmt::streamed(message));
-    } else {
-        DOIP_LOG_INFO("Sent {} bytes to client: {}", sentBytes, fmt::streamed(message));
-    }
-}
-
 /**
  * Sends a message back to the connected client
  * @param message           contains generic header and payload specific content
@@ -134,6 +113,62 @@ void DoIPConnection::handleMessage(const DoIPMessage &message) {
 ssize_t DoIPConnection::sendMessage(const uint8_t *message, size_t messageLength) {
     ssize_t result = write(m_tcpSocket, message, messageLength);
     return result;
+}
+
+// === IConnectionContext interface implementation ===
+
+void DoIPConnection::sendProtocolMessage(const DoIPMessage &msg) {
+    ssize_t sentBytes = sendMessage(msg.data(), msg.size());
+    if (sentBytes < 0) {
+        DOIP_LOG_ERROR("Error sending message to client: {}", fmt::streamed(msg));
+    } else {
+        DOIP_LOG_INFO("Sent {} bytes to client: {}", sentBytes, fmt::streamed(msg));
+    }
+}
+
+void DoIPConnection::closeConnection(CloseReason reason) {
+    DOIP_LOG_INFO("Closing connection, reason: {}", static_cast<int>(reason));
+
+    m_stateMachine.processEvent(DoIPEvent::CloseRequestReceived);
+    close(m_tcpSocket);
+    m_tcpSocket = 0;
+
+    // Notify application
+    notifyConnectionClosed(reason);
+}
+
+DoIPAddress DoIPConnection::getServerAddress() const {
+    return m_serverModel.serverAddress;
+}
+
+uint16_t DoIPConnection::getActiveSourceAddress() const {
+    return m_stateMachine.getActiveSourceAddress();
+}
+
+void DoIPConnection::setActiveSourceAddress(uint16_t address) {
+    m_stateMachine.setActiveSourceAddress(address);
+}
+
+DoIPDiagnosticAck DoIPConnection::handleDiagnosticMessage(const DoIPMessage &msg) {
+    // Forward to application callback
+    if (m_serverModel.onDiagnosticMessage) {
+        return m_serverModel.onDiagnosticMessage(msg);
+    }
+    // Default: ACK
+    return std::nullopt;
+}
+
+void DoIPConnection::notifyConnectionClosed(CloseReason reason) {
+    (void)reason;  // Could extend DoIPServerModel to include close reason
+    if (m_serverModel.onCloseConnection) {
+        m_serverModel.onCloseConnection();
+    }
+}
+
+void DoIPConnection::notifyDiagnosticAckSent(DoIPDiagnosticAck ack) {
+    if (m_serverModel.onDiagnosticNotification) {
+        m_serverModel.onDiagnosticNotification(ack);
+    }
 }
 
 } // namespace doip

@@ -6,7 +6,7 @@
 #include "DoIPNegativeAck.h"
 #include "DoIPNegativeDiagnosticAck.h"
 #include "DoIPServerModel.h"
-#include "DoIPServerStateMachine.h"
+#include "IConnectionContext.h"
 #include <arpa/inet.h>
 #include <array>
 #include <iostream>
@@ -23,7 +23,7 @@ namespace doip {
 /** Maximum size of the ISO-TP message - used as initial value for RX buffer to avoid reallocs */
 constexpr size_t MAX_ISOTP_MTU = 4095;
 
-class DoIPConnection {
+class DoIPConnection : public IConnectionContext {
   public:
 
     DoIPConnection(int tcpSocket, const DoIPServerModel &model);
@@ -51,6 +51,57 @@ class DoIPConnection {
      * @param model The DoIPServerModel to use for this connection
      */
     void setServerModel(const DoIPServerModel& model) { m_serverModel = model; }
+
+    // === IConnectionContext interface implementation ===
+
+    /**
+     * @brief Send a DoIP protocol message to the client
+     * @param msg The DoIP message to send
+     */
+    void sendProtocolMessage(const DoIPMessage &msg) override;
+
+    /**
+     * @brief Close the TCP connection
+     * @param reason Why the connection is being closed
+     */
+    void closeConnection(CloseReason reason) override;
+
+    /**
+     * @brief Get the server's logical address
+     * @return The server's DoIP logical address
+     */
+    DoIPAddress getServerAddress() const override;
+
+    /**
+     * @brief Get the currently active source address
+     * @return The active source address, or 0 if no routing is active
+     */
+    uint16_t getActiveSourceAddress() const override;
+
+    /**
+     * @brief Set the active source address after routing activation
+     * @param address The client's source address
+     */
+    void setActiveSourceAddress(uint16_t address) override;
+
+    /**
+     * @brief Handle an incoming diagnostic message (application callback)
+     * @param msg The diagnostic message received
+     * @return std::nullopt for ACK, or NACK code
+     */
+    DoIPDiagnosticAck handleDiagnosticMessage(const DoIPMessage &msg) override;
+
+    /**
+     * @brief Notify application that connection is closing
+     * @param reason Why the connection is closing
+     */
+    void notifyConnectionClosed(CloseReason reason) override;
+
+    /**
+     * @brief Notify application that diagnostic ACK/NACK was sent
+     * @param ack The ACK/NACK that was sent
+     */
+    void notifyDiagnosticAckSent(DoIPDiagnosticAck ack) override;
 
   private:
     std::array<uint8_t, MAX_ISOTP_MTU> m_receiveBuf{};

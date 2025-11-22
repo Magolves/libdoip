@@ -14,6 +14,7 @@
 #include "DoIPEvent.h"
 #include "TimerManager.h"
 #include "DoIPIdentifiers.h"
+#include "IConnectionContext.h"
 
 namespace doip {
 
@@ -28,14 +29,7 @@ enum class TimerID : uint8_t{
     AliveCheck         // T_TCP_Alive_Check (default: 500ms)
 };
 
-enum class CloseReason : uint8_t {
-    None,
-    InitialInactivityTimeout,
-    GeneralInactivityTimeout,
-    AliveCheckTimeout,
-    SocketError,
-    InvalidMessage
-};
+
 
 inline std::ostream& operator<<(std::ostream& os, TimerID tid) {
     switch(tid) {
@@ -58,16 +52,17 @@ class Timer;
  */
 class DoIPServerStateMachine {
   public:
-    using StateHandler = std::function<void(DoIPEvent, const DoIPMessage *)>;
     using TransitionHandler = std::function<void(DoIPState, DoIPState)>;
-    using SendMessageHandler = std::function<void(const DoIPMessage &)>;
-    using CloseSessionHandler = std::function<void()>;
 
     /**
      * @brief Constructs a new DoIP Server State Machine
-     * @param onClose Callback function to be invoked when the connection should be closed
+     * @param context Reference to the connection context interface
      */
-    explicit DoIPServerStateMachine()  {
+    explicit DoIPServerStateMachine(IConnectionContext &context)
+        : m_context(context),
+          m_state(DoIPState::SocketInitialized),
+          m_activeSourceAddress(0),
+          m_aliveCheckRetryCount(0) {
         transitionTo(DoIPState::WaitRoutingActivation);
     }
 
@@ -113,35 +108,11 @@ class DoIPServerStateMachine {
     // Configuration
 
     /**
-     * @brief Sets the callback for state transitions
+     * @brief Sets the callback for state transitions (optional, for debugging/logging)
      * @param callback Function to be called on state transitions with (old_state, new_state)
      */
     void setTransitionCallback(TransitionHandler callback) {
         m_transitionCallback = callback;
-    }
-
-    /**
-     * @brief Sets the callback for sending messages
-     * @param callback Function to be called when a message needs to be sent
-     */
-    void setSendMessageCallback(SendMessageHandler callback) {
-        m_sendMessageCallback = callback;
-    }
-
-    /**
-     * @brief Sets the callback for closing the session
-     * @param callback Function to be called when the session needs to be closed
-     */
-    void setCloseSessionCallback(CloseSessionHandler callback) {
-        m_closeSessionCallback = callback;
-    }
-
-    /**
-     * @brief Gets the close session callback
-     * @return The current close session callback function
-     */
-    CloseSessionHandler getCloseSessionCallback() const {
-        return m_closeSessionCallback;
     }
 
     /**
@@ -236,15 +207,16 @@ class DoIPServerStateMachine {
         startTimer(TimerID::AliveCheck, m_aliveCheckTimeout);
     }
 
+    // Interface to connection layer
+    IConnectionContext &m_context;
+
     TimerManager m_timerManager;
 
     // State
     DoIPState m_state;
 
-    // Callbacks
-    CloseSessionHandler m_closeSessionCallback;
+    // Optional callback for state transitions (debugging/logging)
     TransitionHandler m_transitionCallback;
-    SendMessageHandler m_sendMessageCallback;
 
     // Runtime data
     uint16_t m_activeSourceAddress;
