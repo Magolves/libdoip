@@ -4,9 +4,9 @@
 #include "DoIPServerModel.h"
 #include "Logger.h"
 #include "MacAddress.h"
-#include <cerrno>  // for errno
-#include <cstring> // for strerror
 #include <algorithm> // for std::remove_if
+#include <cerrno>    // for errno
+#include <cstring>   // for strerror
 
 using namespace doip;
 
@@ -209,7 +209,11 @@ void DoIPServer::setupTcpSocket() {
 /*
  *  Wait till a client attempts a connection and accepts it
  */
+template <typename Model>
 std::unique_ptr<DoIPConnection> DoIPServer::waitForTcpConnection() {
+    static_assert(std::is_default_constructible<Model>::value,
+                  "Model must be default-constructible");
+
     TCP_LOG_INFO("Waiting for TCP connection...");
 
     // waits till client approach to make connection
@@ -227,7 +231,7 @@ std::unique_ptr<DoIPConnection> DoIPServer::waitForTcpConnection() {
     TCP_LOG_INFO("TCP connection accepted, socket: {}", tcpSocket);
 
     // Create a default server model with the gateway address
-    DoIPServerModel model;
+    Model model;
     model.serverAddress = m_gatewayAddress;
     model.onCloseConnection = []() noexcept {};
     model.onDiagnosticMessage = [](const DoIPMessage &msg) noexcept -> DoIPDiagnosticAck {
@@ -287,7 +291,7 @@ ssize_t DoIPServer::receiveUdpMessage() {
 
     // Set socket timeout to prevent blocking indefinitely
     struct timeval timeout;
-    timeout.tv_sec = 1;  // 1 second timeout
+    timeout.tv_sec = 1; // 1 second timeout
     timeout.tv_usec = 0;
     setsockopt(m_udp_sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 
@@ -308,12 +312,12 @@ ssize_t DoIPServer::receiveUdpMessage() {
     // Don't log if no data received (can happen with some socket configurations)
     if (readBytes > 0) {
         UDP_LOG_INFO("RX {} bytes from {}:{}", readBytes,
-                    inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
+                     inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
     } else {
         // For debugging: log zero-byte messages at debug level
         UDP_LOG_DEBUG("RX 0 bytes from {}:{}",
-                     inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
-        return 0;  // Return early for zero-byte messages
+                      inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
+        return 0; // Return early for zero-byte messages
     }
 
     // Store client address for response
@@ -453,7 +457,7 @@ ssize_t DoIPServer::sendVehicleAnnouncement() {
 
     if (setAddressError != 0) {
         DOIP_LOG_INFO("{} address set successfully: {}",
-                     m_useLoopbackAnnouncements ? "Loopback" : "Broadcast", address);
+                      m_useLoopbackAnnouncements ? "Loopback" : "Broadcast", address);
     }
 
     if (!m_useLoopbackAnnouncements) {

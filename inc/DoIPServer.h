@@ -1,29 +1,29 @@
 #ifndef DOIPSERVER_H
 #define DOIPSERVER_H
 
-#include <iostream>
-#include <optional>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <string.h>
-#include <net/if.h>
-#include <unistd.h>
-#include <memory>
-#include <functional>
-#include <atomic>
-#include <thread>
-#include <vector>
-#include "DiagnosticMessageHandler.h"
 #include "AliveCheckTimer.h"
-#include "DoIPFurtherAction.h"
+#include "ByteArray.h"
+#include "DiagnosticMessageHandler.h"
 #include "DoIPConnection.h"
-#include "DoIPServerModel.h"
-#include "MacAddress.h"
+#include "DoIPFurtherAction.h"
 #include "DoIPIdentifiers.h"
 #include "DoIPNegativeAck.h"
-#include "ByteArray.h"
+#include "DoIPServerModel.h"
+#include "MacAddress.h"
+#include <arpa/inet.h>
+#include <atomic>
+#include <functional>
+#include <iostream>
+#include <memory>
+#include <net/if.h>
+#include <netinet/in.h>
+#include <optional>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <thread>
+#include <unistd.h>
+#include <vector>
 
 namespace doip {
 
@@ -34,7 +34,7 @@ const int DOIP_SERVER_PORT = 13400;
  * @param connection The newly created DoIPConnection
  * @return DoIPServerModel to use for this connection, or std::nullopt to reject
  */
-using ConnectionAcceptedHandler = std::function<std::optional<DoIPServerModel>(DoIPConnection*)>;
+using ConnectionAcceptedHandler = std::function<std::optional<DoIPServerModel>(DoIPConnection *)>;
 
 /**
  * @brief DoIP Server class to handle incoming DoIP connections and UDP messages.
@@ -47,21 +47,24 @@ using ConnectionAcceptedHandler = std::function<std::optional<DoIPServerModel>(D
  */
 class DoIPServer {
 
-public:
+  public:
     DoIPServer() {
         m_receiveBuf.reserve(MAX_ISOTP_MTU);
     };
 
     ~DoIPServer();
 
-    DoIPServer(const DoIPServer&) = delete;
-    DoIPServer& operator=(const DoIPServer&) = delete;
-    DoIPServer(DoIPServer&&) = delete;
-    DoIPServer& operator=(DoIPServer&&) = delete;
+    DoIPServer(const DoIPServer &) = delete;
+    DoIPServer &operator=(const DoIPServer &) = delete;
+    DoIPServer(DoIPServer &&) = delete;
+    DoIPServer &operator=(DoIPServer &&) = delete;
 
     // === Low-level API (manual mode) ===
     void setupTcpSocket();
+
+    template <typename Model = DefaultDoIPServerModel>
     std::unique_ptr<DoIPConnection> waitForTcpConnection();
+
     void setupUdpSocket();
     ssize_t receiveUdpMessage();
 
@@ -113,25 +116,22 @@ public:
      */
     bool setEIDdefault();
 
-    void setVIN(const std::string& VINString);
-    const DoIPVIN& getVIN() const { return m_VIN; }
+    void setVIN(const std::string &VINString);
+    const DoIPVIN &getVIN() const { return m_VIN; }
 
     void setEID(const uint64_t inputEID);
-    const DoIPEID& getEID() const { return m_EID; }
+    const DoIPEID &getEID() const { return m_EID; }
 
     void setGID(const uint64_t inputGID);
-    const DoIPGID& getGID() const { return m_GID; }
+    const DoIPGID &getGID() const { return m_GID; }
 
     void setFAR(DoIPFurtherAction inputFAR);
 
-
-
-private:
-
+  private:
     int m_tcp_sock{-1};
     int m_udp_sock{-1};
-    struct sockaddr_in m_serverAddress{};
-    struct sockaddr_in m_clientAddress{};
+    struct sockaddr_in m_serverAddress {};
+    struct sockaddr_in m_clientAddress {};
     ByteArray m_receiveBuf{};
 
     DoIPVIN m_VIN;
@@ -141,8 +141,8 @@ private:
     DoIPFurtherAction m_FurtherActionReq = DoIPFurtherAction::NoFurtherAction;
     TimerManager m_timerManager{};
 
-    int m_announceNum = 3;    //Default Value = 3
-    unsigned int m_announceInterval = 500; //Default Value = 500ms
+    int m_announceNum = 3;                   // Default Value = 3
+    unsigned int m_announceInterval = 500;   // Default Value = 500ms
     bool m_useLoopbackAnnouncements = false; // Default: use broadcast
 
     int m_broadcast = 1;
@@ -153,9 +153,9 @@ private:
     ConnectionAcceptedHandler m_connectionHandler;
 
     ssize_t reactToReceivedUdpMessage(size_t bytesRead);
-    ssize_t sendUdpMessage(const uint8_t* message, size_t messageLength);
+    ssize_t sendUdpMessage(const uint8_t *message, size_t messageLength);
 
-    void setMulticastGroup(const char* address);
+    void setMulticastGroup(const char *address);
 
     ssize_t sendNegativeUdpAck(DoIPNegativeAck ackCode);
 
@@ -163,7 +163,6 @@ private:
     void udpListenerThread();
     void tcpListenerThread();
     void connectionHandlerThread(std::unique_ptr<DoIPConnection> connection);
-
 };
 
 } // namespace doip
