@@ -54,6 +54,11 @@ public:
 
     ~DoIPServer();
 
+    DoIPServer(const DoIPServer&) = delete;
+    DoIPServer& operator=(const DoIPServer&) = delete;
+    DoIPServer(DoIPServer&&) = delete;
+    DoIPServer& operator=(DoIPServer&&) = delete;
+
     // === Low-level API (manual mode) ===
     void setupTcpSocket();
     std::unique_ptr<DoIPConnection> waitForTcpConnection();
