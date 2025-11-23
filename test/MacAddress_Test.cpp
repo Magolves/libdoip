@@ -129,7 +129,7 @@ TEST_SUITE("MacAddress") {
             // (all-zero MAC addresses are typically invalid)
             bool hasNonZero = false;
             for (size_t i = 0; i < 6; ++i) {
-                if (mac[i] != 0) {
+                if (mac.at(i) != 0) {
                     hasNonZero = true;
                     break;
                 }
