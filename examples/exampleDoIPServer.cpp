@@ -1,11 +1,14 @@
-#include "DoIPAddress.h"
-#include "DoIPServer.h"
-#include "Logger.h"
-
 #include <chrono>
 #include <iomanip>
 #include <iostream>
 #include <thread>
+
+#include "DoIPAddress.h"
+#include "DoIPServer.h"
+#include "Logger.h"
+
+#include "DoIPServer.h"
+
 
 using namespace doip;
 using namespace std;
@@ -13,45 +16,48 @@ using namespace std;
 static const DoIPAddress LOGICAL_ADDRESS(static_cast<uint8_t>(0x0), static_cast<uint8_t>(0x28));
 
 DoIPServer server;
-
 std::vector<std::thread> doipReceiver;
 bool serverActive = false;
 std::unique_ptr<DoIPConnection> connection(nullptr);
 
+/**
+ * @brief Example DoIPServerModel with custom callbacks
+ *
+ */
 class ExampleDoIPServerModel : public DoIPServerModel {
   public:
     ExampleDoIPServerModel() {
+        DOIP_LOG_HIGHLIGHT("Configuring ExampleDoIPServerModel callbacks");
+
         onCloseConnection = [](IConnectionContext& ctx) noexcept {
             (void)ctx;
-            cout << "Connection closed (from ExampleDoIPServerModel)" << endl;
+            DOIP_LOG_INFO("Connection closed (from ExampleDoIPServerModel)");
         };
 
         onDiagnosticMessage = [](IConnectionContext& ctx, const DoIPMessage &msg) noexcept -> DoIPDiagnosticAck {
             (void)ctx;
-            cout << "Received Diagnostic message (from ExampleDoIPServerModel)" << msg << '\n';
+            DOIP_LOG_INFO("Received Diagnostic message (from ExampleDoIPServerModel)", fmt::streamed(msg));
 
-            // Example: You could send a response here:
-            // ByteArray response = {0x50, 0x01};
-            // ctx.sendProtocolMessage(createDiagnosticMessage(...));
+            // Example: Access payload using getPayload()
+            auto payload = msg.getPayload();
+            if (payload.second >= 3 && payload.first[0] == 0x22 && payload.first[1] == 0xF1 && payload.first[2] == 0x90) {
+                DOIP_LOG_INFO(" - Detected Read Data by Identifier for VIN (0xF190) -> send NACK");
+                return DoIPNegativeDiagnosticAck::UnknownTargetAddress;
+            }
 
             return std::nullopt;
         };
 
         onDiagnosticNotification = [](IConnectionContext& ctx, DoIPDiagnosticAck ack) noexcept {
             (void)ctx;
-            cout << "Diagnostic ACK/NACK sent (from ExampleDoIPServerModel)" << ack << endl;
+            DOIP_LOG_INFO("Diagnostic ACK/NACK sent (from ExampleDoIPServerModel)", fmt::streamed(ack));
         };
     }
 };
 
 
-void ReceiveFromLibrary(const DoIPAddress &address, const uint8_t *data, size_t length);
-DoIPDiagnosticAck DiagnosticMessageReceived(const DoIPMessage &message);
-
-void CloseConnection();
 void listenUdp();
 void listenTcp();
-void ConfigureDoipServer();
 
 /*
  * Check permantly if udp message was received
@@ -83,7 +89,7 @@ void listenTcp() {
     }
 }
 
-void ConfigureDoipServer() {
+static void ConfigureDoipServer() {
     // VIN needs to have a fixed length of 17 bytes.
     // Shorter VINs will be padded with '0'
     server.setVIN("EXAMPLESERVER");

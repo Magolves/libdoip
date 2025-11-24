@@ -8,6 +8,7 @@
 #include "DoIPMessage.h"
 #include "DoIPNegativeDiagnosticAck.h"
 #include "DoIPState.h"
+#include "Logger.h"
 
 namespace doip {
 
@@ -29,19 +30,24 @@ struct DoIPServerModel {
 
 struct DefaultDoIPServerModel : public DoIPServerModel {
     DefaultDoIPServerModel() {
+        DOIP_LOG_CRITICAL("Using DefaultDoIPServerModel - no callbacks are set!");
+
         onCloseConnection = [](IConnectionContext& ctx) noexcept {
             (void)ctx;
+            DOIP_LOG_CRITICAL("Close connection called on DefaultDoIPServerModel");
             // Default no-op
         };
         onDiagnosticMessage = [](IConnectionContext& ctx, const DoIPMessage &msg) noexcept -> DoIPDiagnosticAck {
             (void)ctx;
             (void)msg;
+            DOIP_LOG_CRITICAL("Diagnostic message received on DefaultDoIPServerModel");
             // Default: always ACK
             return std::nullopt;
         };
         onDiagnosticNotification = [](IConnectionContext& ctx, DoIPDiagnosticAck ack) noexcept {
             (void)ctx;
             (void)ack;
+            DOIP_LOG_CRITICAL("Diagnostic message received on DefaultDoIPServerModel");
             // Default no-op
         };
     }

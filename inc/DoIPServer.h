@@ -184,18 +184,15 @@ std::unique_ptr<DoIPConnection> DoIPServer::waitForTcpConnection() {
     // Create a default server model with the gateway address
     Model model;
     model.serverAddress = m_gatewayAddress;
-    model.onCloseConnection = [](IConnectionContext& ctx) noexcept {
-        (void)ctx;
-    };
-    model.onDiagnosticMessage = [](IConnectionContext& ctx, const DoIPMessage &msg) noexcept -> DoIPDiagnosticAck {
-        (void)ctx;
-        (void)msg;
-        return std::nullopt;
-    };
-    model.onDiagnosticNotification = [](IConnectionContext& ctx, DoIPDiagnosticAck ack) noexcept {
-        (void)ctx;
-        (void)ack;
-    };
+    if (model.onDiagnosticMessage == nullptr) {
+        model.onDiagnosticMessage = [](IConnectionContext& ctx, const DoIPMessage &msg) noexcept -> DoIPDiagnosticAck {
+            (void)ctx;
+            (void)msg;
+            DOIP_LOG_CRITICAL("Diagnostic message received on default-constructed Model");
+            // Default: always ACK
+            return std::nullopt;
+        };
+    }
 
     return std::unique_ptr<DoIPConnection>(new DoIPConnection(tcpSocket, model));
 }

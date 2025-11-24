@@ -280,16 +280,13 @@ void DoIPServerStateMachine::handleFinalize(DoIPEvent event, const DoIPMessage *
     (void)event; // Unused parameter
     (void)msg;   // Unused parameter
 
-    DOIP_LOG_INFO("Closing session...");
+    DOIP_LOG_INFO("Already in Finalize state - ignoring event");
 
-    // Stop all timers
-    stopAllTimers();
-
-    // Close connection via interface
-    m_context.closeConnection(CloseReason::GeneralInactivityTimeout);
-
-    // Transition to closed state
-    transitionTo(DoIPState::Closed);
+    // Connection closure is handled by state entry action
+    // Just transition to closed state if needed
+    if (m_state != DoIPState::Closed) {
+        transitionTo(DoIPState::Closed);
+    }
 }
 
 // Helper Methods
@@ -334,7 +331,12 @@ void DoIPServerStateMachine::transitionTo(DoIPState new_state) {
         break;
 
     case DoIPState::Finalize:
+        DOIP_LOG_INFO("Entering Finalize state - closing connection");
         stopAllTimers();
+        // Close the connection (this will be called only once during transition to Finalize)
+        m_context.closeConnection(CloseReason::GeneralInactivityTimeout);
+        // Immediately transition to Closed
+        transitionTo(DoIPState::Closed);
         break;
 
     case DoIPState::Closed:

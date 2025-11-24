@@ -113,6 +113,8 @@ class DoIPConnection : public IConnectionContext {
     DoIPServerModel m_serverModel;
     DoIPServerStateMachine m_stateMachine;
 
+    bool m_isClosing{false};  // TODO: Guard against recursive closeConnection calls -> solve this
+
     void closeSocket();
 
     int reactOnReceivedTcpMessage(const DoIPMessage &message);

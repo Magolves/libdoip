@@ -11,8 +11,7 @@ namespace doip {
 DoIPConnection::DoIPConnection(int tcpSocket, const DoIPServerModel &model)
     : m_tcpSocket(tcpSocket),
       m_serverModel(model),
-      m_stateMachine(*this) {  // Pass interface reference - no callback setup needed!
-    // State machine now uses IConnectionContext interface to call back into this connection
+      m_stateMachine(*this) {
 }
 
 /*
@@ -127,6 +126,13 @@ void DoIPConnection::sendProtocolMessage(const DoIPMessage &msg) {
 }
 
 void DoIPConnection::closeConnection(CloseReason reason) {
+    // Guard against recursive calls
+    if (m_isClosing) {
+        DOIP_LOG_DEBUG("Connection already closing - ignoring recursive call");
+        return;
+    }
+
+    m_isClosing = true;
     DOIP_LOG_INFO("Closing connection, reason: {}", static_cast<int>(reason));
 
     m_stateMachine.processEvent(DoIPEvent::CloseRequestReceived);
@@ -159,7 +165,7 @@ DoIPDiagnosticAck DoIPConnection::handleDiagnosticMessage(const DoIPMessage &msg
 }
 
 void DoIPConnection::notifyConnectionClosed(CloseReason reason) {
-    (void)reason;  // Could extend DoIPServerModel to include close reason
+    (void)reason; // Could extend DoIPServerModel to include close reason
     if (m_serverModel.onCloseConnection) {
         m_serverModel.onCloseConnection(*this);
     }

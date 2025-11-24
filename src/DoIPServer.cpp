@@ -248,8 +248,6 @@ void DoIPServer::closeUdpSocket() {
  *              or -1 if error occurred
  */
 ssize_t DoIPServer::receiveUdpMessage() {
-    UDP_LOG_DEBUG("Wait for UDP message...");
-
     // Set socket timeout to prevent blocking indefinitely
     struct timeval timeout;
     timeout.tv_sec = 1; // 1 second timeout
