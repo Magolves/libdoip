@@ -165,6 +165,41 @@ class DoIPServer {
     void connectionHandlerThread(std::unique_ptr<DoIPConnection> connection);
 };
 
+// Template implementation must be in header for external linkage
+template <typename Model>
+std::unique_ptr<DoIPConnection> DoIPServer::waitForTcpConnection() {
+    static_assert(std::is_default_constructible<Model>::value,
+                  "Model must be default-constructible");
+
+    // waits till client approach to make connection
+    if (listen(m_tcp_sock, 5) < 0) {
+        return nullptr;
+    }
+
+    int tcpSocket = accept(m_tcp_sock, nullptr, nullptr);
+    if (tcpSocket < 0) {
+        return nullptr;
+    }
+
+    // Create a default server model with the gateway address
+    Model model;
+    model.serverAddress = m_gatewayAddress;
+    model.onCloseConnection = [](IConnectionContext& ctx) noexcept {
+        (void)ctx;
+    };
+    model.onDiagnosticMessage = [](IConnectionContext& ctx, const DoIPMessage &msg) noexcept -> DoIPDiagnosticAck {
+        (void)ctx;
+        (void)msg;
+        return std::nullopt;
+    };
+    model.onDiagnosticNotification = [](IConnectionContext& ctx, DoIPDiagnosticAck ack) noexcept {
+        (void)ctx;
+        (void)ack;
+    };
+
+    return std::unique_ptr<DoIPConnection>(new DoIPConnection(tcpSocket, model));
+}
+
 } // namespace doip
 
 #endif /* DOIPSERVER_H */

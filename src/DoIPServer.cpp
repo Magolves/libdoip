@@ -206,45 +206,6 @@ void DoIPServer::setupTcpSocket() {
     TCP_LOG_INFO("TCP socket successfully bound to port {}", DOIP_SERVER_PORT);
 }
 
-/*
- *  Wait till a client attempts a connection and accepts it
- */
-template <typename Model>
-std::unique_ptr<DoIPConnection> DoIPServer::waitForTcpConnection() {
-    static_assert(std::is_default_constructible<Model>::value,
-                  "Model must be default-constructible");
-
-    TCP_LOG_INFO("Waiting for TCP connection...");
-
-    // waits till client approach to make connection
-    if (listen(m_tcp_sock, 5) < 0) {
-        TCP_LOG_CRITICAL("Failed to listen on TCP socket: {}", strerror(errno));
-        return nullptr;
-    }
-
-    int tcpSocket = accept(m_tcp_sock, nullptr, nullptr);
-    if (tcpSocket < 0) {
-        TCP_LOG_CRITICAL("Failed to accept TCP connection: {}", strerror(errno));
-        return nullptr;
-    }
-
-    TCP_LOG_INFO("TCP connection accepted, socket: {}", tcpSocket);
-
-    // Create a default server model with the gateway address
-    Model model;
-    model.serverAddress = m_gatewayAddress;
-    model.onCloseConnection = []() noexcept {};
-    model.onDiagnosticMessage = [](const DoIPMessage &msg) noexcept -> DoIPDiagnosticAck {
-        (void)msg;
-        return std::nullopt;
-    };
-    model.onDiagnosticNotification = [](DoIPDiagnosticAck ack) noexcept {
-        (void)ack;
-    };
-
-    return std::unique_ptr<DoIPConnection>(new DoIPConnection(tcpSocket, model));
-}
-
 void DoIPServer::setupUdpSocket() {
     UDP_LOG_DEBUG("Setting up UDP socket on port {}", DOIP_SERVER_PORT);
 

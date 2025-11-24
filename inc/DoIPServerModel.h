@@ -11,30 +11,36 @@
 
 namespace doip {
 
-using CloseConnectionHandler = std::function<void()>;
-using DiagnosticMessageHandler = std::function<DoIPDiagnosticAck(const DoIPMessage &)>;
-using DiagnosticNotificationHandler = std::function<void(DoIPDiagnosticAck)>;
+// Forward declaration
+class IConnectionContext;
+
+using ServerModelCloseHandler = std::function<void(IConnectionContext&)>;
+using ServerModelDiagnosticHandler = std::function<DoIPDiagnosticAck(IConnectionContext&, const DoIPMessage &)>;
+using ServerModelDiagnosticNotificationHandler = std::function<void(IConnectionContext&, DoIPDiagnosticAck)>;
 
 struct DoIPServerModel {
 
-    CloseConnectionHandler onCloseConnection;
-    DiagnosticMessageHandler onDiagnosticMessage;
-    DiagnosticNotificationHandler onDiagnosticNotification;
+    ServerModelCloseHandler onCloseConnection;
+    ServerModelDiagnosticHandler onDiagnosticMessage;
+    ServerModelDiagnosticNotificationHandler onDiagnosticNotification;
 
     DoIPAddress serverAddress;
 };
 
 struct DefaultDoIPServerModel : public DoIPServerModel {
     DefaultDoIPServerModel() {
-        onCloseConnection = []() noexcept {
+        onCloseConnection = [](IConnectionContext& ctx) noexcept {
+            (void)ctx;
             // Default no-op
         };
-        onDiagnosticMessage = [](const DoIPMessage &msg) noexcept -> DoIPDiagnosticAck {
+        onDiagnosticMessage = [](IConnectionContext& ctx, const DoIPMessage &msg) noexcept -> DoIPDiagnosticAck {
+            (void)ctx;
             (void)msg;
             // Default: always ACK
             return std::nullopt;
         };
-        onDiagnosticNotification = [](DoIPDiagnosticAck ack) noexcept {
+        onDiagnosticNotification = [](IConnectionContext& ctx, DoIPDiagnosticAck ack) noexcept {
+            (void)ctx;
             (void)ack;
             // Default no-op
         };

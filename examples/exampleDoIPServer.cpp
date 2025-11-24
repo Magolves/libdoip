@@ -1,11 +1,11 @@
-#include "DoIPServer.h"
 #include "DoIPAddress.h"
+#include "DoIPServer.h"
 #include "Logger.h"
 
-#include<iostream>
-#include<iomanip>
-#include<thread>
-#include<chrono>
+#include <chrono>
+#include <iomanip>
+#include <iostream>
+#include <thread>
 
 using namespace doip;
 using namespace std;
@@ -13,11 +13,39 @@ using namespace std;
 static const DoIPAddress LOGICAL_ADDRESS(static_cast<uint8_t>(0x0), static_cast<uint8_t>(0x28));
 
 DoIPServer server;
-unique_ptr<DoIPConnection> connection(nullptr);
+
 std::vector<std::thread> doipReceiver;
 bool serverActive = false;
+std::unique_ptr<DoIPConnection> connection(nullptr);
 
-void ReceiveFromLibrary(const DoIPAddress& address, const uint8_t* data, size_t length);
+class ExampleDoIPServerModel : public DoIPServerModel {
+  public:
+    ExampleDoIPServerModel() {
+        onCloseConnection = [](IConnectionContext& ctx) noexcept {
+            (void)ctx;
+            cout << "Connection closed (from ExampleDoIPServerModel)" << endl;
+        };
+
+        onDiagnosticMessage = [](IConnectionContext& ctx, const DoIPMessage &msg) noexcept -> DoIPDiagnosticAck {
+            (void)ctx;
+            cout << "Received Diagnostic message (from ExampleDoIPServerModel)" << msg << '\n';
+
+            // Example: You could send a response here:
+            // ByteArray response = {0x50, 0x01};
+            // ctx.sendProtocolMessage(createDiagnosticMessage(...));
+
+            return std::nullopt;
+        };
+
+        onDiagnosticNotification = [](IConnectionContext& ctx, DoIPDiagnosticAck ack) noexcept {
+            (void)ctx;
+            cout << "Diagnostic ACK/NACK sent (from ExampleDoIPServerModel)" << ack << endl;
+        };
+    }
+};
+
+
+void ReceiveFromLibrary(const DoIPAddress &address, const uint8_t *data, size_t length);
 DoIPDiagnosticAck DiagnosticMessageReceived(const DoIPMessage &message);
 
 void CloseConnection();
@@ -25,27 +53,12 @@ void listenUdp();
 void listenTcp();
 void ConfigureDoipServer();
 
-
-DoIPDiagnosticAck DiagnosticMessageReceived(const DoIPMessage &message) {
-    cout << "Received Diagnostic message" << message << '\n';
-
-    return std::nullopt;
-}
-
-/**
- * Closes the connection of the server by ending the listener threads
- */
-void CloseConnection() {
-    cout << "Connection closed" << endl;
-    //serverActive = false;
-}
-
 /*
  * Check permantly if udp message was received
  */
 void listenUdp() {
 
-    while(serverActive) {
+    while (serverActive) {
         ssize_t result = server.receiveUdpMessage();
         // If timeout (result == 0), sleep briefly to prevent CPU spinning
         if (result == 0) {
@@ -61,22 +74,12 @@ void listenTcp() {
 
     server.setupTcpSocket();
 
-    while(true) {
-        connection = server.waitForTcpConnection();
+    while (true) {
+        connection = server.waitForTcpConnection<ExampleDoIPServerModel>();
 
-        DoIPServerModel model;
-        model.serverAddress = LOGICAL_ADDRESS;
-        model.onCloseConnection = CloseConnection;
-        model.onDiagnosticMessage = DiagnosticMessageReceived;
-        model.onDiagnosticNotification = [](DoIPDiagnosticAck ack) noexcept {
-            (void)ack;
-        };
-
-        connection->setServerModel(model);
-
-         while(connection->isSocketActive()) {
-             connection->receiveTcpMessage();
-         }
+        while (connection->isSocketActive()) {
+            connection->receiveTcpMessage();
+        }
     }
 }
 
@@ -95,17 +98,16 @@ void ConfigureDoipServer() {
 
     // doipserver->setAnnounceNum(tempNum);
     // doipserver->setAnnounceInterval(tempInterval);
-
 }
 
-static void printUsage(const char* progName) {
+static void printUsage(const char *progName) {
     cout << "Usage: " << progName << " [OPTIONS]\n";
     cout << "Options:\n";
     cout << "  --loopback    Use loopback (127.0.0.1) for announcements instead of broadcast\n";
     cout << "  --help        Show this help message\n";
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     bool useLoopback = false;
 
     // Parse command line arguments
@@ -132,7 +134,7 @@ int main(int argc, char* argv[]) {
 
     // Configure server based on mode
     if (useLoopback) {
-        server.setAnnouncementMode(true);  // We'll add this method
+        server.setAnnouncementMode(true);
     }
 
     server.setupUdpSocket();

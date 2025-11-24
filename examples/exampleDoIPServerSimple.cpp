@@ -14,7 +14,7 @@ static std::atomic<bool> g_shutdownRequested{false};
 
 // Forward declarations
 static void signalHandler(int signal);
-static DoIPDiagnosticAck onDiagnosticMessage(const DoIPMessage &message);
+static DoIPDiagnosticAck onDiagnosticMessage(IConnectionContext& ctx, const DoIPMessage &message);
 static std::optional<DoIPServerModel> onConnectionAccepted(DoIPConnection* connection);
 static void configureServer(DoIPServer &server);
 
@@ -26,7 +26,8 @@ static void signalHandler(int signal) {
 }
 
 // Callback for diagnostic messages
-static DoIPDiagnosticAck onDiagnosticMessage(const DoIPMessage &message) {
+static DoIPDiagnosticAck onDiagnosticMessage(IConnectionContext& ctx, const DoIPMessage &message) {
+    (void)ctx;  // Available for sending responses if needed
     cout << "Received Diagnostic message: " << message << '\n';
 
     // Extract diagnostic data from message
@@ -35,6 +36,10 @@ static DoIPDiagnosticAck onDiagnosticMessage(const DoIPMessage &message) {
         cout << "  Service ID: 0x" << hex << setw(2) << setfill('0')
              << static_cast<int>(payload.first[0]) << dec << '\n';
     }
+
+    // Example: Send a response back using the context
+    // ByteArray response = {0x50, 0x01}; // Example: positive response
+    // ctx.sendProtocolMessage(createDiagnosticMessage(message.targetAddress, message.sourceAddress, response));
 
     // Return nullopt to send positive ACK, or return NACK code
     return std::nullopt;
@@ -51,7 +56,8 @@ static std::optional<DoIPServerModel> onConnectionAccepted(DoIPConnection* conne
 
     model.onDiagnosticMessage = onDiagnosticMessage;
 
-    model.onDiagnosticNotification = [](DoIPDiagnosticAck ack) noexcept {
+    model.onDiagnosticNotification = [](IConnectionContext& ctx, DoIPDiagnosticAck ack) noexcept {
+        (void)ctx;
         if (ack.has_value()) {
             cout << "Diagnostic NACK sent: " << static_cast<int>(ack.value()) << '\n';
         } else {
@@ -59,7 +65,8 @@ static std::optional<DoIPServerModel> onConnectionAccepted(DoIPConnection* conne
         }
     };
 
-    model.onCloseConnection = []() noexcept {
+    model.onCloseConnection = [](IConnectionContext& ctx) noexcept {
+        (void)ctx;
         cout << "Connection closed" << endl;
     };
 

@@ -152,7 +152,7 @@ void DoIPConnection::setActiveSourceAddress(uint16_t address) {
 DoIPDiagnosticAck DoIPConnection::handleDiagnosticMessage(const DoIPMessage &msg) {
     // Forward to application callback
     if (m_serverModel.onDiagnosticMessage) {
-        return m_serverModel.onDiagnosticMessage(msg);
+        return m_serverModel.onDiagnosticMessage(*this, msg);
     }
     // Default: ACK
     return std::nullopt;
@@ -161,13 +161,13 @@ DoIPDiagnosticAck DoIPConnection::handleDiagnosticMessage(const DoIPMessage &msg
 void DoIPConnection::notifyConnectionClosed(CloseReason reason) {
     (void)reason;  // Could extend DoIPServerModel to include close reason
     if (m_serverModel.onCloseConnection) {
-        m_serverModel.onCloseConnection();
+        m_serverModel.onCloseConnection(*this);
     }
 }
 
 void DoIPConnection::notifyDiagnosticAckSent(DoIPDiagnosticAck ack) {
     if (m_serverModel.onDiagnosticNotification) {
-        m_serverModel.onDiagnosticNotification(ack);
+        m_serverModel.onDiagnosticNotification(*this, ack);
     }
 }
 
