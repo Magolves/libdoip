@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 #include <optional>
+#include <iostream>
+#include <iomanip>
 
 namespace doip {
 
@@ -28,6 +30,56 @@ enum class DoIPNegativeDiagnosticAck : uint8_t {
  */
 using DoIPDiagnosticAck = std::optional<DoIPNegativeDiagnosticAck>;
 
+}
+
+/**
+ * @brief Stream output operator for DoIPNegativeDiagnosticAck
+ *
+ * @param os the output stream
+ * @param nack the negative acknowledgment code
+ * @return std::ostream& the output stream
+ */
+inline std::ostream& operator<<(std::ostream& os, doip::DoIPDiagnosticAck ack) {
+    if (!ack.has_value()) {
+        os << "PositiveAck (0x00)";
+        return os;
+    }
+
+    auto ackVal = ack.value();
+    const char* name = nullptr;
+    switch (ackVal) {
+        case doip::DoIPNegativeDiagnosticAck::InvalidSourceAddress:
+            name = "InvalidSourceAddress";
+            break;
+        case doip::DoIPNegativeDiagnosticAck::UnknownTargetAddress:
+            name = "UnknownTargetAddress";
+            break;
+        case doip::DoIPNegativeDiagnosticAck::DiagnosticMessageTooLarge:
+            name = "DiagnosticMessageTooLarge";
+            break;
+        case doip::DoIPNegativeDiagnosticAck::OutOfMemory:
+            name = "OutOfMemory";
+            break;
+        case doip::DoIPNegativeDiagnosticAck::TargetUnreachable:
+            name = "TargetUnreachable";
+            break;
+        case doip::DoIPNegativeDiagnosticAck::UnknownNetwork:
+            name = "UnknownNetwork";
+            break;
+        case doip::DoIPNegativeDiagnosticAck::TransportProtocolError:
+            name = "TransportProtocolError";
+            break;
+        case doip::DoIPNegativeDiagnosticAck::TargetBusy:
+            name = "TargetBusy";
+            break;
+        default:
+            name = "Unknown";
+            break;
+    }
+    os << name << " (0x" << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
+       << static_cast<unsigned int>(static_cast<uint8_t>(ackVal)) << std::dec << ")";
+
+    return os;
 }
 
 #endif  /* DOIPNEGATIVEDIAGNOSTICACK_H */
