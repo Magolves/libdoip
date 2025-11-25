@@ -11,9 +11,8 @@ C/C++ library for Diagnostics over IP (DoIP) (fork from https://github.com/AVL-D
 
 **CAUTION** The current API is under construction any may change at any time.
 
-Despite the excellent work I saw some shortcomings in the design and refactored some parts - hopefully for the better.
 
-The C++ standard is set to 17.
+
 
 ## Dependencies
 
