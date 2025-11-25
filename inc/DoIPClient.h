@@ -1,6 +1,7 @@
 
 #ifndef DOIPCLIENT_H
 #define DOIPCLIENT_H
+
 #include <arpa/inet.h>
 #include <cstddef>
 #include <cstdlib>
@@ -9,7 +10,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "DiagnosticMessageHandler.h"
+#include "DoIPMessage.h"
 
 namespace doip {
 

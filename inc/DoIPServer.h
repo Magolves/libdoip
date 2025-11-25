@@ -3,7 +3,6 @@
 
 #include "AliveCheckTimer.h"
 #include "ByteArray.h"
-#include "DiagnosticMessageHandler.h"
 #include "DoIPConnection.h"
 #include "DoIPFurtherAction.h"
 #include "DoIPIdentifiers.h"

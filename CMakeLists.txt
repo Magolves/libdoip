@@ -59,7 +59,6 @@ endif()
 set(DOIP_NAME iso13400 CACHE STRING "DoIP library name")
 set(SOURCES
     src/AliveCheckTimer.cpp
-    src/DiagnosticMessageHandler.cpp
     src/DoIPClient.cpp
     src/DoIPConnection.cpp
     src/DoIPServer.cpp
