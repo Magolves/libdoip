@@ -8,6 +8,7 @@
 #include "DoIPMessage.h"
 #include "DoIPNegativeDiagnosticAck.h"
 #include "DoIPState.h"
+#include "DoIPCloseReason.h"
 #include "Logger.h"
 
 namespace doip {
@@ -15,7 +16,7 @@ namespace doip {
 // Forward declaration
 class IConnectionContext;
 
-using ServerModelCloseHandler = std::function<void(IConnectionContext&)>;
+using ServerModelCloseHandler = std::function<void(IConnectionContext&, DoIPCloseReason)>;
 using ServerModelDiagnosticHandler = std::function<DoIPDiagnosticAck(IConnectionContext&, const DoIPMessage &)>;
 using ServerModelDiagnosticNotificationHandler = std::function<void(IConnectionContext&, DoIPDiagnosticAck)>;
 
@@ -34,9 +35,9 @@ struct DefaultDoIPServerModel : public DoIPServerModel {
     DefaultDoIPServerModel() {
         DOIP_LOG_CRITICAL("Using DefaultDoIPServerModel - no callbacks are set!");
 
-        onCloseConnection = [](IConnectionContext& ctx) noexcept {
+        onCloseConnection = [](IConnectionContext& ctx, DoIPCloseReason reason) noexcept {
             (void)ctx;
-            DOIP_LOG_CRITICAL("Close connection called on DefaultDoIPServerModel");
+            DOIP_LOG_CRITICAL("Close connection called on DefaultDoIPServerModel - reason {}", fmt::streamed(reason));
             // Default no-op
         };
         onDiagnosticMessage = [](IConnectionContext& ctx, const DoIPMessage &msg) noexcept -> DoIPDiagnosticAck {

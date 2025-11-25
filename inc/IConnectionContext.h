@@ -4,23 +4,11 @@
 #include "DoIPAddress.h"
 #include "DoIPMessage.h"
 #include "DoIPNegativeDiagnosticAck.h"
+#include "DoIPCloseReason.h"
+
 #include <cstdint>
 
 namespace doip {
-
-/**
- * @brief Reason for connection closure
- */
-enum class CloseReason : uint8_t {
-    None,
-    InitialInactivityTimeout,
-    GeneralInactivityTimeout,
-    AliveCheckTimeout,
-    SocketError,
-    InvalidMessage,
-    ApplicationRequest,
-    RoutingActivationDenied
-};
 
 /**
  * @brief Interface between DoIPServerStateMachine and DoIPConnection
@@ -28,12 +16,6 @@ enum class CloseReason : uint8_t {
  * This interface inverts the dependency between the state machine and connection.
  * Instead of the state machine holding callbacks to the connection, the connection
  * implements this interface and passes itself to the state machine.
- *
- * Benefits:
- * - No callback setup boilerplate
- * - Compile-time type checking
- * - Easier to test (mock the interface)
- * - Clear contract between layers
  *
  * Responsibilities:
  * - Bridge between protocol layer (state machine) and application layer (user callbacks)
@@ -62,7 +44,7 @@ public:
      *
      * @param reason Why the connection is being closed
      */
-    virtual void closeConnection(CloseReason reason) = 0;
+    virtual void closeConnection(DoIPCloseReason reason) = 0;
 
     /**
      * @brief Get the server's logical address
@@ -112,7 +94,7 @@ public:
      *
      * @param reason Why the connection is closing
      */
-    virtual void notifyConnectionClosed(CloseReason reason) = 0;
+    virtual void notifyConnectionClosed(DoIPCloseReason reason) = 0;
 
     /**
      * @brief Notify application that diagnostic ACK/NACK was sent

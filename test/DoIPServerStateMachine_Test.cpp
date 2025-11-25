@@ -32,7 +32,7 @@ class MockConnectionContext : public IConnectionContext {
 public:
     // Captured data
     std::vector<DoIPMessage> sentMessages;
-    CloseReason closeReason = CloseReason::None;
+    DoIPCloseReason closeReason = DoIPCloseReason::None;
     DoIPAddress serverAddress{0x0E, 0x80};
     uint16_t activeSourceAddress = 0;
     bool connectionClosed = false;
@@ -47,7 +47,7 @@ public:
         return static_cast<ssize_t>(msg.size());
     }
 
-    void closeConnection(CloseReason reason) override {
+    void closeConnection(DoIPCloseReason reason) override {
         closeReason = reason;
         connectionClosed = true;
     }
@@ -69,7 +69,7 @@ public:
         return diagnosticResponse;
     }
 
-    void notifyConnectionClosed(CloseReason reason) override {
+    void notifyConnectionClosed(DoIPCloseReason reason) override {
         (void)reason;
     }
 

@@ -64,7 +64,7 @@ class DoIPConnection : public IConnectionContext {
      * @brief Close the TCP connection
      * @param reason Why the connection is being closed
      */
-    void closeConnection(CloseReason reason) override;
+    void closeConnection(DoIPCloseReason reason) override;
 
     /**
      * @brief Get the server's logical address
@@ -95,7 +95,7 @@ class DoIPConnection : public IConnectionContext {
      * @brief Notify application that connection is closing
      * @param reason Why the connection is closing
      */
-    void notifyConnectionClosed(CloseReason reason) override;
+    void notifyConnectionClosed(DoIPCloseReason reason) override;
 
     /**
      * @brief Notify application that diagnostic ACK/NACK was sent

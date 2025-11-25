@@ -67,9 +67,9 @@ static std::optional<DoIPServerModel> onConnectionAccepted(DoIPConnection *conne
         }
     };
 
-    model.onCloseConnection = [](IConnectionContext &ctx) noexcept {
+    model.onCloseConnection = [](IConnectionContext &ctx, DoIPCloseReason reason) noexcept {
         (void)ctx;
-        cout << "Connection closed" << endl;
+        cout << "Connection closed (" << reason << ")" << endl;
     };
 
     return model;

@@ -18,7 +18,7 @@ DoIPConnection::DoIPConnection(int tcpSocket, UniqueServerModelPtr model)
  * Closes the socket for this server (private method)
  */
 void DoIPConnection::closeSocket() {
-    closeConnection(CloseReason::ApplicationRequest);
+    closeConnection(DoIPCloseReason::ApplicationRequest);
 }
 
 /*
@@ -125,7 +125,7 @@ ssize_t DoIPConnection::sendProtocolMessage(const DoIPMessage &msg) {
     return sentBytes;
 }
 
-void DoIPConnection::closeConnection(CloseReason reason) {
+void DoIPConnection::closeConnection(DoIPCloseReason reason) {
     // Guard against recursive calls
     if (m_isClosing) {
         DOIP_LOG_DEBUG("Connection already closing - ignoring recursive call");
@@ -164,10 +164,10 @@ DoIPDiagnosticAck DoIPConnection::notifyDiagnosticMessage(const DoIPMessage &msg
     return std::nullopt;
 }
 
-void DoIPConnection::notifyConnectionClosed(CloseReason reason) {
+void DoIPConnection::notifyConnectionClosed(DoIPCloseReason reason) {
     (void)reason; // Could extend DoIPServerModel to include close reason
     if (m_serverModel->onCloseConnection) {
-        m_serverModel->onCloseConnection(*this);
+        m_serverModel->onCloseConnection(*this, reason);
     }
 }
 

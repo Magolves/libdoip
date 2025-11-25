@@ -13,9 +13,9 @@ using namespace doip;
 class ExampleDoIPServerModel : public DoIPServerModel {
   public:
     ExampleDoIPServerModel() {
-        onCloseConnection = [](IConnectionContext &ctx) noexcept {
+        onCloseConnection = [](IConnectionContext &ctx, DoIPCloseReason reason) noexcept {
             (void)ctx;
-            DOIP_LOG_INFO("Connection closed (from ExampleDoIPServerModel)");
+            DOIP_LOG_WARN("Connection closed ({})", fmt::streamed(reason));
         };
 
         onDiagnosticMessage = [](IConnectionContext &ctx, const DoIPMessage &msg) noexcept -> DoIPDiagnosticAck {

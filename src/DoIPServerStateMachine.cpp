@@ -334,7 +334,7 @@ void DoIPServerStateMachine::transitionTo(DoIPState new_state) {
         DOIP_LOG_INFO("Entering Finalize state - closing connection");
         stopAllTimers();
         // Close the connection (this will be called only once during transition to Finalize)
-        m_context.closeConnection(CloseReason::GeneralInactivityTimeout);
+        m_context.closeConnection(DoIPCloseReason::GeneralInactivityTimeout);
         // Immediately transition to Closed
         transitionTo(DoIPState::Closed);
         break;
