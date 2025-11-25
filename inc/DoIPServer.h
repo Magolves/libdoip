@@ -1,14 +1,6 @@
 #ifndef DOIPSERVER_H
 #define DOIPSERVER_H
 
-#include "AliveCheckTimer.h"
-#include "ByteArray.h"
-#include "DoIPConnection.h"
-#include "DoIPFurtherAction.h"
-#include "DoIPIdentifiers.h"
-#include "DoIPNegativeAck.h"
-#include "DoIPServerModel.h"
-#include "MacAddress.h"
 #include <arpa/inet.h>
 #include <atomic>
 #include <functional>
@@ -23,6 +15,14 @@
 #include <thread>
 #include <unistd.h>
 #include <vector>
+
+#include "ByteArray.h"
+#include "DoIPConnection.h"
+#include "DoIPFurtherAction.h"
+#include "DoIPIdentifiers.h"
+#include "DoIPNegativeAck.h"
+#include "DoIPServerModel.h"
+#include "MacAddress.h"
 
 namespace doip {
 
@@ -280,7 +280,6 @@ bool DoIPServer::start(ConnectionAcceptedHandler onConnectionAccepted, bool send
         return false;
     }
 }
-
 
 } // namespace doip
 
