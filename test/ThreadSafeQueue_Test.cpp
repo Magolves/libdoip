@@ -69,7 +69,7 @@ TEST_SUITE("ThreadSafeQueue") {
         // Start producer threads
         std::vector<std::thread> producers;
         for (int i = 0; i < numProducers; ++i) {
-            producers.emplace_back([&queue, &producedCount, itemsPerProducer, i]() {
+            producers.emplace_back([&queue, &producedCount, i]() {
                 for (int j = 0; j < itemsPerProducer; ++j) {
                     queue.push(i * itemsPerProducer + j);
                     producedCount++;
@@ -78,7 +78,7 @@ TEST_SUITE("ThreadSafeQueue") {
         }
 
         // Start consumer thread
-        std::thread consumer([&queue, &consumedCount, totalItems]() {
+        std::thread consumer([&queue, &consumedCount]() {
             int item;
             while (consumedCount < totalItems) {
                 if (queue.pop(item, 10ms)) {
