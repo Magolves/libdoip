@@ -106,7 +106,7 @@ TEST_SUITE("ThreadSafeQueue") {
         constexpr int numConsumers = 4;
 
         // Start producer thread
-        std::thread producer([&queue, &producedCount, totalItems]() {
+        std::thread producer([&queue, &producedCount]() {
             for (int i = 0; i < totalItems; ++i) {
                 queue.push(i);
                 producedCount++;
