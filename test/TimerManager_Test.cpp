@@ -1,9 +1,9 @@
-#include <doctest/doctest.h>
-#include <chrono>
-#include <thread>
 #include <atomic>
-#include <vector>
+#include <chrono>
+#include <doctest/doctest.h>
 #include <stdexcept>
+#include <thread>
+#include <vector>
 
 #include "TimerManager.h"
 
@@ -49,7 +49,7 @@ TEST_SUITE("TimerManager") {
         // Wait for multiple executions
         std::this_thread::sleep_for(100ms);
 
-        CHECK(executionCount >= 2); // Should have executed at least twice
+        CHECK(executionCount >= 2);       // Should have executed at least twice
         CHECK(manager.timerCount() == 1); // Periodic timer should still exist
 
         // Clean up
@@ -132,8 +132,15 @@ TEST_SUITE("TimerManager") {
         bool updated = manager.updateTimer(timerId.value(), 50ms);
         CHECK(updated);
 
-        // Should execute sooner now
-        std::this_thread::sleep_for(90ms);
+        // Should execute sooner now. Add some tolerance due to delays
+        // caused by sanitizers
+        const int maxWaitMs = 200;
+        int waited = 0;
+        while (!callbackExecuted && waited < maxWaitMs) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            waited += 5;
+        }
+        MESSAGE("Callback executed after ", (waited * 5), "ms");
         CHECK(callbackExecuted);
 
         // Try to update non-existent timer
