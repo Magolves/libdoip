@@ -9,6 +9,8 @@
 
 #include "DoIPServer.h"
 
+#include "ExampleDoIPServerModel.h"
+
 
 using namespace doip;
 using namespace std;
@@ -19,41 +21,6 @@ DoIPServer server;
 std::vector<std::thread> doipReceiver;
 bool serverActive = false;
 std::unique_ptr<DoIPConnection> connection(nullptr);
-
-/**
- * @brief Example DoIPServerModel with custom callbacks
- *
- */
-class ExampleDoIPServerModel : public DoIPServerModel {
-  public:
-    ExampleDoIPServerModel() {
-        DOIP_LOG_HIGHLIGHT("Configuring ExampleDoIPServerModel callbacks");
-
-        onCloseConnection = [](IConnectionContext& ctx) noexcept {
-            (void)ctx;
-            DOIP_LOG_INFO("Connection closed (from ExampleDoIPServerModel)");
-        };
-
-        onDiagnosticMessage = [](IConnectionContext& ctx, const DoIPMessage &msg) noexcept -> DoIPDiagnosticAck {
-            (void)ctx;
-            DOIP_LOG_INFO("Received Diagnostic message (from ExampleDoIPServerModel)", fmt::streamed(msg));
-
-            // Example: Access payload using getPayload()
-            auto payload = msg.getPayload();
-            if (payload.second >= 3 && payload.first[0] == 0x22 && payload.first[1] == 0xF1 && payload.first[2] == 0x90) {
-                DOIP_LOG_INFO(" - Detected Read Data by Identifier for VIN (0xF190) -> send NACK");
-                return DoIPNegativeDiagnosticAck::UnknownTargetAddress;
-            }
-
-            return std::nullopt;
-        };
-
-        onDiagnosticNotification = [](IConnectionContext& ctx, DoIPDiagnosticAck ack) noexcept {
-            (void)ctx;
-            DOIP_LOG_INFO("Diagnostic ACK/NACK sent (from ExampleDoIPServerModel)", fmt::streamed(ack));
-        };
-    }
-};
 
 
 void listenUdp();

@@ -192,8 +192,10 @@ class DoIPServerStateMachine {
     void stopAllTimers();
     void sendRoutingActivationResponse(const DoIPAddress& sourceAddress, uint8_t response_code);
     void sendAliveCheckRequest();
+
+    void sendDiagnosticMessageResponse(const DoIPAddress& sourceAddress, DoIPDiagnosticAck ack);
     void sendDiagnosticMessageAck(const DoIPAddress& sourceAddress);
-    void sendDiagnosticMessageNack(const DoIPAddress& sourceAddress, uint8_t nack_code);
+    void sendDiagnosticMessageNack(const DoIPAddress& sourceAddress, DoIPNegativeDiagnosticAck nack);
 
     // Helper function to forward messages
     void notifyMessage(const DoIPMessage &msg);

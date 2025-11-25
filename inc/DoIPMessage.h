@@ -57,6 +57,12 @@ constexpr uint8_t DIAGNOSTIC_MESSAGE_ACK = 0;
 constexpr size_t DOIP_HEADER_SIZE = 8;
 
 /**
+ * @brief Size of the DoIP diagnostic message header
+ */
+constexpr size_t DOIP_DIAG_HEADER_SIZE = DOIP_HEADER_SIZE + 4;
+
+
+/**
  * @brief Represents a complete DoIP message with internal ByteArray representation.
  *
  * The message is stored internally as a complete ByteArray including the 8-byte header
@@ -158,6 +164,18 @@ public:
             return {nullptr, 0};
         }
         return {m_data.data() + DOIP_HEADER_SIZE, m_data.size() - DOIP_HEADER_SIZE};
+    }
+
+    /**
+     * @brief Gets the payload data (without header).
+     *
+     * @return ByteArrayRef pointing to the payload portion
+     */
+    ByteArrayRef getDiagnosticMessagePayload() const {
+        if (m_data.size() <= DOIP_DIAG_HEADER_SIZE) {
+            return {nullptr, 0};
+        }
+        return {m_data.data() + DOIP_DIAG_HEADER_SIZE, m_data.size() - DOIP_DIAG_HEADER_SIZE};
     }
 
     /**

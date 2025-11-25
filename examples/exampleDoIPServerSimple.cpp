@@ -2,6 +2,8 @@
 #include "DoIPAddress.h"
 #include "Logger.h"
 
+#include "ExampleDoIPServerModel.h"
+
 #include <iostream>
 #include <csignal>
 #include <atomic>
@@ -123,7 +125,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Start the server with automatic connection handling
-    if (!server.start(onConnectionAccepted, true)) {
+    if (!server.start<ExampleDoIPServerModel>(onConnectionAccepted, true)) {
         DOIP_LOG_ERROR("Failed to start server");
         return 1;
     }

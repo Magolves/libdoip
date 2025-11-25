@@ -195,8 +195,8 @@ void DoIPServerStateMachine::handleRoutingActivated(DoIPEvent event, const DoIPM
         if (msg) {
             auto sourceAddress = msg->getSourceAddress();
             if (sourceAddress.has_value()) {
-                // Send diagnostic message acknowledgment
-                sendDiagnosticMessageAck(sourceAddress.value());
+                auto ack = m_context.handleDiagnosticMessage(*msg);
+                sendDiagnosticMessageResponse(sourceAddress.value(), ack);
 
                 // Reset general inactivity timer
                 stopTimer(TimerID::GeneralInactivity);
@@ -405,6 +405,14 @@ void DoIPServerStateMachine::sendAliveCheckRequest() {
     DOIP_LOG_INFO("Sent alive check request");
 }
 
+void DoIPServerStateMachine::sendDiagnosticMessageResponse(const DoIPAddress& sourceAddress, DoIPDiagnosticAck ack) {
+    if (ack.has_value()) {
+        sendDiagnosticMessageNack(sourceAddress, ack.value());
+    } else {
+        sendDiagnosticMessageAck(sourceAddress);
+    }
+}
+
 void DoIPServerStateMachine::sendDiagnosticMessageAck(const DoIPAddress &source_address) {
     DoIPAddress sourceAddr = source_address;
     DoIPAddress targetAddr(m_activeSourceAddress);
@@ -420,7 +428,7 @@ void DoIPServerStateMachine::sendDiagnosticMessageAck(const DoIPAddress &source_
     DOIP_LOG_INFO("Sent diagnostic message ACK to address=" + std::to_string(static_cast<unsigned int>(source_address.toUint16())));
 }
 
-void DoIPServerStateMachine::sendDiagnosticMessageNack(const DoIPAddress &source_address, uint8_t nack_code) {
+void DoIPServerStateMachine::sendDiagnosticMessageNack(const DoIPAddress &source_address, DoIPNegativeDiagnosticAck nack_code) {
     DoIPAddress sourceAddr = source_address;
     DoIPAddress targetAddr(m_activeSourceAddress);
 

@@ -8,9 +8,9 @@
 
 namespace doip {
 
-DoIPConnection::DoIPConnection(int tcpSocket, const DoIPServerModel &model)
+DoIPConnection::DoIPConnection(int tcpSocket, UniqueServerModelPtr model)
     : m_tcpSocket(tcpSocket),
-      m_serverModel(model),
+      m_serverModel(std::move(model)),
       m_stateMachine(*this) {
 }
 
@@ -144,7 +144,7 @@ void DoIPConnection::closeConnection(CloseReason reason) {
 }
 
 DoIPAddress DoIPConnection::getServerAddress() const {
-    return m_serverModel.serverAddress;
+    return m_serverModel->serverAddress;
 }
 
 uint16_t DoIPConnection::getActiveSourceAddress() const {
@@ -157,8 +157,8 @@ void DoIPConnection::setActiveSourceAddress(uint16_t address) {
 
 DoIPDiagnosticAck DoIPConnection::handleDiagnosticMessage(const DoIPMessage &msg) {
     // Forward to application callback
-    if (m_serverModel.onDiagnosticMessage) {
-        return m_serverModel.onDiagnosticMessage(*this, msg);
+    if (m_serverModel->onDiagnosticMessage) {
+        return m_serverModel->onDiagnosticMessage(*this, msg);
     }
     // Default: ACK
     return std::nullopt;
@@ -166,14 +166,14 @@ DoIPDiagnosticAck DoIPConnection::handleDiagnosticMessage(const DoIPMessage &msg
 
 void DoIPConnection::notifyConnectionClosed(CloseReason reason) {
     (void)reason; // Could extend DoIPServerModel to include close reason
-    if (m_serverModel.onCloseConnection) {
-        m_serverModel.onCloseConnection(*this);
+    if (m_serverModel->onCloseConnection) {
+        m_serverModel->onCloseConnection(*this);
     }
 }
 
 void DoIPConnection::notifyDiagnosticAckSent(DoIPDiagnosticAck ack) {
-    if (m_serverModel.onDiagnosticNotification) {
-        m_serverModel.onDiagnosticNotification(*this, ack);
+    if (m_serverModel->onDiagnosticNotification) {
+        m_serverModel->onDiagnosticNotification(*this, ack);
     }
 }
 

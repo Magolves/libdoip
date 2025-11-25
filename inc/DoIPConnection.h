@@ -26,7 +26,7 @@ constexpr size_t MAX_ISOTP_MTU = 4095;
 class DoIPConnection : public IConnectionContext {
   public:
 
-    DoIPConnection(int tcpSocket, const DoIPServerModel &model);
+    DoIPConnection(int tcpSocket, UniqueServerModelPtr model);
 
     int receiveTcpMessage();
     size_t receiveFixedNumberOfBytesFromTCP(uint8_t *receivedData, size_t payloadLength);
@@ -42,15 +42,15 @@ class DoIPConnection : public IConnectionContext {
 
     /**
      * @brief Gets the server model configuration
-     * @return Reference to the current DoIPServerModel
+     * @return Pointer to the current DoIPServerModel, or nullptr if not set
      */
-    const DoIPServerModel& getServerModel() const { return m_serverModel; }
+    DoIPServerModel* getServerModel() const { return m_serverModel.get(); }
 
     /**
      * @brief Sets the server model configuration
      * @param model The DoIPServerModel to use for this connection
      */
-    void setServerModel(const DoIPServerModel& model) { m_serverModel = model; }
+    void setServerModel(UniqueServerModelPtr model) { m_serverModel = std::move(model); }
 
     // === IConnectionContext interface implementation ===
 
@@ -110,7 +110,7 @@ class DoIPConnection : public IConnectionContext {
     DoIPAddress m_gatewayAddress;
     DoIPAddress m_routedClientAddress;
 
-    DoIPServerModel m_serverModel;
+    UniqueServerModelPtr m_serverModel;
     DoIPServerStateMachine m_stateMachine;
 
     bool m_isClosing{false};  // TODO: Guard against recursive closeConnection calls -> solve this

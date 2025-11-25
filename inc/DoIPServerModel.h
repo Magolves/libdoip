@@ -28,6 +28,8 @@ struct DoIPServerModel {
     DoIPAddress serverAddress;
 };
 
+using UniqueServerModelPtr = std::unique_ptr<DoIPServerModel>;
+
 struct DefaultDoIPServerModel : public DoIPServerModel {
     DefaultDoIPServerModel() {
         DOIP_LOG_CRITICAL("Using DefaultDoIPServerModel - no callbacks are set!");

@@ -82,6 +82,7 @@ class DoIPServer {
      * @param sendAnnouncements If true, send vehicle announcements on startup
      * @return true if server started successfully, false otherwise
      */
+    template <typename Model>
     bool start(ConnectionAcceptedHandler onConnectionAccepted, bool sendAnnouncements = true);
 
     /**
@@ -161,7 +162,10 @@ class DoIPServer {
 
     // Worker thread functions
     void udpListenerThread();
+
+    template <typename Model>
     void tcpListenerThread();
+
     void connectionHandlerThread(std::unique_ptr<DoIPConnection> connection);
 };
 
@@ -182,20 +186,102 @@ std::unique_ptr<DoIPConnection> DoIPServer::waitForTcpConnection() {
     }
 
     // Create a default server model with the gateway address
-    Model model;
-    model.serverAddress = m_gatewayAddress;
-    if (model.onDiagnosticMessage == nullptr) {
-        model.onDiagnosticMessage = [](IConnectionContext& ctx, const DoIPMessage &msg) noexcept -> DoIPDiagnosticAck {
-            (void)ctx;
-            (void)msg;
-            DOIP_LOG_CRITICAL("Diagnostic message received on default-constructed Model");
-            // Default: always ACK
-            return std::nullopt;
-        };
+    // Model model;
+    // model.serverAddress = m_gatewayAddress;
+    // if (model.onDiagnosticMessage == nullptr) {
+    //     model.onDiagnosticMessage = [](IConnectionContext& ctx, const DoIPMessage &msg) noexcept -> DoIPDiagnosticAck {
+    //         (void)ctx;
+    //         (void)msg;
+    //         DOIP_LOG_CRITICAL("Diagnostic message received on default-constructed Model");
+    //         // Default: always ACK
+    //         return std::nullopt;
+    //     };
+    // }
+
+    return std::unique_ptr<DoIPConnection>(new DoIPConnection(tcpSocket, std::make_unique<Model>()));
+}
+
+/*
+ * Background thread: TCP connection acceptor
+ */
+template <typename Model>
+void DoIPServer::tcpListenerThread() {
+    DOIP_LOG_INFO("TCP listener thread started");
+
+    while (m_running.load()) {
+        auto connection = waitForTcpConnection<Model>();
+
+        if (!connection) {
+            if (m_running.load()) {
+                TCP_LOG_DEBUG("Failed to accept connection, retrying...");
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+            continue;
+        }
+
+        // Spawn a dedicated thread for this connection
+        // Note: We detach because the connection thread manages its own lifecycle
+        std::thread(&DoIPServer::connectionHandlerThread, this, std::move(connection)).detach();
     }
 
-    return std::unique_ptr<DoIPConnection>(new DoIPConnection(tcpSocket, model));
+    DOIP_LOG_INFO("TCP listener thread stopped");
 }
+
+/*
+ * High-level API: Start the server with automatic connection handling
+ */
+template <typename Model>
+bool DoIPServer::start(ConnectionAcceptedHandler onConnectionAccepted, bool sendAnnouncements) {
+    if (m_running.load()) {
+        DOIP_LOG_WARN("Server is already running");
+        return false;
+    }
+
+    if (!onConnectionAccepted) {
+        DOIP_LOG_ERROR("Connection handler callback is required");
+        return false;
+    }
+
+    m_connectionHandler = onConnectionAccepted;
+
+    // Setup sockets
+    setupUdpSocket();
+    if (m_udp_sock < 0) {
+        DOIP_LOG_ERROR("Failed to setup UDP socket");
+        return false;
+    }
+
+    setupTcpSocket();
+    if (m_tcp_sock < 0) {
+        DOIP_LOG_ERROR("Failed to setup TCP socket");
+        closeUdpSocket();
+        return false;
+    }
+
+    // Start background threads
+    m_running.store(true);
+
+    try {
+        m_workerThreads.emplace_back(&DoIPServer::udpListenerThread, this);
+        m_workerThreads.emplace_back(&DoIPServer::tcpListenerThread<Model>, this);
+
+        DOIP_LOG_INFO("DoIP Server started successfully");
+
+        // Send vehicle announcements if requested
+        if (sendAnnouncements) {
+            sendVehicleAnnouncement();
+        }
+
+        return true;
+    } catch (const std::exception &e) {
+        DOIP_LOG_ERROR("Failed to start worker threads: {}", e.what());
+        m_running.store(false);
+        closeUdpSocket();
+        closeTcpSocket();
+        return false;
+    }
+}
+
 
 } // namespace doip
 

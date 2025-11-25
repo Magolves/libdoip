@@ -24,59 +24,6 @@ DoIPServer::~DoIPServer() {
     }
 }
 
-/*
- * High-level API: Start the server with automatic connection handling
- */
-bool DoIPServer::start(ConnectionAcceptedHandler onConnectionAccepted, bool sendAnnouncements) {
-    if (m_running.load()) {
-        DOIP_LOG_WARN("Server is already running");
-        return false;
-    }
-
-    if (!onConnectionAccepted) {
-        DOIP_LOG_ERROR("Connection handler callback is required");
-        return false;
-    }
-
-    m_connectionHandler = onConnectionAccepted;
-
-    // Setup sockets
-    setupUdpSocket();
-    if (m_udp_sock < 0) {
-        DOIP_LOG_ERROR("Failed to setup UDP socket");
-        return false;
-    }
-
-    setupTcpSocket();
-    if (m_tcp_sock < 0) {
-        DOIP_LOG_ERROR("Failed to setup TCP socket");
-        closeUdpSocket();
-        return false;
-    }
-
-    // Start background threads
-    m_running.store(true);
-
-    try {
-        m_workerThreads.emplace_back(&DoIPServer::udpListenerThread, this);
-        m_workerThreads.emplace_back(&DoIPServer::tcpListenerThread, this);
-
-        DOIP_LOG_INFO("DoIP Server started successfully");
-
-        // Send vehicle announcements if requested
-        if (sendAnnouncements) {
-            sendVehicleAnnouncement();
-        }
-
-        return true;
-    } catch (const std::exception &e) {
-        DOIP_LOG_ERROR("Failed to start worker threads: {}", e.what());
-        m_running.store(false);
-        closeUdpSocket();
-        closeTcpSocket();
-        return false;
-    }
-}
 
 /*
  * High-level API: Stop the server and cleanup
@@ -120,41 +67,7 @@ void DoIPServer::udpListenerThread() {
     DOIP_LOG_INFO("UDP listener thread stopped");
 }
 
-/*
- * Background thread: TCP connection acceptor
- */
-void DoIPServer::tcpListenerThread() {
-    DOIP_LOG_INFO("TCP listener thread started");
 
-    while (m_running.load()) {
-        auto connection = waitForTcpConnection();
-
-        if (!connection) {
-            if (m_running.load()) {
-                TCP_LOG_DEBUG("Failed to accept connection, retrying...");
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            }
-            continue;
-        }
-
-        // Invoke the user's callback to get the server model
-        auto optModel = m_connectionHandler(connection.get());
-
-        if (!optModel.has_value()) {
-            TCP_LOG_INFO("Connection rejected by application handler");
-            continue;
-        }
-
-        // Apply the model to the connection
-        connection->setServerModel(optModel.value());
-
-        // Spawn a dedicated thread for this connection
-        // Note: We detach because the connection thread manages its own lifecycle
-        std::thread(&DoIPServer::connectionHandlerThread, this, std::move(connection)).detach();
-    }
-
-    DOIP_LOG_INFO("TCP listener thread stopped");
-}
 
 /*
  * Background thread: Handle individual TCP connection
