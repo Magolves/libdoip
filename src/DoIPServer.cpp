@@ -1,9 +1,12 @@
 #include "DoIPServer.h"
+#include "DoIPConnection.h"
 #include "DoIPMessage.h"
+#include "DoIPServerModel.h"
 #include "Logger.h"
 #include "MacAddress.h"
-#include <cerrno>  // for errno
-#include <cstring> // for strerror
+#include <algorithm> // for std::remove_if
+#include <cerrno>    // for errno
+#include <cstring>   // for strerror
 
 using namespace doip;
 
@@ -12,8 +15,78 @@ const char *DEFAULT_IFACE = "eth0";
 #elif defined(__APPLE__)
 const char *DEFAULT_IFACE = "en0";
 #else
-#pragmea error "Unsupported platform"
+#pragma error "Unsupported platform"
 #endif
+
+DoIPServer::~DoIPServer() {
+    if (m_running.load()) {
+        stop();
+    }
+}
+
+
+/*
+ * High-level API: Stop the server and cleanup
+ */
+void DoIPServer::stop() {
+    DOIP_LOG_INFO("Stopping DoIP Server...");
+    m_running.store(false);
+
+    // Close sockets to unblock any pending accept/recv calls
+    closeUdpSocket();
+    closeTcpSocket();
+
+    // Wait for all threads to finish
+    for (auto &thread : m_workerThreads) {
+        if (thread.joinable()) {
+            thread.join();
+        }
+    }
+    m_workerThreads.clear();
+
+    DOIP_LOG_INFO("DoIP Server stopped");
+}
+
+/*
+ * Background thread: UDP message listener
+ */
+void DoIPServer::udpListenerThread() {
+    DOIP_LOG_INFO("UDP listener thread started");
+
+    while (m_running.load()) {
+        ssize_t result = receiveUdpMessage();
+
+        // If timeout (result == 0), continue without delay
+        // The socket already has a timeout configured
+        if (result < 0 && m_running.load()) {
+            // Only log errors if we're still supposed to be running
+            UDP_LOG_DEBUG("UDP receive error, continuing...");
+        }
+    }
+
+    DOIP_LOG_INFO("UDP listener thread stopped");
+}
+
+
+
+/*
+ * Background thread: Handle individual TCP connection
+ */
+void DoIPServer::connectionHandlerThread(std::unique_ptr<DoIPConnection> connection) {
+    TCP_LOG_INFO("Connection handler thread started");
+
+    while (m_running.load() && connection->isSocketActive()) {
+        int result = connection->receiveTcpMessage();
+
+        if (result < 0) {
+            TCP_LOG_INFO("Connection closed or error occurred");
+            break;
+        }
+    }
+
+    // Connection is automatically closed when unique_ptr goes out of scope
+    TCP_LOG_INFO("Connection handler thread stopped");
+}
 
 /*
  * Set up a tcp socket, so the socket is ready to accept a connection
@@ -44,28 +117,6 @@ void DoIPServer::setupTcpSocket() {
     }
 
     TCP_LOG_INFO("TCP socket successfully bound to port {}", DOIP_SERVER_PORT);
-}
-
-/*
- *  Wait till a client attempts a connection and accepts it
- */
-std::unique_ptr<DoIPConnection> DoIPServer::waitForTcpConnection() {
-    TCP_LOG_INFO("Waiting for TCP connection...");
-
-    // waits till client approach to make connection
-    if (listen(m_tcp_sock, 5) < 0) {
-        TCP_LOG_CRITICAL("Failed to listen on TCP socket: {}", strerror(errno));
-        return nullptr;
-    }
-
-    int tcpSocket = accept(m_tcp_sock, nullptr, nullptr);
-    if (tcpSocket < 0) {
-        TCP_LOG_CRITICAL("Failed to accept TCP connection: {}", strerror(errno));
-        return nullptr;
-    }
-
-    TCP_LOG_INFO("TCP connection accepted, socket: {}", tcpSocket);
-    return std::unique_ptr<DoIPConnection>(new DoIPConnection(tcpSocket, m_gatewayAddress));
 }
 
 void DoIPServer::setupUdpSocket() {
@@ -110,11 +161,9 @@ void DoIPServer::closeUdpSocket() {
  *              or -1 if error occurred
  */
 ssize_t DoIPServer::receiveUdpMessage() {
-    UDP_LOG_DEBUG("Wait for UDP message...");
-
     // Set socket timeout to prevent blocking indefinitely
     struct timeval timeout;
-    timeout.tv_sec = 1;  // 1 second timeout
+    timeout.tv_sec = 1; // 1 second timeout
     timeout.tv_usec = 0;
     setsockopt(m_udp_sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 
@@ -135,12 +184,12 @@ ssize_t DoIPServer::receiveUdpMessage() {
     // Don't log if no data received (can happen with some socket configurations)
     if (readBytes > 0) {
         UDP_LOG_INFO("RX {} bytes from {}:{}", readBytes,
-                    inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
+                     inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
     } else {
         // For debugging: log zero-byte messages at debug level
         UDP_LOG_DEBUG("RX 0 bytes from {}:{}",
-                     inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
-        return 0;  // Return early for zero-byte messages
+                      inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
+        return 0; // Return early for zero-byte messages
     }
 
     // Store client address for response
@@ -280,7 +329,7 @@ ssize_t DoIPServer::sendVehicleAnnouncement() {
 
     if (setAddressError != 0) {
         DOIP_LOG_INFO("{} address set successfully: {}",
-                     m_useLoopbackAnnouncements ? "Loopback" : "Broadcast", address);
+                      m_useLoopbackAnnouncements ? "Loopback" : "Broadcast", address);
     }
 
     if (!m_useLoopbackAnnouncements) {

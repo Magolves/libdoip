@@ -1,6 +1,7 @@
 
 #ifndef DOIPCLIENT_H
 #define DOIPCLIENT_H
+
 #include <arpa/inet.h>
 #include <cstddef>
 #include <cstdlib>
@@ -9,7 +10,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "DiagnosticMessageHandler.h"
+#include "DoIPMessage.h"
 
 namespace doip {
 
@@ -37,10 +38,9 @@ class DoIPClient {
 
     /**
      * Sends a diagnostic message to the server
-     * @param targetAddress     the address of the ecu which should receive the message
      * @param payload          data that will be given to the ecu
      */
-    ssize_t sendDiagnosticMessage(const DoIPAddress &targetAddress, const ByteArray &payload);
+    ssize_t sendDiagnosticMessage(const ByteArray &payload);
 
     /**
      * Sends a alive check response containing the clients source address to the server

@@ -1,18 +1,17 @@
 #include "DoIPClient.h"
+#include "DoIPMessage.h"
 #include "Logger.h"
 
-#include<iostream>
-#include<iomanip>
-#include<thread>
+#include <iomanip>
+#include <iostream>
+#include <thread>
 
 using namespace doip;
 using namespace std;
 
-
 DoIPClient client;
 
-
-static void printUsage(const char* progName) {
+static void printUsage(const char *progName) {
     cout << "Usage: " << progName << " [OPTIONS]\n";
     cout << "Options:\n";
     cout << "  --loopback            Use loopback (127.0.0.1) instead of multicast\n";
@@ -20,8 +19,8 @@ static void printUsage(const char* progName) {
     cout << "  --help                Show this help message\n";
 }
 
-int main(int argc, char* argv[]) {
-    string serverAddress = "224.0.0.2";  // Default multicast address
+int main(int argc, char *argv[]) {
+    string serverAddress = "224.0.0.2"; // Default multicast address
 
     // Parse command line arguments
     for (int i = 1; i < argc; i++) {
@@ -68,6 +67,11 @@ int main(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
     }
 
+    client.receiveMessage();
+
+    client.sendDiagnosticMessage({0x22, 0xF1, 0x90}); // Example: Read Data by Identifier (0xF190 = VIN)
+    client.receiveMessage();
+    client.sendDiagnosticMessage({0x22, 0xF2, 0x90}); // Example: Read Data by Identifier (0xF190 = VIN)
     client.receiveMessage();
 
     client.closeTcpConnection();

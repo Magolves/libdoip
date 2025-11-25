@@ -21,7 +21,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang
         -Wsign-conversion       # Warn about sign conversions
         -Wsign-promo            # Warn about promotions from signed to unsigned
         -Wstrict-overflow=2     # Warn about optimizations based on strict overflow rules (level 2 = reasonable balance)
-        -Wswitch-default        # Warn about switch statements without default
         -Wundef                 # Warn about undefined macros
         -Wunreachable-code      # Warn about unreachable code
         -Wunused                # Warn about unused variables, functions, etc.
@@ -46,6 +45,13 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang
             -Wnoexcept              # Warn when a noexcept expression evaluates to false
             -Wstrict-null-sentinel  # Warn about uncasted NULL used as sentinel
         )
+
+        # Disable false positive warnings in GCC 13+
+        if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13.0)
+            add_compile_options(
+                -Wno-dangling-reference  # False positive with fmt library's stream operator detection
+            )
+        endif()
     endif()
 
     # Clang-specific warnings
@@ -177,8 +183,9 @@ if(ENABLE_STATIC_ANALYSIS)
             --std=c++17;
             --verbose;
             --quiet;
-            --suppress=missingIncludeSystem
-            --suppress=unusedFunction
+            --suppress=missingIncludeSystem;
+            --suppress=unusedFunction;
+            -i${CMAKE_BINARY_DIR}/_deps;
         )
         message(STATUS "cppcheck found: ${CPPCHECK_EXE}")
     else()

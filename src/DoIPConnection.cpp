@@ -6,23 +6,19 @@
 #include <iomanip>
 #include <iostream>
 
-using namespace doip;
+namespace doip {
 
-/**
- * Closes the connection by closing the sockets
- */
-void DoIPConnection::aliveCheckTimeout() {
-    DOIP_LOG_ERROR("Alive Check Timeout. Close Connection");
-    closeSocket();
-    m_close_connection();
+DoIPConnection::DoIPConnection(int tcpSocket, UniqueServerModelPtr model)
+    : m_tcpSocket(tcpSocket),
+      m_serverModel(std::move(model)),
+      m_stateMachine(*this) {
 }
 
 /*
- * Closes the socket for this server
+ * Closes the socket for this server (private method)
  */
 void DoIPConnection::closeSocket() {
-    close(m_tcpSocket);
-    m_tcpSocket = 0;
+    closeConnection(DoIPCloseReason::ApplicationRequest);
 }
 
 /*
@@ -34,14 +30,15 @@ int DoIPConnection::receiveTcpMessage() {
     DOIP_LOG_INFO("Waiting for DoIP Header...");
     uint8_t genericHeader[DOIP_HEADER_SIZE];
     unsigned int readBytes = receiveFixedNumberOfBytesFromTCP(genericHeader, DOIP_HEADER_SIZE);
-    if (readBytes == DOIP_HEADER_SIZE && !m_aliveCheckTimer.hasTimeout()) {
+    if (readBytes == DOIP_HEADER_SIZE /*&& !m_aliveCheckTimer.hasTimeout()*/) {
         DOIP_LOG_INFO("Received DoIP Header.");
 
         auto optHeader = DoIPMessage::tryParseHeader(genericHeader, DOIP_HEADER_SIZE);
         if (!optHeader.has_value()) {
-            auto sentBytes = sendNegativeAck(DoIPNegativeAck::IncorrectPatternFormat);
+            m_stateMachine.processEvent(DoIPEvent::InvalidMessage);
+            DOIP_LOG_ERROR("DoIP message header parsing failed");
             closeSocket();
-            return sentBytes;
+            return -2;
         }
 
         auto plType = optHeader->first;
@@ -49,30 +46,24 @@ int DoIPConnection::receiveTcpMessage() {
 
         DOIP_LOG_INFO("Payload Type: {}, length: {} ", fmt::streamed(plType), payloadLength);
 
-
         if (payloadLength > 0) {
             DOIP_LOG_DEBUG("Waiting for {} bytes of payload...", payloadLength);
             unsigned int receivedPayloadBytes = receiveFixedNumberOfBytesFromTCP(m_receiveBuf.data(), payloadLength);
             if (receivedPayloadBytes < payloadLength) {
                 DOIP_LOG_ERROR("DoIP message completely incomplete");
-                auto sentBytes = sendNegativeAck(DoIPNegativeAck::InvalidPayloadLength);
+                m_stateMachine.processEvent(DoIPEvent::InvalidMessage);
                 closeSocket();
-                return sentBytes;
+                return -2;
             }
 
             DoIPMessage msg = DoIPMessage(plType, m_receiveBuf.data(), receivedPayloadBytes);
             DOIP_LOG_INFO("RX: {}", fmt::streamed(msg));
         }
 
-        // if alive check timouts should be possible, reset timer when message received
-        if (m_aliveCheckTimer.isActive()) {
-            m_aliveCheckTimer.resetTimer();
-        }
-
         DoIPMessage message(plType, m_receiveBuf.data(), payloadLength);
-        int sentBytes = reactOnReceivedTcpMessage(message);
+        m_stateMachine.processMessage(message);
 
-        return sentBytes;
+        return 1;
     } else {
         closeSocket();
         return 0;
@@ -105,78 +96,6 @@ size_t DoIPConnection::receiveFixedNumberOfBytesFromTCP(uint8_t *receivedData, s
 
     return payloadPos;
 }
-int DoIPConnection::reactOnReceivedTcpMessage(const DoIPMessage &message) {
-    // Process the received DoIP message
-    ssize_t sentBytes = -1;
-    switch (message.getPayloadType()) {
-    case DoIPPayloadType::NegativeAck: {
-        // should not happen, already handled in receiveTcpMessage
-        break;
-    }
-
-    case DoIPPayloadType::AliveCheckResponse: {
-        return 0;
-    }
-
-    case DoIPPayloadType::AliveCheckRequest: {
-        // Handle Alive Check Request
-        DoIPMessage response = message::makeAliveCheckResponse(m_gatewayAddress);
-        sentBytes = sendMessage(response.data(), response.size());
-        break;
-    }
-
-    case DoIPPayloadType::RoutingActivationRequest: {
-        auto optSourceAddress = message.getSourceAddress();
-        if (!optSourceAddress.has_value()) {
-            DOIP_LOG_WARN("No address in routing request: {}", fmt::streamed(message));
-            sentBytes = sendNegativeAck(DoIPNegativeAck::InvalidPayloadLength);
-            closeSocket();
-            return sentBytes;
-        }
-
-        if (!m_aliveCheckTimer.isActive()) {
-            m_aliveCheckTimer.setCloseConnectionHandler(std::bind(&DoIPConnection::aliveCheckTimeout, this));
-            m_aliveCheckTimer.startTimer();
-        }
-
-        m_routedClientAddress = optSourceAddress.value();
-        DoIPMessage response = message::makeRoutingActivationResponse(message, m_gatewayAddress);
-        sentBytes = sendMessage(response.data(), response.size());
-
-        break;
-    }
-    case DoIPPayloadType::DiagnosticMessage : {
-        auto optTargetAddress = message.getTargetAddress();
-        if (!optTargetAddress.has_value()) {
-            sentBytes = sendNegativeAck(DoIPNegativeAck::InvalidPayloadLength);
-            break;
-        }
-
-        DoIPAddress ta = optTargetAddress.value();
-        DoIPDiagnosticAck ackResponse = std::nullopt;
-        if (m_notify_application && m_notify_application(ta)) {
-            ackResponse = handleDiagnosticMessage(m_diag_callback, m_routedClientAddress, message.getPayload().first, message.getPayloadSize());
-        }
-
-        if (ackResponse.has_value()) {
-            sendDiagnosticNegativeAck(ta, ackResponse.value());
-        } else {
-            sendDiagnosticAck(ta);
-        }
-
-        // continue here
-
-        break;
-    }
-
-    default: {
-        DOIP_LOG_ERROR("Received message with unhandled payload type: {}", static_cast<uint8_t>(message.getPayloadType()));
-        return -1;
-    }
-    }
-
-    return sentBytes;
-}
 
 void DoIPConnection::triggerDisconnection() {
     DOIP_LOG_INFO("Application requested to disconnect Client from Server");
@@ -195,64 +114,67 @@ ssize_t DoIPConnection::sendMessage(const uint8_t *message, size_t messageLength
     return result;
 }
 
-/**
- * Sets the time in seconds after which a alive check timeout occurs.
- * Alive check timeouts can be deactivated when setting the seconds to 0
- * @param seconds   time after which alive check timeout occurs
- */
-void DoIPConnection::setGeneralInactivityTime(uint16_t seconds) {
-    if (seconds > 0) {
-        m_aliveCheckTimer.setTimer(seconds);
+// === IConnectionContext interface implementation ===
+ssize_t DoIPConnection::sendProtocolMessage(const DoIPMessage &msg) {
+    ssize_t sentBytes = sendMessage(msg.data(), msg.size());
+    if (sentBytes < 0) {
+        DOIP_LOG_ERROR("Error sending message to client: {}", fmt::streamed(msg));
     } else {
-        m_aliveCheckTimer.setDisabled(true);
+        DOIP_LOG_INFO("Sent {} bytes to client: {}", sentBytes, fmt::streamed(msg));
+    }
+    return sentBytes;
+}
+
+void DoIPConnection::closeConnection(DoIPCloseReason reason) {
+    // Guard against recursive calls
+    if (m_isClosing) {
+        DOIP_LOG_DEBUG("Connection already closing - ignoring recursive call");
+        return;
+    }
+
+    m_isClosing = true;
+    DOIP_LOG_INFO("Closing connection, reason: {}", static_cast<int>(reason));
+
+    m_stateMachine.processEvent(DoIPEvent::CloseRequestReceived);
+    close(m_tcpSocket);
+    m_tcpSocket = 0;
+
+    // Notify application
+    notifyConnectionClosed(reason);
+}
+
+DoIPAddress DoIPConnection::getServerAddress() const {
+    return m_serverModel->serverAddress;
+}
+
+uint16_t DoIPConnection::getActiveSourceAddress() const {
+    return m_stateMachine.getActiveSourceAddress();
+}
+
+void DoIPConnection::setActiveSourceAddress(uint16_t address) {
+    m_stateMachine.setActiveSourceAddress(address);
+}
+
+DoIPDiagnosticAck DoIPConnection::notifyDiagnosticMessage(const DoIPMessage &msg) {
+    // Forward to application callback
+    if (m_serverModel->onDiagnosticMessage) {
+        return m_serverModel->onDiagnosticMessage(*this, msg);
+    }
+    // Default: ACK
+    return std::nullopt;
+}
+
+void DoIPConnection::notifyConnectionClosed(DoIPCloseReason reason) {
+    (void)reason; // Could extend DoIPServerModel to include close reason
+    if (m_serverModel->onCloseConnection) {
+        m_serverModel->onCloseConnection(*this, reason);
     }
 }
 
-/*
- * Send diagnostic message payload to the client
- * @param sourceAddress   logical source address (i.e. address of this server)
- * @param value     received payload
- * @param length    length of received payload
- */
-void DoIPConnection::sendDiagnosticPayload(const DoIPAddress &sourceAddress, const ByteArray &payload) {
-
-    DOIP_LOG_INFO("Sending diagnostic data: {}", fmt::streamed(payload));
-
-    // uint8_t* message = createDiagnosticMessage(sourceAddress, m_routedClientAddress, data, length);
-    DoIPMessage msg = message::makeDiagnosticMessage(sourceAddress, m_routedClientAddress, payload);
-    sendMessage(msg.data(), msg.size());
+void DoIPConnection::notifyDiagnosticAckSent(DoIPDiagnosticAck ack) {
+    if (m_serverModel->onDiagnosticNotification) {
+        m_serverModel->onDiagnosticNotification(*this, ack);
+    }
 }
 
-/*
- * Set the callback function for this doip server instance
- * @dc      Callback which sends the data of a diagnostic message to the application
- * @dmn     Callback which notifies the application of receiving a diagnostic message
- * @ccb     Callback for application function when the library closes the connection
- */
-void DoIPConnection::setCallback(DiagnosticCallback dc, DiagnosticMessageNotification dmn, CloseConnectionCallback ccb) {
-    m_diag_callback = dc;
-    m_notify_application = dmn;
-    m_close_connection = ccb;
-}
-
-void DoIPConnection::sendDiagnosticAck(const DoIPAddress &sourceAddress) {
-    DoIPMessage msg = message::makeDiagnosticPositiveResponse(sourceAddress, m_routedClientAddress, {});
-    sendMessage(msg.data(), msg.size());
-}
-
-void DoIPConnection::sendDiagnosticNegativeAck(const DoIPAddress &sourceAddress, DoIPNegativeDiagnosticAck ackCode) {
-    DoIPMessage msg = message::makeDiagnosticNegativeResponse(sourceAddress, m_routedClientAddress, ackCode, {});
-    sendMessage(msg.data(), msg.size());
-}
-
-/**
- * Prepares a generic header nack and sends it to the client
- * @param ackCode       NACK-Code which will be included in the message
- * @return              amount of bytes sended to the client
- */
-int DoIPConnection::sendNegativeAck(DoIPNegativeAck ackCode) {
-    DoIPMessage msg = message::makeNegativeAckMessage(ackCode);
-    DOIP_LOG_WARN("NACK: {}", fmt::streamed(msg));
-    int sentBytes = sendMessage(msg.data(), msg.size());
-    return sentBytes;
-}
+} // namespace doip

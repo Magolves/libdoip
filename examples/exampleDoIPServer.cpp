@@ -1,11 +1,15 @@
-#include "DoIPServer.h"
+#include <chrono>
+#include <iomanip>
+#include <iostream>
+#include <thread>
+
 #include "DoIPAddress.h"
+#include "DoIPServer.h"
 #include "Logger.h"
 
-#include<iostream>
-#include<iomanip>
-#include<thread>
-#include<chrono>
+#include "DoIPServer.h"
+
+#include "ExampleDoIPServerModel.h"
 
 using namespace doip;
 using namespace std;
@@ -13,76 +17,19 @@ using namespace std;
 static const DoIPAddress LOGICAL_ADDRESS(static_cast<uint8_t>(0x0), static_cast<uint8_t>(0x28));
 
 DoIPServer server;
-unique_ptr<DoIPConnection> connection(nullptr);
 std::vector<std::thread> doipReceiver;
 bool serverActive = false;
+std::unique_ptr<DoIPConnection> connection(nullptr);
 
-void ReceiveFromLibrary(const DoIPAddress& address, const uint8_t* data, size_t length);
-bool DiagnosticMessageReceived(const DoIPAddress& targetAddress);
-void CloseConnection();
 void listenUdp();
 void listenTcp();
-void ConfigureDoipServer();
-
-/**
- * Is called when the doip library receives a diagnostic message.
- * @param address   logical address of the ecu
- * @param data      message which was received
- * @param length    length of the message
- */
-void ReceiveFromLibrary(const DoIPAddress& address, const uint8_t* data, size_t length) {
-    cout << "DoIP Message received from 0x" << hex << address << ": ";
-    for(size_t i = 0; i < length; i++) {
-        cout << hex << setw(2) << +data[i] << " ";
-    }
-    cout << endl;
-
-    if(length > 2 && data[0] == 0x22)  {
-        cout << "-> Send diagnostic message positive response" << endl;
-        ByteArray responseData{ 0x62, data[1], data[2], 0x01, 0x02, 0x03, 0x04};
-        connection->sendDiagnosticPayload(LOGICAL_ADDRESS, responseData);
-    } else {
-        cout << "-> Send diagnostic message negative response" << endl;
-        ByteArray responseData{ 0x7F, data[0], 0x11};
-        connection->sendDiagnosticPayload(LOGICAL_ADDRESS, responseData);
-    }
-
-
-}
-
-/**
- * Will be called when the doip library receives a diagnostic message.
- * The library notifies the application about the message.
- * Checks if there is a ecu with the logical address
- * @param targetAddress     logical address to the ecu
- * @return                  If a positive or negative ACK should be send to the client
- */
-bool DiagnosticMessageReceived(const DoIPAddress& targetAddress) {
-    (void)targetAddress;
-
-    cout << "Received Diagnostic message" << endl;
-
-    //send positiv ack
-    cout << "-> Send positive diagnostic message ack" << endl;
-    connection->sendDiagnosticAck(LOGICAL_ADDRESS);
-
-    return true;
-}
-
-/**
- * Closes the connection of the server by ending the listener threads
- */
-void CloseConnection() {
-    cout << "Connection closed" << endl;
-    //serverActive = false;
-}
 
 /*
  * Check permantly if udp message was received
  */
 void listenUdp() {
 
-    while(serverActive) {
+    while (serverActive) {
         ssize_t result = server.receiveUdpMessage();
         // If timeout (result == 0), sleep briefly to prevent CPU spinning
         if (result == 0) {
@@ -98,18 +45,16 @@ void listenTcp() {
 
     server.setupTcpSocket();
 
-    while(true) {
-        connection = server.waitForTcpConnection();
-        connection->setCallback(ReceiveFromLibrary, DiagnosticMessageReceived, CloseConnection);
-        connection->setGeneralInactivityTime(50000);
+    while (true) {
+        connection = server.waitForTcpConnection<ExampleDoIPServerModel>();
 
-         while(connection->isSocketActive()) {
-             connection->receiveTcpMessage();
-         }
+        while (connection->isSocketActive()) {
+            connection->receiveTcpMessage();
+        }
     }
 }
 
-void ConfigureDoipServer() {
+static void ConfigureDoipServer() {
     // VIN needs to have a fixed length of 17 bytes.
     // Shorter VINs will be padded with '0'
     server.setVIN("EXAMPLESERVER");
@@ -124,17 +69,16 @@ void ConfigureDoipServer() {
 
     // doipserver->setAnnounceNum(tempNum);
     // doipserver->setAnnounceInterval(tempInterval);
-
 }
 
-static void printUsage(const char* progName) {
+static void printUsage(const char *progName) {
     cout << "Usage: " << progName << " [OPTIONS]\n";
     cout << "Options:\n";
     cout << "  --loopback    Use loopback (127.0.0.1) for announcements instead of broadcast\n";
     cout << "  --help        Show this help message\n";
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     bool useLoopback = false;
 
     // Parse command line arguments
@@ -161,7 +105,7 @@ int main(int argc, char* argv[]) {
 
     // Configure server based on mode
     if (useLoopback) {
-        server.setAnnouncementMode(true);  // We'll add this method
+        server.setAnnouncementMode(true);
     }
 
     server.setupUdpSocket();

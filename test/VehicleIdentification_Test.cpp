@@ -1,8 +1,7 @@
 #include "DoIPMessage.h"
 #include "DoIPServer.h"
 #include <doctest/doctest.h>
-#include <stdint.h>
-#include <string>
+#include <sstream>
 
 #include "doctest_aux.h"
 
