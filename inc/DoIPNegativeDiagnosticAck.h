@@ -36,7 +36,7 @@ using DoIPDiagnosticAck = std::optional<DoIPNegativeDiagnosticAck>;
  * @brief Stream output operator for DoIPNegativeDiagnosticAck
  *
  * @param os the output stream
- * @param nack the negative acknowledgment code
+ * @param ack the negative acknowledgment code
  * @return std::ostream& the output stream
  */
 inline std::ostream& operator<<(std::ostream& os, doip::DoIPDiagnosticAck ack) {

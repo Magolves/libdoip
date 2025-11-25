@@ -30,7 +30,6 @@ const int DOIP_SERVER_PORT = 13400;
 
 /**
  * @brief Callback invoked when a new TCP connection is established
- * @param connection The newly created DoIPConnection
  * @return DoIPServerModel to use for this connection, or std::nullopt to reject
  */
 using ConnectionAcceptedHandler = std::function<std::optional<DoIPServerModel>(DoIPConnection *)>;
