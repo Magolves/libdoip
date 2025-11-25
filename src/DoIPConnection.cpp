@@ -115,14 +115,14 @@ ssize_t DoIPConnection::sendMessage(const uint8_t *message, size_t messageLength
 }
 
 // === IConnectionContext interface implementation ===
-
-void DoIPConnection::sendProtocolMessage(const DoIPMessage &msg) {
+ssize_t DoIPConnection::sendProtocolMessage(const DoIPMessage &msg) {
     ssize_t sentBytes = sendMessage(msg.data(), msg.size());
     if (sentBytes < 0) {
         DOIP_LOG_ERROR("Error sending message to client: {}", fmt::streamed(msg));
     } else {
         DOIP_LOG_INFO("Sent {} bytes to client: {}", sentBytes, fmt::streamed(msg));
     }
+    return sentBytes;
 }
 
 void DoIPConnection::closeConnection(CloseReason reason) {

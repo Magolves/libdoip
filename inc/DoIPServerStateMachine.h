@@ -190,15 +190,15 @@ class DoIPServerStateMachine {
     void startTimer(TimerID timer_id, std::chrono::milliseconds duration);
     void stopTimer(TimerID timer_id);
     void stopAllTimers();
-    void sendRoutingActivationResponse(const DoIPAddress& sourceAddress, uint8_t response_code);
-    void sendAliveCheckRequest();
+    ssize_t sendRoutingActivationResponse(const DoIPAddress& sourceAddress, uint8_t response_code);
+    ssize_t sendAliveCheckRequest();
 
-    void sendDiagnosticMessageResponse(const DoIPAddress& sourceAddress, DoIPDiagnosticAck ack);
-    void sendDiagnosticMessageAck(const DoIPAddress& sourceAddress);
-    void sendDiagnosticMessageNack(const DoIPAddress& sourceAddress, DoIPNegativeDiagnosticAck nack);
+    ssize_t sendDiagnosticMessageResponse(const DoIPAddress& sourceAddress, DoIPDiagnosticAck ack);
+    ssize_t sendDiagnosticMessageAck(const DoIPAddress& sourceAddress);
+    ssize_t sendDiagnosticMessageNack(const DoIPAddress& sourceAddress, DoIPNegativeDiagnosticAck nack);
 
     // Helper function to forward messages
-    void notifyMessage(const DoIPMessage &msg);
+    ssize_t sendMessage(const DoIPMessage &msg);
 
     // Inline helper functions for common timer operations
     inline void startGeneralInactivityTimer() {

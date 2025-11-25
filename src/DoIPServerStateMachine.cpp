@@ -380,7 +380,7 @@ void DoIPServerStateMachine::stopAllTimers() {
     DOIP_LOG_DEBUG("Stopped all timers");
 }
 
-void DoIPServerStateMachine::sendRoutingActivationResponse(const DoIPAddress &source_address, uint8_t response_code) {
+ssize_t DoIPServerStateMachine::sendRoutingActivationResponse(const DoIPAddress &source_address, uint8_t response_code) {
     // Create routing activation response message
     DoIPAddress serverAddr = m_context.getServerAddress();
 
@@ -393,27 +393,31 @@ void DoIPServerStateMachine::sendRoutingActivationResponse(const DoIPAddress &so
     payload.insert(payload.end(), {0x00, 0x00, 0x00, 0x00});
 
     DoIPMessage response(DoIPPayloadType::RoutingActivationResponse, std::move(payload));
-    notifyMessage(response);
+    auto sentBytes = sendMessage(response);
 
     DOIP_LOG_INFO("Sent routing activation response: code=" + std::to_string(static_cast<unsigned int>(response_code)) + " to address=" + std::to_string(static_cast<unsigned int>(source_address.toUint16())));
+    return sentBytes;
 }
 
-void DoIPServerStateMachine::sendAliveCheckRequest() {
+ssize_t DoIPServerStateMachine::sendAliveCheckRequest() {
     auto request = message::makeAliveCheckRequest();
-    notifyMessage(request);
+    auto sentBytes = sendMessage(request);
     DOIP_LOG_INFO("Sent alive check request");
+    return sentBytes;
 }
 
-void DoIPServerStateMachine::sendDiagnosticMessageResponse(const DoIPAddress& sourceAddress, DoIPDiagnosticAck ack) {
+ssize_t DoIPServerStateMachine::sendDiagnosticMessageResponse(const DoIPAddress& sourceAddress, DoIPDiagnosticAck ack) {
+    ssize_t sentBytes;
     if (ack.has_value()) {
-        sendDiagnosticMessageNack(sourceAddress, ack.value());
+        sentBytes = sendDiagnosticMessageNack(sourceAddress, ack.value());
     } else {
-        sendDiagnosticMessageAck(sourceAddress);
+        sentBytes = sendDiagnosticMessageAck(sourceAddress);
     }
     m_context.notifyDiagnosticAckSent(ack);
+    return sentBytes;
 }
 
-void DoIPServerStateMachine::sendDiagnosticMessageAck(const DoIPAddress &source_address) {
+ssize_t DoIPServerStateMachine::sendDiagnosticMessageAck(const DoIPAddress &source_address) {
     DoIPAddress sourceAddr = source_address;
     DoIPAddress targetAddr(m_activeSourceAddress);
 
@@ -423,12 +427,13 @@ void DoIPServerStateMachine::sendDiagnosticMessageAck(const DoIPAddress &source_
         ByteArray{} // Empty payload for ACK
     );
 
-    notifyMessage(ack);
+    auto sentBytes = sendMessage(ack);
 
     DOIP_LOG_INFO("Sent diagnostic message ACK to address=" + std::to_string(static_cast<unsigned int>(source_address.toUint16())));
+    return sentBytes;
 }
 
-void DoIPServerStateMachine::sendDiagnosticMessageNack(const DoIPAddress &source_address, DoIPNegativeDiagnosticAck nack_code) {
+ssize_t DoIPServerStateMachine::sendDiagnosticMessageNack(const DoIPAddress &source_address, DoIPNegativeDiagnosticAck nack_code) {
     DoIPAddress sourceAddr = source_address;
     DoIPAddress targetAddr(m_activeSourceAddress);
 
@@ -439,13 +444,14 @@ void DoIPServerStateMachine::sendDiagnosticMessageNack(const DoIPAddress &source
         ByteArray{} // Empty payload
     );
 
-    notifyMessage(nack);
+    auto sentBytes = sendMessage(nack);
 
     DOIP_LOG_INFO("Sent diagnostic message NACK: code=" + std::to_string(static_cast<unsigned int>(nack_code)) + " to address=" + std::to_string(static_cast<unsigned int>(source_address.toUint16())));
+    return sentBytes;
 }
 
-void DoIPServerStateMachine::notifyMessage(const DoIPMessage &msg) {
-    m_context.sendProtocolMessage(msg);
+ssize_t DoIPServerStateMachine::sendMessage(const DoIPMessage &msg) {
+    return m_context.sendProtocolMessage(msg);
 }
 
 } // namespace doip

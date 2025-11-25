@@ -58,7 +58,7 @@ class DoIPConnection : public IConnectionContext {
      * @brief Send a DoIP protocol message to the client
      * @param msg The DoIP message to send
      */
-    void sendProtocolMessage(const DoIPMessage &msg) override;
+    ssize_t sendProtocolMessage(const DoIPMessage &msg) override;
 
     /**
      * @brief Close the TCP connection

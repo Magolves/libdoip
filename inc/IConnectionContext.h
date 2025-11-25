@@ -52,7 +52,7 @@ public:
      *
      * @param msg The DoIP message to send
      */
-    virtual void sendProtocolMessage(const DoIPMessage &msg) = 0;
+    [[nodiscard]] virtual ssize_t sendProtocolMessage(const DoIPMessage &msg) = 0;
 
     /**
      * @brief Close the TCP connection

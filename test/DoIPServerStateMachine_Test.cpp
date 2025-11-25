@@ -42,8 +42,9 @@ public:
     std::function<void(DoIPState, DoIPState)> transitionCallback;
 
     // IConnectionContext implementation
-    void sendProtocolMessage(const DoIPMessage &msg) override {
+    ssize_t sendProtocolMessage(const DoIPMessage &msg) override {
         sentMessages.push_back(msg);
+        return static_cast<ssize_t>(msg.size());
     }
 
     void closeConnection(CloseReason reason) override {
