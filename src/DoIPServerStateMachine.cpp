@@ -195,7 +195,7 @@ void DoIPServerStateMachine::handleRoutingActivated(DoIPEvent event, const DoIPM
         if (msg) {
             auto sourceAddress = msg->getSourceAddress();
             if (sourceAddress.has_value()) {
-                auto ack = m_context.handleDiagnosticMessage(*msg);
+                auto ack = m_context.notifyDiagnosticMessage(*msg);
                 sendDiagnosticMessageResponse(sourceAddress.value(), ack);
 
                 // Reset general inactivity timer
@@ -393,15 +393,14 @@ void DoIPServerStateMachine::sendRoutingActivationResponse(const DoIPAddress &so
     payload.insert(payload.end(), {0x00, 0x00, 0x00, 0x00});
 
     DoIPMessage response(DoIPPayloadType::RoutingActivationResponse, std::move(payload));
-    m_context.sendProtocolMessage(response);
+    notifyMessage(response);
 
     DOIP_LOG_INFO("Sent routing activation response: code=" + std::to_string(static_cast<unsigned int>(response_code)) + " to address=" + std::to_string(static_cast<unsigned int>(source_address.toUint16())));
 }
 
 void DoIPServerStateMachine::sendAliveCheckRequest() {
     auto request = message::makeAliveCheckRequest();
-    m_context.sendProtocolMessage(request);
-
+    notifyMessage(request);
     DOIP_LOG_INFO("Sent alive check request");
 }
 
@@ -411,6 +410,7 @@ void DoIPServerStateMachine::sendDiagnosticMessageResponse(const DoIPAddress& so
     } else {
         sendDiagnosticMessageAck(sourceAddress);
     }
+    m_context.notifyDiagnosticAckSent(ack);
 }
 
 void DoIPServerStateMachine::sendDiagnosticMessageAck(const DoIPAddress &source_address) {

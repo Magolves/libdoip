@@ -63,7 +63,7 @@ public:
         activeSourceAddress = address;
     }
 
-    DoIPDiagnosticAck handleDiagnosticMessage(const DoIPMessage &msg) override {
+    DoIPDiagnosticAck notifyDiagnosticMessage(const DoIPMessage &msg) override {
         (void)msg;
         return diagnosticResponse;
     }

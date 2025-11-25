@@ -102,7 +102,7 @@ public:
      * @param msg The diagnostic message received
      * @return std::nullopt for ACK, or NACK code
      */
-    virtual DoIPDiagnosticAck handleDiagnosticMessage(const DoIPMessage &msg) = 0;
+    virtual DoIPDiagnosticAck notifyDiagnosticMessage(const DoIPMessage &msg) = 0;
 
     /**
      * @brief Notify application that connection is closing

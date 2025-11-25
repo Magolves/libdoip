@@ -11,7 +11,6 @@
 
 #include "ExampleDoIPServerModel.h"
 
-
 using namespace doip;
 using namespace std;
 
@@ -21,7 +20,6 @@ DoIPServer server;
 std::vector<std::thread> doipReceiver;
 bool serverActive = false;
 std::unique_ptr<DoIPConnection> connection(nullptr);
-
 
 void listenUdp();
 void listenTcp();

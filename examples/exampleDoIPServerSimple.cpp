@@ -1,12 +1,12 @@
-#include "DoIPServer.h"
 #include "DoIPAddress.h"
+#include "DoIPServer.h"
 #include "Logger.h"
 
 #include "ExampleDoIPServerModel.h"
 
-#include <iostream>
-#include <csignal>
 #include <atomic>
+#include <csignal>
+#include <iostream>
 
 using namespace doip;
 using namespace std;
@@ -16,8 +16,8 @@ static std::atomic<bool> g_shutdownRequested{false};
 
 // Forward declarations
 static void signalHandler(int signal);
-static DoIPDiagnosticAck onDiagnosticMessage(IConnectionContext& ctx, const DoIPMessage &message);
-static std::optional<DoIPServerModel> onConnectionAccepted(DoIPConnection* connection);
+static DoIPDiagnosticAck onDiagnosticMessage(IConnectionContext &ctx, const DoIPMessage &message);
+static std::optional<DoIPServerModel> onConnectionAccepted(DoIPConnection *connection);
 static void configureServer(DoIPServer &server);
 
 // Signal handler for graceful shutdown
@@ -28,8 +28,8 @@ static void signalHandler(int signal) {
 }
 
 // Callback for diagnostic messages
-static DoIPDiagnosticAck onDiagnosticMessage(IConnectionContext& ctx, const DoIPMessage &message) {
-    (void)ctx;  // Available for sending responses if needed
+static DoIPDiagnosticAck onDiagnosticMessage(IConnectionContext &ctx, const DoIPMessage &message) {
+    (void)ctx; // Available for sending responses if needed
     cout << "Received Diagnostic message: " << message << '\n';
 
     // Extract diagnostic data from message
@@ -48,7 +48,7 @@ static DoIPDiagnosticAck onDiagnosticMessage(IConnectionContext& ctx, const DoIP
 }
 
 // Callback invoked when a new connection is accepted
-static std::optional<DoIPServerModel> onConnectionAccepted(DoIPConnection* connection) {
+static std::optional<DoIPServerModel> onConnectionAccepted(DoIPConnection *connection) {
     (void)connection;
     cout << "New client connected!" << endl;
 
@@ -58,7 +58,7 @@ static std::optional<DoIPServerModel> onConnectionAccepted(DoIPConnection* conne
 
     model.onDiagnosticMessage = onDiagnosticMessage;
 
-    model.onDiagnosticNotification = [](IConnectionContext& ctx, DoIPDiagnosticAck ack) noexcept {
+    model.onDiagnosticNotification = [](IConnectionContext &ctx, DoIPDiagnosticAck ack) noexcept {
         (void)ctx;
         if (ack.has_value()) {
             cout << "Diagnostic NACK sent: " << static_cast<int>(ack.value()) << '\n';
@@ -67,7 +67,7 @@ static std::optional<DoIPServerModel> onConnectionAccepted(DoIPConnection* conne
         }
     };
 
-    model.onCloseConnection = [](IConnectionContext& ctx) noexcept {
+    model.onCloseConnection = [](IConnectionContext &ctx) noexcept {
         (void)ctx;
         cout << "Connection closed" << endl;
     };
@@ -89,7 +89,7 @@ static void configureServer(DoIPServer &server) {
     server.setAnnounceNum(10);
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     bool useLoopback = false;
 
     // Parse command line arguments

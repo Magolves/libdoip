@@ -155,7 +155,7 @@ void DoIPConnection::setActiveSourceAddress(uint16_t address) {
     m_stateMachine.setActiveSourceAddress(address);
 }
 
-DoIPDiagnosticAck DoIPConnection::handleDiagnosticMessage(const DoIPMessage &msg) {
+DoIPDiagnosticAck DoIPConnection::notifyDiagnosticMessage(const DoIPMessage &msg) {
     // Forward to application callback
     if (m_serverModel->onDiagnosticMessage) {
         return m_serverModel->onDiagnosticMessage(*this, msg);

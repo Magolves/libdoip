@@ -89,7 +89,7 @@ class DoIPConnection : public IConnectionContext {
      * @param msg The diagnostic message received
      * @return std::nullopt for ACK, or NACK code
      */
-    DoIPDiagnosticAck handleDiagnosticMessage(const DoIPMessage &msg) override;
+    DoIPDiagnosticAck notifyDiagnosticMessage(const DoIPMessage &msg) override;
 
     /**
      * @brief Notify application that connection is closing
