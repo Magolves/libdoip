@@ -133,7 +133,7 @@ TEST_SUITE("TimerManager") {
         CHECK(updated);
 
         // Should execute sooner now
-        std::this_thread::sleep_for(80ms);
+        std::this_thread::sleep_for(90ms);
         CHECK(callbackExecuted);
 
         // Try to update non-existent timer

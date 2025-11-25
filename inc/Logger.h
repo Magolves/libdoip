@@ -10,6 +10,51 @@
 #include <spdlog/spdlog.h>
 #include <string>
 
+
+#if !defined(FMT_VERSION) || FMT_VERSION < 90000
+#include <sstream>
+#include <optional>
+namespace fmt {
+    template <typename T>
+    struct streamed_t {
+        const T& value;
+        explicit streamed_t(const T& v) : value(v) {}
+    };
+
+    template <typename T>
+    streamed_t<T> streamed(const T& v) { return streamed_t<T>(v); }
+
+    template <typename OStream, typename T>
+    OStream& operator<<(OStream& os, const streamed_t<T>& s) {
+        os << s.value;
+        return os;
+    }
+
+    // Fallback for std::optional<T>
+    template <typename OStream, typename T>
+    OStream& operator<<(OStream& os, const streamed_t<std::optional<T>>& s) {
+        if (s.value.has_value()) {
+            os << *s.value;
+        } else {
+            os << "<nullopt>";
+        }
+        return os;
+    }
+}
+
+// namespace std {
+// template <typename T>
+// std::ostream& operator<<(std::ostream& os, const std::optional<T>& opt) {
+//     if (opt) {
+//         os << *opt;
+//     } else {
+//         os << "<nullopt>";
+//     }
+//     return os;
+// }
+//}
+#endif
+
 namespace doip {
 
 constexpr const char *DEFAULT_PATTERN = "[%H:%M:%S.%e] [%n] [%^%l%$] %v";

@@ -21,8 +21,6 @@ enum class DoIPCloseReason : uint8_t {
 };
 
 inline std::ostream &operator<<(std::ostream &os, DoIPCloseReason event) {
-    std::string name;
-
     switch (event) {
     case DoIPCloseReason::None:
         return os << "None";

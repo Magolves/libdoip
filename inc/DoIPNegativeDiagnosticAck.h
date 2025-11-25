@@ -30,24 +30,16 @@ enum class DoIPNegativeDiagnosticAck : uint8_t {
  */
 using DoIPDiagnosticAck = std::optional<DoIPNegativeDiagnosticAck>;
 
-}
-
 /**
  * @brief Stream output operator for DoIPNegativeDiagnosticAck
  *
  * @param os the output stream
- * @param ack the negative acknowledgment code
+ * @param nack the negative acknowledgment code
  * @return std::ostream& the output stream
  */
-inline std::ostream& operator<<(std::ostream& os, doip::DoIPDiagnosticAck ack) {
-    if (!ack.has_value()) {
-        os << "PositiveAck (0x00)";
-        return os;
-    }
-
-    auto ackVal = ack.value();
+inline std::ostream& operator<<(std::ostream& os, doip::DoIPNegativeDiagnosticAck nack) {
     const char* name = nullptr;
-    switch (ackVal) {
+    switch (nack) {
         case doip::DoIPNegativeDiagnosticAck::InvalidSourceAddress:
             name = "InvalidSourceAddress";
             break;
@@ -77,9 +69,26 @@ inline std::ostream& operator<<(std::ostream& os, doip::DoIPDiagnosticAck ack) {
             break;
     }
     os << name << " (0x" << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
-       << static_cast<unsigned int>(static_cast<uint8_t>(ackVal)) << std::dec << ")";
+       << static_cast<unsigned int>(static_cast<uint8_t>(nack)) << std::dec << ")";
 
     return os;
 }
 
+/**
+ * @brief Stream output operator for DoIPNegativeDiagnosticAck
+ *
+ * @param os the output stream
+ * @param ack the negative acknowledgment code
+ * @return std::ostream& the output stream
+ */
+inline std::ostream& operator<<(std::ostream& os, doip::DoIPDiagnosticAck ack) {
+    if (!ack.has_value()) {
+        os << "PositiveAck (0x00)";
+        return os;
+    }
+
+    return os << ack.value();
+}
+
+}
 #endif  /* DOIPNEGATIVEDIAGNOSTICACK_H */

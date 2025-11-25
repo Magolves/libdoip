@@ -311,14 +311,14 @@ void DoIPServerStateMachine::transitionTo(DoIPState new_state) {
     case DoIPState::SocketInitialized:
         // Start initial inactivity timer
         startTimer(TimerID::InitialInactivity,
-                   std::chrono::milliseconds(m_initialInactivityTimeout));
+                   m_initialInactivityTimeout);
         transitionTo(DoIPState::WaitRoutingActivation);
         break;
 
     case DoIPState::WaitRoutingActivation:
         // Start initial inactivity timer
         startTimer(TimerID::InitialInactivity,
-                   std::chrono::milliseconds(m_initialInactivityTimeout));
+                   m_initialInactivityTimeout);
         break;
 
     case DoIPState::RoutingActivated:
@@ -394,7 +394,6 @@ ssize_t DoIPServerStateMachine::sendRoutingActivationResponse(const DoIPAddress 
 
     DoIPMessage response(DoIPPayloadType::RoutingActivationResponse, std::move(payload));
     auto sentBytes = sendMessage(response);
-
     DOIP_LOG_INFO("Sent routing activation response: code=" + std::to_string(static_cast<unsigned int>(response_code)) + " to address=" + std::to_string(static_cast<unsigned int>(source_address.toUint16())));
     return sentBytes;
 }
@@ -440,7 +439,7 @@ ssize_t DoIPServerStateMachine::sendDiagnosticMessageNack(const DoIPAddress &sou
     auto nack = message::makeDiagnosticNegativeResponse(
         sourceAddr,
         targetAddr,
-        static_cast<DoIPNegativeDiagnosticAck>(nack_code),
+        nack_code,
         ByteArray{} // Empty payload
     );
 

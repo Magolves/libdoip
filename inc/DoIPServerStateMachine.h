@@ -19,7 +19,8 @@
 namespace doip {
 
 // Forward declarations
-class DoIPAddress;
+struct DoIPAddress;
+class DoIPMessage;
 
 
 // Timer IDsD& config
@@ -39,10 +40,6 @@ inline std::ostream& operator<<(std::ostream& os, TimerID tid) {
         default: return os << "Unknown(" << static_cast<int>(tid) << ")";
     }
 }
-
-// Forward declarations
-class DoIPMessage;
-class Timer;
 
 /**
  * @brief DoIP Server State Machine implementing ISO 13400-2:2019 protocol
