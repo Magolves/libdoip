@@ -34,7 +34,7 @@ public:
     std::vector<DoIPMessage> sentMessages;
     DoIPCloseReason closeReason = DoIPCloseReason::None;
     DoIPAddress serverAddress{0x0E, 0x80};
-    uint16_t activeSourceAddress = 0;
+    DoIPAddress clientAddress = DoIPAddress::ZeroAddress;
     bool connectionClosed = false;
     DoIPDiagnosticAck diagnosticResponse = std::nullopt;
 
@@ -56,12 +56,12 @@ public:
         return serverAddress;
     }
 
-    uint16_t getClientAddress() const override {
-        return activeSourceAddress;
+    DoIPAddress getClientAddress() const override {
+        return clientAddress;
     }
 
-    void setClientAddress(uint16_t address) override {
-        activeSourceAddress = address;
+    void setClientAddress(const DoIPAddress& address) override {
+        clientAddress = address;
     }
 
     DoIPDiagnosticAck notifyDiagnosticMessage(const DoIPMessage &msg) override {
@@ -155,6 +155,31 @@ TEST_SUITE("Server state machine") {
         // Send check alive response
         sm.processMessage(message::makeAliveCheckResponse(
             DoIPAddress(0xE0, 0x00)));
+        // Server should be fine again
+        REQUIRE(sm.getState() == DoIPState::RoutingActivated);
+    }
+
+    TEST_CASE_FIXTURE(ServerStateMachineFixture, "Alive check with diagnostic message response") {
+        Logger::get()->set_level(spdlog::level::debug); // to increase log level
+        auto generalInactivityTimeout = std::chrono::milliseconds(std::uniform_int_distribution<>(500, 2000)(gen));
+        sm.setGeneralInactivityTimeout(generalInactivityTimeout);
+
+        // Activate routing
+        REQUIRE(sm.getState() == DoIPState::WaitRoutingActivation);
+        sm.processMessage(message::makeRoutingActivationRequest(DoIPAddress(0xE0, 0x00)));
+        REQUIRE(sm.getState() == DoIPState::RoutingActivated);
+        REQUIRE(mockContext.getLastSentMessageType() == DoIPPayloadType::RoutingActivationResponse);
+
+        REQUIRE(sm.getState() == DoIPState::RoutingActivated);
+        WAIT_FOR_STATE(DoIPState::WaitAliveCheckResponse, 300);
+
+        REQUIRE(sm.getState() == DoIPState::WaitAliveCheckResponse);
+        REQUIRE(mockContext.getLastSentMessageType() == DoIPPayloadType::AliveCheckRequest);
+
+        // Send diagnostic message instead of alive check response
+        sm.processMessage(message::makeDiagnosticMessage(
+            DoIPAddress(0xE0, 0x00), DoIPAddress(0xE0, 0x01), ByteArray{0x03, 0x22, 0xFD, 0x11}));
+        REQUIRE(mockContext.getLastSentMessageType() == DoIPPayloadType::DiagnosticMessageAck);
         // Server should be fine again
         REQUIRE(sm.getState() == DoIPState::RoutingActivated);
     }

@@ -35,12 +35,22 @@ void DoIPServerStateMachine::processMessage(const DoIPMessage &message) {
 
 void DoIPServerStateMachine::processEvent(DoIPEvent event, OptDoIPMessage msg) {
     DOIP_LOG_INFO("processEvent {} in state {}", fmt::streamed(event), fmt::streamed(m_state));
+    if (msg.has_value()) {
+        DOIP_LOG_DEBUG("With message: {}", fmt::streamed(msg.value()));
+    }
 
     switch (event) {
     case DoIPEvent::AliveCheckTimeout:
+        transitionTo(DoIPState::Finalize, DoIPCloseReason::AliveCheckTimeout);
+        break;
     case DoIPEvent::Initial_inactivity_timeout:
+        transitionTo(DoIPState::Finalize, DoIPCloseReason::InitialInactivityTimeout);
+        break;
     case DoIPEvent::GeneralInactivityTimeout:
-        transitionTo(DoIPState::Finalize);
+        stopTimer(StateMachineTimer::GeneralInactivity);
+        sendAliveCheckRequest();
+        startAliveCheckTimer();
+        transitionTo(DoIPState::WaitAliveCheckResponse);
         break;
     default:
         break;
@@ -168,6 +178,7 @@ void DoIPServerStateMachine::handleWaitAliveCheckResponse(DoIPEvent event, OptDo
         return;
     }
 
+
     if (event == DoIPEvent::AliveCheckResponseReceived) {
         DOIP_LOG_INFO("Alive check response received");
         stopTimer(StateMachineTimer::AliveCheck);
@@ -196,7 +207,7 @@ void DoIPServerStateMachine::handleWaitAliveCheckResponse(DoIPEvent event, OptDo
         return;
     }
 
-    DOIP_LOG_WARN("handleWaitAliveCheckResponse: Unexpected event {} in state {}", fmt::streamed(event), fmt::streamed(m_state));
+    DOIP_LOG_WARN("handleWaitAliveCheckResponse: Unexpected event {} in state {} (msg {})", fmt::streamed(event), fmt::streamed(m_state), fmt::streamed(msg.value()));
 }
 
 void DoIPServerStateMachine::handleFinalize(DoIPEvent event, OptDoIPMessage msg) {

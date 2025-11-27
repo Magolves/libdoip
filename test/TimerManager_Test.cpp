@@ -10,16 +10,23 @@
 using namespace std::chrono_literals;
 using namespace doip;
 
+enum class TimerTestId : uint8_t {
+    TimerOne = 1,
+    TimerTwo = 2,
+    TimerThree = 3,
+    NonExistent = 99,
+};
+
 TEST_SUITE("TimerManager") {
     TEST_CASE("Basic timer creation and execution") {
-        TimerManager manager;
+        TimerManager<TimerTestId> manager;
         std::atomic<bool> callbackExecuted{false};
 
         auto callback = [&callbackExecuted]() noexcept {
             callbackExecuted = true;
         };
 
-        auto timerId = manager.addTimer(50ms, callback);
+        auto timerId = manager.addTimer(TimerTestId::TimerOne, 50ms, callback);
 
         REQUIRE(timerId.has_value());
         CHECK(manager.hasTimer(timerId.value()));
@@ -33,14 +40,14 @@ TEST_SUITE("TimerManager") {
     }
 
     TEST_CASE("Periodic timer") {
-        TimerManager manager;
+        TimerManager<TimerTestId> manager;
         std::atomic<int> executionCount{0};
 
         auto callback = [&executionCount]() noexcept {
             executionCount++;
         };
 
-        auto timerId = manager.addTimer(30ms, callback, true); // periodic = true
+        auto timerId = manager.addTimer(TimerTestId::TimerOne, 30ms, callback, true); // periodic = true
 
         REQUIRE(timerId.has_value());
         CHECK(manager.hasTimer(timerId.value()));
@@ -57,15 +64,15 @@ TEST_SUITE("TimerManager") {
         CHECK(manager.timerCount() == 0);
     }
 
-    TEST_CASE("Timer removal") {
-        TimerManager manager;
+    TEST_CASE("TimerOne removal") {
+        TimerManager<TimerTestId> manager;
         std::atomic<bool> callbackExecuted{false};
 
         auto callback = [&callbackExecuted]() noexcept {
             callbackExecuted = true;
         };
 
-        auto timerId = manager.addTimer(100ms, callback);
+        auto timerId = manager.addTimer(TimerTestId::TimerOne, 100ms, callback);
 
         REQUIRE(timerId.has_value());
         CHECK(manager.hasTimer(timerId.value()));
@@ -86,15 +93,15 @@ TEST_SUITE("TimerManager") {
         CHECK_FALSE(removedAgain);
     }
 
-    TEST_CASE("Timer restart") {
-        TimerManager manager;
+    TEST_CASE("TimerOne restart") {
+        TimerManager<TimerTestId> manager;
         std::atomic<bool> callbackExecuted{false};
 
         auto callback = [&callbackExecuted]() noexcept {
             callbackExecuted = true;
         };
 
-        auto timerId = manager.addTimer(100ms, callback);
+        auto timerId = manager.addTimer(TimerTestId::TimerOne, 100ms, callback);
 
         REQUIRE(timerId.has_value());
 
@@ -112,19 +119,19 @@ TEST_SUITE("TimerManager") {
         CHECK(callbackExecuted);
 
         // Try to restart non-existent timer
-        bool restartedNonExistent = manager.restartTimer(999);
+        bool restartedNonExistent = manager.restartTimer(TimerTestId::TimerOne);
         CHECK_FALSE(restartedNonExistent);
     }
 
-    TEST_CASE("Timer update duration") {
-        TimerManager manager;
+    TEST_CASE("TimerOne update duration") {
+        TimerManager<TimerTestId> manager;
         std::atomic<bool> callbackExecuted{false};
 
         auto callback = [&callbackExecuted]() noexcept {
             callbackExecuted = true;
         };
 
-        auto timerId = manager.addTimer(200ms, callback);
+        auto timerId = manager.addTimer(TimerTestId::TimerOne, 200ms, callback);
 
         REQUIRE(timerId.has_value());
 
@@ -144,14 +151,14 @@ TEST_SUITE("TimerManager") {
         CHECK(callbackExecuted);
 
         // Try to update non-existent timer
-        bool updatedNonExistent = manager.updateTimer(999, 100ms);
+        bool updatedNonExistent = manager.updateTimer(TimerTestId::TimerOne, 100ms);
         CHECK_FALSE(updatedNonExistent);
     }
 
-    TEST_CASE("Timer enable/disable") {
+    TEST_CASE("TimerOne enable/disable") {
         // Test 1: Disable functionality
         {
-            TimerManager manager;
+            TimerManager<TimerTestId> manager;
             std::atomic<bool> callbackExecuted{false};
 
             auto callback = [&callbackExecuted]() noexcept {
@@ -159,7 +166,7 @@ TEST_SUITE("TimerManager") {
             };
 
             // Create timer with longer duration to have time to disable it
-            auto timerId = manager.addTimer(200ms, callback);
+            auto timerId = manager.addTimer(TimerTestId::TimerOne, 200ms, callback);
             REQUIRE(timerId.has_value());
 
             // Disable timer immediately
@@ -173,19 +180,19 @@ TEST_SUITE("TimerManager") {
 
         // Test 2: Basic enable/disable API
         {
-            TimerManager manager;
+            TimerManager<TimerTestId> manager;
 
             // Try enable/disable non-existent timer
-            bool disabledNonExistent = manager.disableTimer(999);
+            bool disabledNonExistent = manager.disableTimer(TimerTestId::NonExistent);
             CHECK_FALSE(disabledNonExistent);
 
-            bool enabledNonExistent = manager.enableTimer(999);
+            bool enabledNonExistent = manager.enableTimer(TimerTestId::NonExistent);
             CHECK_FALSE(enabledNonExistent);
         }
     }
 
     TEST_CASE("Multiple timers") {
-        TimerManager manager;
+        TimerManager<TimerTestId> manager;
         std::atomic<int> counter1{0};
         std::atomic<int> counter2{0};
         std::atomic<int> counter3{0};
@@ -194,9 +201,9 @@ TEST_SUITE("TimerManager") {
         auto callback2 = [&counter2]() noexcept { counter2++; };
         auto callback3 = [&counter3]() noexcept { counter3++; };
 
-        auto timer1 = manager.addTimer(30ms, callback1, true);
-        auto timer2 = manager.addTimer(50ms, callback2, true);
-        auto timer3 = manager.addTimer(80ms, callback3);
+        auto timer1 = manager.addTimer(TimerTestId::TimerOne, 30ms, callback1, true);
+        auto timer2 = manager.addTimer(TimerTestId::TimerTwo, 50ms, callback2, true);
+        auto timer3 = manager.addTimer(TimerTestId::TimerThree, 80ms, callback3);
 
         REQUIRE(timer1.has_value());
         REQUIRE(timer2.has_value());
@@ -220,16 +227,16 @@ TEST_SUITE("TimerManager") {
     }
 
     TEST_CASE("Null callback handling") {
-        TimerManager manager;
+        TimerManager<TimerTestId> manager;
 
         // Try to add timer with null callback
-        auto timerId = manager.addTimer(50ms, nullptr);
+        auto timerId = manager.addTimer(TimerTestId::TimerOne, 50ms, nullptr);
         CHECK_FALSE(timerId.has_value());
         CHECK(manager.timerCount() == 0);
     }
 
     TEST_CASE("Exception handling in callback") {
-        TimerManager manager;
+        TimerManager<TimerTestId> manager;
         std::atomic<bool> normalCallbackExecuted{false};
 
         // Add timer that throws exception
@@ -241,8 +248,8 @@ TEST_SUITE("TimerManager") {
             normalCallbackExecuted = true;
         };
 
-        auto throwingTimer = manager.addTimer(30ms, throwingCallback);
-        auto normalTimer = manager.addTimer(50ms, normalCallback);
+        auto throwingTimer = manager.addTimer(TimerTestId::TimerOne, 30ms, throwingCallback);
+        auto normalTimer = manager.addTimer(TimerTestId::TimerOne, 50ms, normalCallback);
 
         REQUIRE(throwingTimer.has_value());
         REQUIRE(normalTimer.has_value());
@@ -255,10 +262,10 @@ TEST_SUITE("TimerManager") {
     }
 
     TEST_CASE("Basic functionality verification") {
-        TimerManager manager;
+        TimerManager<TimerTestId> manager;
         std::atomic<int> totalExecutions{0};
-        constexpr int timerCount = 5; // Reduced from 50 for faster testing
-        std::vector<TimerManager::TimerId> timerIds;
+        constexpr int timerCount = 3;
+        std::vector<TimerTestId> timerIds;
 
         // Add timers with different intervals
         for (int i = 0; i < timerCount; ++i) {
@@ -267,9 +274,24 @@ TEST_SUITE("TimerManager") {
             };
 
             auto duration = std::chrono::milliseconds(20 + (i % 10)); // 20-29ms
-            auto timerId = manager.addTimer(duration, callback);
-            REQUIRE(timerId.has_value());
-            timerIds.push_back(timerId.value());
+            TimerTestId timerId;
+            switch(i) {
+                case 0:
+                    timerId = TimerTestId::TimerOne;
+                    break;
+                case 1:
+                    timerId = TimerTestId::TimerTwo;
+                    break;
+                case 2:
+                    timerId = TimerTestId::TimerThree;
+                    break;
+                default:
+                    timerId = TimerTestId::NonExistent; // Should not happen
+            }
+
+            auto timerIdOpt = manager.addTimer(timerId, duration, callback);
+            REQUIRE(timerIdOpt.has_value());
+            timerIds.push_back(timerIdOpt.value());
         }
 
         CHECK(manager.timerCount() == timerCount);
