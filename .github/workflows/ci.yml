@@ -218,7 +218,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y ninja-build gcc-11 g++-11 lcov
+        sudo apt-get install -y ninja-build libspdlog-dev gcc-11 g++-11 lcov
 
     - name: Set up CMake
       uses: jwlawson/actions-setup-cmake@v1.14
