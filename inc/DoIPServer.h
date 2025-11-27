@@ -58,12 +58,14 @@ class DoIPServer {
     DoIPServer &operator=(DoIPServer &&) = delete;
 
     // === Low-level API (manual mode) ===
-    void setupTcpSocket();
+    [[nodiscard]]
+    bool setupTcpSocket();
 
     template <typename Model = DefaultDoIPServerModel>
     std::unique_ptr<DoIPConnection> waitForTcpConnection();
 
-    void setupUdpSocket();
+    [[nodiscard]]
+    bool setupUdpSocket();
     ssize_t receiveUdpMessage();
 
     // === High-level API (automatic mode) ===
@@ -243,14 +245,13 @@ bool DoIPServer::start(ConnectionAcceptedHandler onConnectionAccepted, bool send
     m_connectionHandler = onConnectionAccepted;
 
     // Setup sockets
-    setupUdpSocket();
-    if (m_udp_sock < 0) {
+    if (!setupUdpSocket()) {
         DOIP_LOG_ERROR("Failed to setup UDP socket");
         return false;
     }
 
-    setupTcpSocket();
-    if (m_tcp_sock < 0) {
+
+    if (setupTcpSocket()) {
         DOIP_LOG_ERROR("Failed to setup TCP socket");
         closeUdpSocket();
         return false;

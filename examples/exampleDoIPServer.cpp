@@ -28,7 +28,7 @@ void listenTcp();
  * Check permantly if udp message was received
  */
 void listenUdp() {
-
+    UDP_LOG_INFO("UDP listener thread started");
     while (serverActive) {
         ssize_t result = server.receiveUdpMessage();
         // If timeout (result == 0), sleep briefly to prevent CPU spinning
@@ -42,8 +42,7 @@ void listenUdp() {
  * Check permantly if tcp message was received
  */
 void listenTcp() {
-
-    server.setupTcpSocket();
+    UDP_LOG_INFO("TCP listener thread started");
 
     while (true) {
         connection = server.waitForTcpConnection<ExampleDoIPServerModel>();
@@ -108,7 +107,15 @@ int main(int argc, char *argv[]) {
         server.setAnnouncementMode(true);
     }
 
-    server.setupUdpSocket();
+    if (!server.setupUdpSocket()) {
+        DOIP_LOG_CRITICAL("Failed to set up UDP socket");
+        return 1;
+    }
+
+    if (!server.setupTcpSocket()) {
+        DOIP_LOG_CRITICAL("Failed to set up TCP socket");
+        return 1;
+    }
 
     serverActive = true;
     DOIP_LOG_INFO("Starting UDP and TCP listener threads");

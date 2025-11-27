@@ -91,13 +91,13 @@ void DoIPServer::connectionHandlerThread(std::unique_ptr<DoIPConnection> connect
 /*
  * Set up a tcp socket, so the socket is ready to accept a connection
  */
-void DoIPServer::setupTcpSocket() {
+bool DoIPServer::setupTcpSocket() {
     DOIP_LOG_DEBUG("Setting up TCP socket on port {}", DOIP_SERVER_PORT);
 
     m_tcp_sock = socket(AF_INET, SOCK_STREAM, 0);
     if (m_tcp_sock < 0) {
         TCP_LOG_ERROR("Failed to create TCP socket: {}", strerror(errno));
-        return;
+        return false;
     }
 
     // Allow socket reuse
@@ -113,13 +113,14 @@ void DoIPServer::setupTcpSocket() {
     // binds the socket to the address and port number
     if (bind(m_tcp_sock, reinterpret_cast<const struct sockaddr *>(&m_serverAddress), sizeof(m_serverAddress)) < 0) {
         TCP_LOG_ERROR("Failed to bind TCP socket: {}", strerror(errno));
-        return;
+        return false;
     }
 
     TCP_LOG_INFO("TCP socket successfully bound to port {}", DOIP_SERVER_PORT);
+    return true;
 }
 
-void DoIPServer::setupUdpSocket() {
+bool DoIPServer::setupUdpSocket() {
     UDP_LOG_DEBUG("Setting up UDP socket on port {}", DOIP_SERVER_PORT);
 
     m_udp_sock = socket(AF_INET, SOCK_DGRAM, 0);
@@ -130,18 +131,19 @@ void DoIPServer::setupUdpSocket() {
 
     if (m_udp_sock < 0) {
         UDP_LOG_ERROR("Failed to create UDP socket: {}", strerror(errno));
-        return;
+        return false;
     }
 
     // binds the socket to any IP DoIPAddress and the Port Number 13400
     if (bind(m_udp_sock, reinterpret_cast<const struct sockaddr *>(&m_serverAddress), sizeof(m_serverAddress)) < 0) {
         UDP_LOG_ERROR("Failed to bind UDP socket: {}", strerror(errno));
-        return;
+        return false;
     }
 
     // setting the IP DoIPAddress for Multicast
     setMulticastGroup("224.0.0.2");
     UDP_LOG_INFO("UDP socket successfully bound to port {} with multicast group", DOIP_SERVER_PORT);
+    return true;
 }
 
 /*
