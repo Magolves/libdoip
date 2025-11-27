@@ -40,3 +40,6 @@ checks.json
 
 # Doxygen generated documentation
 docs/
+
+# Individual files
+inc/gen/DoIPConfig.h

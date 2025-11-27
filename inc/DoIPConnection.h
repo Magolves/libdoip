@@ -73,16 +73,16 @@ class DoIPConnection : public IConnectionContext {
     DoIPAddress getServerAddress() const override;
 
     /**
-     * @brief Get the currently active source address
-     * @return The active source address, or 0 if no routing is active
+     * @brief Get the currently client (active source) address
+     * @return The client (active source) address, or 0 if no routing is active
      */
-    uint16_t getActiveSourceAddress() const override;
+    DoIPAddress getClientAddress() const override;
 
     /**
-     * @brief Set the active source address after routing activation
+     * @brief Set the client (active source) address after routing activation
      * @param address The client's source address
      */
-    void setActiveSourceAddress(uint16_t address) override;
+    void setClientAddress(const DoIPAddress& address) override;
 
     /**
      * @brief Handle an incoming diagnostic message (application callback)

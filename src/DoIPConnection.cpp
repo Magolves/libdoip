@@ -147,12 +147,12 @@ DoIPAddress DoIPConnection::getServerAddress() const {
     return m_serverModel->serverAddress;
 }
 
-uint16_t DoIPConnection::getActiveSourceAddress() const {
-    return m_stateMachine.getActiveSourceAddress();
+DoIPAddress DoIPConnection::getClientAddress() const {
+    return m_gatewayAddress;
 }
 
-void DoIPConnection::setActiveSourceAddress(uint16_t address) {
-    m_stateMachine.setActiveSourceAddress(address);
+void DoIPConnection::setClientAddress(const DoIPAddress& address) {
+    m_gatewayAddress = address;
 }
 
 DoIPDiagnosticAck DoIPConnection::notifyDiagnosticMessage(const DoIPMessage &msg) {

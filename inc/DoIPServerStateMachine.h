@@ -9,12 +9,13 @@
 #include <memory>
 #include <queue>
 
-#include "DoIPTimes.h"
-#include "DoIPState.h"
 #include "DoIPEvent.h"
-#include "TimerManager.h"
 #include "DoIPIdentifiers.h"
+#include "DoIPState.h"
+#include "DoIPTimes.h"
 #include "IConnectionContext.h"
+#include "DoIPRoutingActivationResult.h"
+#include "TimerManager.h"
 
 namespace doip {
 
@@ -22,22 +23,23 @@ namespace doip {
 struct DoIPAddress;
 class DoIPMessage;
 
-
 // Timer IDsD& config
-enum class TimerID : uint8_t{
+enum class StateMachineTimer : uint8_t {
     InitialInactivity, // T_TCP_Initial_Inactivity (default: 2s)
     GeneralInactivity, // T_TCP_General_Inactivity (default: 5min)
     AliveCheck         // T_TCP_Alive_Check (default: 500ms)
 };
 
-
-
-inline std::ostream& operator<<(std::ostream& os, TimerID tid) {
-    switch(tid) {
-        case TimerID::InitialInactivity: return os << "Initial Inactivity";
-        case TimerID::GeneralInactivity: return os << "General Inactivity";
-        case TimerID::AliveCheck: return os << "Alive Check";
-        default: return os << "Unknown(" << static_cast<int>(tid) << ")";
+inline std::ostream &operator<<(std::ostream &os, StateMachineTimer tid) {
+    switch (tid) {
+    case StateMachineTimer::InitialInactivity:
+        return os << "Initial Inactivity";
+    case StateMachineTimer::GeneralInactivity:
+        return os << "General Inactivity";
+    case StateMachineTimer::AliveCheck:
+        return os << "Alive Check";
+    default:
+        return os << "Unknown(" << static_cast<int>(tid) << ")";
     }
 }
 
@@ -58,7 +60,6 @@ class DoIPServerStateMachine {
     explicit DoIPServerStateMachine(IConnectionContext &context)
         : m_context(context),
           m_state(DoIPState::SocketInitialized),
-          m_activeSourceAddress(0),
           m_aliveCheckRetryCount(0) {
         transitionTo(DoIPState::WaitRoutingActivation);
     }
@@ -86,7 +87,7 @@ class DoIPServerStateMachine {
      * @brief Handles a timer timeout event
      * @param timer_id The ID of the timer that expired
      */
-    void handleTimeout(TimerID timer_id);
+    void handleTimeout(StateMachineTimer timer_id);
 
     // State queries
 
@@ -113,12 +114,6 @@ class DoIPServerStateMachine {
     }
 
     /**
-     * @brief Gets the active source address
-     * @return The currently active source address
-     */
-    uint16_t getActiveSourceAddress() const { return m_activeSourceAddress; }
-
-    /**
      * @brief Gets the alive check retry count
      * @return The number of alive check retries
      */
@@ -141,14 +136,6 @@ class DoIPServerStateMachine {
      * @return The alive check timeout in milliseconds
      */
     std::chrono::milliseconds getAliveCheckTimeout() const { return m_aliveCheckTimeout; }
-
-    // Runtime data setters
-
-    /**
-     * @brief Sets the active source address
-     * @param address The source address to set as active
-     */
-    void setActiveSourceAddress(uint16_t address) { m_activeSourceAddress = address; }
 
     /**
      * @brief Sets the alive check retry count
@@ -182,34 +169,42 @@ class DoIPServerStateMachine {
     void handleWaitAliveCheckResponse(DoIPEvent event, const DoIPMessage *msg);
     void handleFinalize(DoIPEvent event, const DoIPMessage *msg);
 
+    /**
+     * @brief Handles common transitions valid for all states
+     *
+     * @param event the event to process
+     * @param msg the associated message, if any
+     */
+    bool  handleCommonTransition(DoIPEvent event, const DoIPMessage *msg);
+
     // Helper methods
-    void transitionTo(DoIPState new_state);
-    void startTimer(TimerID timer_id, std::chrono::milliseconds duration);
-    void stopTimer(TimerID timer_id);
+    void transitionTo(DoIPState new_state, DoIPCloseReason reason = DoIPCloseReason::None);
+    void startTimer(StateMachineTimer timer_id, std::chrono::milliseconds duration);
+    void stopTimer(StateMachineTimer timer_id);
     void stopAllTimers();
-    ssize_t sendRoutingActivationResponse(const DoIPAddress& sourceAddress, uint8_t response_code);
+    ssize_t sendRoutingActivationResponse(const DoIPAddress &sourceAddress, DoIPRoutingActivationResult response_code);
     ssize_t sendAliveCheckRequest();
 
-    ssize_t sendDiagnosticMessageResponse(const DoIPAddress& sourceAddress, DoIPDiagnosticAck ack);
-    ssize_t sendDiagnosticMessageAck(const DoIPAddress& sourceAddress);
-    ssize_t sendDiagnosticMessageNack(const DoIPAddress& sourceAddress, DoIPNegativeDiagnosticAck nack);
+    ssize_t sendDiagnosticMessageResponse(const DoIPAddress &sourceAddress, DoIPDiagnosticAck ack);
+    ssize_t sendDiagnosticMessageAck(const DoIPAddress &sourceAddress);
+    ssize_t sendDiagnosticMessageNack(const DoIPAddress &sourceAddress, DoIPNegativeDiagnosticAck nack);
 
     // Helper function to forward messages
     ssize_t sendMessage(const DoIPMessage &msg);
 
     // Inline helper functions for common timer operations
     inline void startGeneralInactivityTimer() {
-        startTimer(TimerID::GeneralInactivity, m_generalInactivityTimeout);
+        startTimer(StateMachineTimer::GeneralInactivity, m_generalInactivityTimeout);
     }
 
     inline void startAliveCheckTimer() {
-        startTimer(TimerID::AliveCheck, m_aliveCheckTimeout);
+        startTimer(StateMachineTimer::AliveCheck, m_aliveCheckTimeout);
     }
 
     // Interface to connection layer
     IConnectionContext &m_context;
 
-    TimerManager m_timerManager;
+    TimerManager<StateMachineTimer> m_timerManager;
 
     // State
     DoIPState m_state;
@@ -218,14 +213,16 @@ class DoIPServerStateMachine {
     TransitionHandler m_transitionCallback;
 
     // Runtime data
-    uint16_t m_activeSourceAddress;
     uint8_t m_aliveCheckRetryCount;
     std::chrono::milliseconds m_initialInactivityTimeout{times::server::InitialInactivityTimeout}; // 2 seconds
     std::chrono::milliseconds m_generalInactivityTimeout{times::server::GeneralInactivityTimeout}; // 5 minutes
     std::chrono::milliseconds m_aliveCheckTimeout{times::server::AliveCheckResponseTimeout};       // 500 ms
 };
 
+
+
+
+
 } // namespace doip
 
-
-#endif  /* DOIPSERVERSTATEMACHINE_H */
+#endif /* DOIPSERVERSTATEMACHINE_H */

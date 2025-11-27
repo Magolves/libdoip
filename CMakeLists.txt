@@ -56,7 +56,26 @@ else()
     message(STATUS "spdlog found")
 endif()
 
+# Configuration options
+set(DOIP_ALIVE_CHECK_RETRIES "1" CACHE STRING "Number of retries for DoIP alive check messages")
+
+# Validate numeric options
+foreach(VAR DOIP_ALIVE_CHECK_RETRIES)
+    if(NOT ${VAR} MATCHES "^[0-9]+$")
+        message(FATAL_ERROR "${VAR} must be a positive integer")
+    endif()
+endforeach()
+
+# Configure configuration header
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc/gen/DoIPConfig.h.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc/gen/DoIPConfig.h
+    @ONLY
+)
+
 set(DOIP_NAME iso13400 CACHE STRING "DoIP library name")
+
+
 set(SOURCES
     src/DoIPClient.cpp
     src/DoIPConnection.cpp
@@ -85,6 +104,7 @@ set_target_properties(${DOIP_NAME} PROPERTIES
 target_include_directories(${DOIP_NAME}
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc/gen>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/lib${DOIP_NAME}>
 )
 

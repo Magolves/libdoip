@@ -56,11 +56,11 @@ public:
         return serverAddress;
     }
 
-    uint16_t getActiveSourceAddress() const override {
+    uint16_t getClientAddress() const override {
         return activeSourceAddress;
     }
 
-    void setActiveSourceAddress(uint16_t address) override {
+    void setClientAddress(uint16_t address) override {
         activeSourceAddress = address;
     }
 

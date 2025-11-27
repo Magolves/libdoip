@@ -13,9 +13,10 @@
 
 namespace doip {
 
+template <typename TimerIdType = uint8_t>
 class TimerManager {
   public:
-    using TimerId = int;
+    using TimerId = TimerIdType;
 
     struct TimerEntry {
         std::chrono::steady_clock::time_point expiry;
@@ -43,7 +44,7 @@ class TimerManager {
      * @return std::optional<TimerId>
      */
     [[nodiscard]]
-    std::optional<TimerId> addTimer(std::chrono::milliseconds duration,
+    std::optional<TimerId> addTimer(TimerId id, std::chrono::milliseconds duration,
                                     std::function<void()> callback,
                                     bool periodic = false) {
         if (!callback) {
@@ -51,7 +52,6 @@ class TimerManager {
         }
 
         std::lock_guard<std::mutex> lock(m_mutex);
-        TimerId id = m_nextId++;
 
         TimerEntry entry;
         entry.expiry = std::chrono::steady_clock::now() + duration;
@@ -197,7 +197,6 @@ class TimerManager {
     std::condition_variable m_cv;
     std::thread m_thread;
     std::atomic<bool> m_running{false};
-    TimerId m_nextId = 1;
 
     void run() {
         while (m_running) {

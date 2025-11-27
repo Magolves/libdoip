@@ -62,7 +62,7 @@ public:
      *
      * @return The active source address, or 0 if no routing is active
      */
-    virtual uint16_t getActiveSourceAddress() const = 0;
+    virtual DoIPAddress getClientAddress() const = 0;
 
     /**
      * @brief Set the active source address after routing activation
@@ -71,7 +71,7 @@ public:
      *
      * @param address The client's source address
      */
-    virtual void setActiveSourceAddress(uint16_t address) = 0;
+    virtual void setClientAddress(const DoIPAddress& address) = 0;
 
     /**
      * @brief Handle an incoming diagnostic message (application callback)
