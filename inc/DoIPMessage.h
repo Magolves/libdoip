@@ -61,6 +61,9 @@ constexpr size_t DOIP_HEADER_SIZE = 8;
  */
 constexpr size_t DOIP_DIAG_HEADER_SIZE = DOIP_HEADER_SIZE + 4;
 
+class DoIPMessage;
+using OptDoIPMessage = std::optional<DoIPMessage>;
+
 
 /**
  * @brief Represents a complete DoIP message with internal ByteArray representation.
@@ -78,6 +81,8 @@ constexpr size_t DOIP_DIAG_HEADER_SIZE = DOIP_HEADER_SIZE + 4;
  * The message types are listed in table 17.
  */
 class DoIPMessage {
+
+
 public:
     /**
      * @brief Default constructor - creates invalid empty message

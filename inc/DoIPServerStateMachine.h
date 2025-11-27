@@ -80,8 +80,9 @@ class DoIPServerStateMachine {
     /**
      * @brief Processes a DoIP event
      * @param event The event to process
+     * @param msg The associated message, if any
      */
-    void processEvent(DoIPEvent event);
+    void processEvent(DoIPEvent event, OptDoIPMessage msg = std::nullopt);
 
     /**
      * @brief Handles a timer timeout event
@@ -163,11 +164,11 @@ class DoIPServerStateMachine {
 
   private:
     // State handlers
-    void handleSocketInitialized(DoIPEvent event, const DoIPMessage *msg);
-    void handleWaitRoutingActivation(DoIPEvent event, const DoIPMessage *msg);
-    void handleRoutingActivated(DoIPEvent event, const DoIPMessage *msg);
-    void handleWaitAliveCheckResponse(DoIPEvent event, const DoIPMessage *msg);
-    void handleFinalize(DoIPEvent event, const DoIPMessage *msg);
+    void handleSocketInitialized(DoIPEvent event, OptDoIPMessage msg);
+    void handleWaitRoutingActivation(DoIPEvent event, OptDoIPMessage msg);
+    void handleRoutingActivated(DoIPEvent event, OptDoIPMessage msg);
+    void handleWaitAliveCheckResponse(DoIPEvent event, OptDoIPMessage msg);
+    void handleFinalize(DoIPEvent event, OptDoIPMessage msg);
 
     /**
      * @brief Handles common transitions valid for all states
@@ -175,7 +176,7 @@ class DoIPServerStateMachine {
      * @param event the event to process
      * @param msg the associated message, if any
      */
-    bool  handleCommonTransition(DoIPEvent event, const DoIPMessage *msg);
+    bool  handleCommonTransition(DoIPEvent event, OptDoIPMessage msg);
 
     // Helper methods
     void transitionTo(DoIPState new_state, DoIPCloseReason reason = DoIPCloseReason::None);

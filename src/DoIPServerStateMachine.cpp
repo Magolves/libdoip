@@ -13,6 +13,7 @@ DoIPServerStateMachine::~DoIPServerStateMachine() {
 void DoIPServerStateMachine::processMessage(const DoIPMessage &message) {
     // Map message type to event
     DoIPEvent event;
+    DOIP_LOG_INFO("processMessage of type {}", fmt::streamed(message.getPayloadType()));
 
     switch (message.getPayloadType()) {
     case DoIPPayloadType::RoutingActivationRequest:
@@ -29,10 +30,10 @@ void DoIPServerStateMachine::processMessage(const DoIPMessage &message) {
         break;
     }
 
-    processEvent(event);
+    processEvent(event, message);
 }
 
-void DoIPServerStateMachine::processEvent(DoIPEvent event) {
+void DoIPServerStateMachine::processEvent(DoIPEvent event, OptDoIPMessage msg) {
     DOIP_LOG_INFO("processEvent {} in state {}", fmt::streamed(event), fmt::streamed(m_state));
 
     switch (event) {
@@ -48,19 +49,19 @@ void DoIPServerStateMachine::processEvent(DoIPEvent event) {
     // Process events based on current state
     switch (m_state) {
     case DoIPState::SocketInitialized:
-        handleSocketInitialized(event, nullptr);
+        handleSocketInitialized(event, msg);
         break;
     case DoIPState::WaitRoutingActivation:
-        handleWaitRoutingActivation(event, nullptr);
+        handleWaitRoutingActivation(event, msg);
         break;
     case DoIPState::RoutingActivated:
-        handleRoutingActivated(event, nullptr);
+        handleRoutingActivated(event, msg);
         break;
     case DoIPState::WaitAliveCheckResponse:
-        handleWaitAliveCheckResponse(event, nullptr);
+        handleWaitAliveCheckResponse(event, msg);
         break;
     case DoIPState::Finalize:
-        handleFinalize(event, nullptr);
+        handleFinalize(event, msg);
         break;
     case DoIPState::Closed:
         // No processing in closed state
@@ -90,7 +91,7 @@ void DoIPServerStateMachine::handleTimeout(StateMachineTimer timer_id) {
 
 // State Handlers
 
-void DoIPServerStateMachine::handleSocketInitialized(DoIPEvent event, const DoIPMessage *msg) {
+void DoIPServerStateMachine::handleSocketInitialized(DoIPEvent event, OptDoIPMessage msg) {
     if (handleCommonTransition(event, msg)) {
         return;
     }
@@ -100,7 +101,7 @@ void DoIPServerStateMachine::handleSocketInitialized(DoIPEvent event, const DoIP
     DOIP_LOG_INFO("Socket init {} in state {}", fmt::streamed(event), fmt::streamed(m_state));
 }
 
-void DoIPServerStateMachine::handleWaitRoutingActivation(DoIPEvent event, const DoIPMessage *msg) {
+void DoIPServerStateMachine::handleWaitRoutingActivation(DoIPEvent event, OptDoIPMessage msg) {
     if (handleCommonTransition(event, msg)) {
         return;
     }
@@ -113,9 +114,10 @@ void DoIPServerStateMachine::handleWaitRoutingActivation(DoIPEvent event, const 
 
         auto sourceAddress = msg->getSourceAddress();
         bool hasAddress = sourceAddress.has_value();
-        bool rightPayloadType = (msg->getPayloadType() == DoIPPayloadType::RoutingActivationResponse);
+        bool rightPayloadType = (msg->getPayloadType() == DoIPPayloadType::RoutingActivationRequest);
 
         if (!hasAddress || !rightPayloadType) {
+            DOIP_LOG_WARN("Invalid Routing Activation Request message");
             transitionTo(DoIPState::Finalize, DoIPCloseReason::InvalidMessage);
             return;
         }
@@ -132,12 +134,13 @@ void DoIPServerStateMachine::handleWaitRoutingActivation(DoIPEvent event, const 
 
         // Transition to Routing Activated state
         transitionTo(DoIPState::RoutingActivated);
+        return;
     }
-    DOIP_LOG_WARN("Unexpected event {} in state {}", fmt::streamed(event), fmt::streamed(m_state));
+    DOIP_LOG_WARN("handleWaitRoutingActivation: Unexpected event {} in state {}", fmt::streamed(event), fmt::streamed(m_state));
 }
 
 // Routing Activated State: In this state we are waiting for diagnostic messages
-void DoIPServerStateMachine::handleRoutingActivated(DoIPEvent event, const DoIPMessage *msg) {
+void DoIPServerStateMachine::handleRoutingActivated(DoIPEvent event, OptDoIPMessage msg) {
     if (handleCommonTransition(event, msg)) {
         return;
     }
@@ -157,10 +160,10 @@ void DoIPServerStateMachine::handleRoutingActivated(DoIPEvent event, const DoIPM
         return;
     }
 
-    DOIP_LOG_WARN("Unexpected event {} in state {}", fmt::streamed(event), fmt::streamed(m_state));
+    DOIP_LOG_WARN("handleRoutingActivated: Unexpected event {} in state {}", fmt::streamed(event), fmt::streamed(m_state));
 }
 
-void DoIPServerStateMachine::handleWaitAliveCheckResponse(DoIPEvent event, const DoIPMessage *msg) {
+void DoIPServerStateMachine::handleWaitAliveCheckResponse(DoIPEvent event, OptDoIPMessage msg) {
     if (handleCommonTransition(event, msg)) {
         return;
     }
@@ -193,10 +196,10 @@ void DoIPServerStateMachine::handleWaitAliveCheckResponse(DoIPEvent event, const
         return;
     }
 
-    DOIP_LOG_WARN("Unexpected event {} in state {}", fmt::streamed(event), fmt::streamed(m_state));
+    DOIP_LOG_WARN("handleWaitAliveCheckResponse: Unexpected event {} in state {}", fmt::streamed(event), fmt::streamed(m_state));
 }
 
-void DoIPServerStateMachine::handleFinalize(DoIPEvent event, const DoIPMessage *msg) {
+void DoIPServerStateMachine::handleFinalize(DoIPEvent event, OptDoIPMessage msg) {
     (void)event; // Unused parameter
     (void)msg;   // Unused parameter
 
@@ -209,7 +212,7 @@ void DoIPServerStateMachine::handleFinalize(DoIPEvent event, const DoIPMessage *
     }
 }
 
-bool DoIPServerStateMachine::handleCommonTransition(DoIPEvent event, const DoIPMessage *msg) {
+bool DoIPServerStateMachine::handleCommonTransition(DoIPEvent event, OptDoIPMessage msg) {
     (void)msg; // Unused parameter
 
     switch (event) {
@@ -226,7 +229,6 @@ bool DoIPServerStateMachine::handleCommonTransition(DoIPEvent event, const DoIPM
         transitionTo(DoIPState::Finalize, DoIPCloseReason::SocketError);
         break;
     default:
-        DOIP_LOG_WARN("Unexpected event {} in state {}", fmt::streamed(event), fmt::streamed(m_state));
         return false;
     }
 
@@ -255,9 +257,6 @@ void DoIPServerStateMachine::transitionTo(DoIPState new_state, DoIPCloseReason r
     // State entry actions
     switch (new_state) {
     case DoIPState::SocketInitialized:
-        // Start initial inactivity timer
-        startTimer(StateMachineTimer::InitialInactivity,
-                   m_initialInactivityTimeout);
         transitionTo(DoIPState::WaitRoutingActivation);
         break;
 

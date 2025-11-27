@@ -133,7 +133,7 @@ void DoIPConnection::closeConnection(DoIPCloseReason reason) {
     }
 
     m_isClosing = true;
-    DOIP_LOG_INFO("Closing connection, reason: {}", static_cast<int>(reason));
+    DOIP_LOG_INFO("Closing connection, reason: {}", fmt::streamed(reason));
 
     m_stateMachine.processEvent(DoIPEvent::CloseRequestReceived);
     close(m_tcpSocket);
