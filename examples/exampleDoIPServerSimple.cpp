@@ -16,7 +16,6 @@ static std::atomic<bool> g_shutdownRequested{false};
 
 // Forward declarations
 static void signalHandler(int signal);
-static DoIPDiagnosticAck onDiagnosticMessage(IConnectionContext &ctx, const DoIPMessage &message);
 static std::optional<DoIPServerModel> onConnectionAccepted(DoIPConnection *connection);
 static void configureServer(DoIPServer &server);
 
@@ -25,26 +24,6 @@ static void signalHandler(int signal) {
     (void)signal;
     cout << "\nShutdown requested..." << endl;
     g_shutdownRequested.store(true);
-}
-
-// Callback for diagnostic messages
-static DoIPDiagnosticAck onDiagnosticMessage(IConnectionContext &ctx, const DoIPMessage &message) {
-    (void)ctx; // Available for sending responses if needed
-    cout << "Received Diagnostic message: " << message << '\n';
-
-    // Extract diagnostic data from message
-    auto payload = message.getPayload();
-    if (payload.second > 0) {
-        cout << "  Service ID: 0x" << hex << setw(2) << setfill('0')
-             << static_cast<int>(payload.first[0]) << dec << '\n';
-    }
-
-    // Example: Send a response back using the context
-    // ByteArray response = {0x50, 0x01}; // Example: positive response
-    // ctx.sendProtocolMessage(createDiagnosticMessage(message.targetAddress, message.sourceAddress, response));
-
-    // Return nullopt to send positive ACK, or return NACK code
-    return std::nullopt;
 }
 
 // Callback invoked when a new connection is accepted
@@ -56,7 +35,24 @@ static std::optional<DoIPServerModel> onConnectionAccepted(DoIPConnection *conne
     DoIPServerModel model;
     model.serverAddress = LOGICAL_ADDRESS;
 
-    model.onDiagnosticMessage = onDiagnosticMessage;
+    model.onDiagnosticMessage = [](IConnectionContext &ctx, const DoIPMessage &msg) noexcept -> DoIPDiagnosticAck {
+        (void)ctx;
+        cout << "Received Diagnostic message: " << msg << '\n';
+
+        auto payload = msg.getPayload();
+        if (payload.second > 0) {
+            cout << "  Service ID: 0x" << hex << setw(2) << setfill('0')
+                 << static_cast<int>(payload.first[0]) << dec << '\n';
+        }
+
+        // Example logic: NACK if service ID is 0x22 (Read Data by Identifier)
+        if (payload.second > 0 && payload.first[0] == 0x22) {
+            cout << " - Sending NACK for service ID 0x22\n";
+            return DoIPNegativeDiagnosticAck::UnknownTargetAddress;
+        }
+
+        return std::nullopt; // Send positive ACK
+    };
 
     model.onDiagnosticNotification = [](IConnectionContext &ctx, DoIPDiagnosticAck ack) noexcept {
         (void)ctx;

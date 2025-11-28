@@ -19,7 +19,7 @@ static const DoIPAddress LOGICAL_ADDRESS(static_cast<uint8_t>(0x0), static_cast<
 DoIPServer server;
 std::vector<std::thread> doipReceiver;
 bool serverActive = false;
-std::unique_ptr<DoIPConnection> connection(nullptr);
+std::unique_ptr<DoIPConnection> tcpConnection(nullptr);
 
 void listenUdp();
 void listenTcp();
@@ -45,10 +45,10 @@ void listenTcp() {
     UDP_LOG_INFO("TCP listener thread started");
 
     while (true) {
-        connection = server.waitForTcpConnection<ExampleDoIPServerModel>();
+        tcpConnection = server.waitForTcpConnection<ExampleDoIPServerModel>();
 
-        while (connection->isSocketActive()) {
-            connection->receiveTcpMessage();
+        while (tcpConnection->isSocketActive()) {
+            tcpConnection->receiveTcpMessage();
         }
     }
 }
