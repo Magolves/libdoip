@@ -10,6 +10,7 @@ add_executable(${DOIP_NAME}_tests
     TimerManager_Test.cpp
     ThreadSafeQueue_Test.cpp
     VehicleIdentification_Test.cpp
+    uds/UdsMock_Test.cpp
 )
 
 target_link_libraries(${DOIP_NAME}_tests
