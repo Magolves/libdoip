@@ -4,10 +4,10 @@
 #include <functional>
 
 #include "DoIPAddress.h"
-#include "DoIPEvent.h"
+#include "DoIPServerEvent.h"
 #include "DoIPMessage.h"
 #include "DoIPNegativeDiagnosticAck.h"
-#include "DoIPState.h"
+#include "DoIPServerState.h"
 #include "DoIPCloseReason.h"
 #include "Logger.h"
 

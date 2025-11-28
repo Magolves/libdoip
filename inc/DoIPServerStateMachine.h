@@ -9,15 +9,17 @@
 #include <memory>
 #include <queue>
 
-#include "DoIPEvent.h"
+#include "DoIPServerEvent.h"
 #include "DoIPIdentifiers.h"
-#include "DoIPState.h"
+#include "DoIPServerState.h"
 #include "DoIPTimes.h"
 #include "IConnectionContext.h"
 #include "DoIPRoutingActivationResult.h"
 #include "TimerManager.h"
 
 namespace doip {
+
+using namespace std::chrono_literals;
 
 // Forward declarations
 struct DoIPAddress;
@@ -27,7 +29,8 @@ class DoIPMessage;
 enum class StateMachineTimer : uint8_t {
     InitialInactivity, // T_TCP_Initial_Inactivity (default: 2s)
     GeneralInactivity, // T_TCP_General_Inactivity (default: 5min)
-    AliveCheck         // T_TCP_Alive_Check (default: 500ms)
+    AliveCheck,         // T_TCP_Alive_Check (default: 500ms)
+    DownstreamResponse   // Server timeout when waiting for a response of the subnet device ("downstream") - not standardized by ISO 13400
 };
 
 inline std::ostream &operator<<(std::ostream &os, StateMachineTimer tid) {
@@ -38,6 +41,8 @@ inline std::ostream &operator<<(std::ostream &os, StateMachineTimer tid) {
         return os << "General Inactivity";
     case StateMachineTimer::AliveCheck:
         return os << "Alive Check";
+    case StateMachineTimer::DownstreamResponse:
+        return os << "Downstream Response";
     default:
         return os << "Unknown(" << static_cast<int>(tid) << ")";
     }
@@ -51,7 +56,7 @@ inline std::ostream &operator<<(std::ostream &os, StateMachineTimer tid) {
  */
 class DoIPServerStateMachine {
   public:
-    using TransitionHandler = std::function<void(DoIPState, DoIPState)>;
+    using TransitionHandler = std::function<void(DoIPServerState, DoIPServerState)>;
 
     /**
      * @brief Constructs a new DoIP Server State Machine
@@ -59,9 +64,9 @@ class DoIPServerStateMachine {
      */
     explicit DoIPServerStateMachine(IConnectionContext &context)
         : m_context(context),
-          m_state(DoIPState::SocketInitialized),
+          m_state(DoIPServerState::SocketInitialized),
           m_aliveCheckRetryCount(0) {
-        transitionTo(DoIPState::WaitRoutingActivation);
+        transitionTo(DoIPServerState::WaitRoutingActivation);
     }
 
     /**
@@ -82,7 +87,7 @@ class DoIPServerStateMachine {
      * @param event The event to process
      * @param msg The associated message, if any
      */
-    void processEvent(DoIPEvent event, OptDoIPMessage msg = std::nullopt);
+    void processEvent(DoIPServerEvent event, OptDoIPMessage msg = std::nullopt);
 
     /**
      * @brief Handles a timer timeout event
@@ -94,15 +99,15 @@ class DoIPServerStateMachine {
 
     /**
      * @brief Gets the current state of the state machine
-     * @return The current DoIPState
+     * @return The current DoIPServerState
      */
-    DoIPState getState() const { return m_state; }
+    DoIPServerState getState() const { return m_state; }
 
     /**
      * @brief Checks if routing is currently activated
      * @return true if routing is activated, false otherwise
      */
-    bool isRoutingActivated() const { return m_state == DoIPState::RoutingActivated; }
+    bool isRoutingActivated() const { return m_state == DoIPServerState::RoutingActivated; }
 
     // Configuration
 
@@ -139,6 +144,12 @@ class DoIPServerStateMachine {
     std::chrono::milliseconds getAliveCheckTimeout() const { return m_aliveCheckTimeout; }
 
     /**
+     * @brief Gets the downstream response timeout duration
+     * @return The downstream response timeout in milliseconds
+     */
+    std::chrono::milliseconds getDownstreamResponseTimeout() const { return m_downstreamResponseTimeout; }
+
+    /**
      * @brief Sets the alive check retry count
      * @param count The number of retries for alive checks
      */
@@ -162,13 +173,20 @@ class DoIPServerStateMachine {
      */
     void setAliveCheckTimeout(std::chrono::milliseconds timeout) { m_aliveCheckTimeout = timeout; }
 
+    /**
+     * @brief Sets the downstream response timeout duration
+     * @param timeout The timeout duration in milliseconds
+     */
+    void setDownstreamResponseTimeout(std::chrono::milliseconds timeout) { m_downstreamResponseTimeout = timeout; }
+
   private:
     // State handlers
-    void handleSocketInitialized(DoIPEvent event, OptDoIPMessage msg);
-    void handleWaitRoutingActivation(DoIPEvent event, OptDoIPMessage msg);
-    void handleRoutingActivated(DoIPEvent event, OptDoIPMessage msg);
-    void handleWaitAliveCheckResponse(DoIPEvent event, OptDoIPMessage msg);
-    void handleFinalize(DoIPEvent event, OptDoIPMessage msg);
+    void handleSocketInitialized(DoIPServerEvent event, OptDoIPMessage msg);
+    void handleWaitRoutingActivation(DoIPServerEvent event, OptDoIPMessage msg);
+    void handleRoutingActivated(DoIPServerEvent event, OptDoIPMessage msg);
+    void handleWaitAliveCheckResponse(DoIPServerEvent event, OptDoIPMessage msg);
+    void handleWaitDownstreamResponse(DoIPServerEvent event, OptDoIPMessage msg);
+    void handleFinalize(DoIPServerEvent event, OptDoIPMessage msg);
 
     /**
      * @brief Handles common transitions valid for all states
@@ -176,10 +194,10 @@ class DoIPServerStateMachine {
      * @param event the event to process
      * @param msg the associated message, if any
      */
-    bool  handleCommonTransition(DoIPEvent event, OptDoIPMessage msg);
+    bool  handleCommonTransition(DoIPServerEvent event, OptDoIPMessage msg);
 
     // Helper methods
-    void transitionTo(DoIPState new_state, DoIPCloseReason reason = DoIPCloseReason::None);
+    void transitionTo(DoIPServerState new_state, DoIPCloseReason reason = DoIPCloseReason::None);
     void startTimer(StateMachineTimer timer_id, std::chrono::milliseconds duration);
     void stopTimer(StateMachineTimer timer_id);
     void stopAllTimers();
@@ -198,9 +216,19 @@ class DoIPServerStateMachine {
         startTimer(StateMachineTimer::GeneralInactivity, m_generalInactivityTimeout);
     }
 
+    inline void restartGeneralInactivityTimer() {
+        stopTimer(StateMachineTimer::GeneralInactivity);
+        startTimer(StateMachineTimer::GeneralInactivity, m_generalInactivityTimeout);
+    }
+
     inline void startAliveCheckTimer() {
         startTimer(StateMachineTimer::AliveCheck, m_aliveCheckTimeout);
     }
+
+    inline void startDownstreamResponseTimer() {
+        startTimer(StateMachineTimer::DownstreamResponse, m_downstreamResponseTimeout);
+    }
+
 
     // Interface to connection layer
     IConnectionContext &m_context;
@@ -208,7 +236,7 @@ class DoIPServerStateMachine {
     TimerManager<StateMachineTimer> m_timerManager;
 
     // State
-    DoIPState m_state;
+    DoIPServerState m_state;
 
     // Optional callback for state transitions (debugging/logging)
     TransitionHandler m_transitionCallback;
@@ -218,6 +246,8 @@ class DoIPServerStateMachine {
     std::chrono::milliseconds m_initialInactivityTimeout{times::server::InitialInactivityTimeout}; // 2 seconds
     std::chrono::milliseconds m_generalInactivityTimeout{times::server::GeneralInactivityTimeout}; // 5 minutes
     std::chrono::milliseconds m_aliveCheckTimeout{times::server::AliveCheckResponseTimeout};       // 500 ms
+
+    std::chrono::milliseconds m_downstreamResponseTimeout{10s};       // 500 ms
 };
 
 

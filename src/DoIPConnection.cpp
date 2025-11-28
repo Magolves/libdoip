@@ -35,7 +35,7 @@ int DoIPConnection::receiveTcpMessage() {
 
         auto optHeader = DoIPMessage::tryParseHeader(genericHeader, DOIP_HEADER_SIZE);
         if (!optHeader.has_value()) {
-            m_stateMachine.processEvent(DoIPEvent::InvalidMessage);
+            m_stateMachine.processEvent(DoIPServerEvent::InvalidMessage);
             DOIP_LOG_ERROR("DoIP message header parsing failed");
             closeSocket();
             return -2;
@@ -51,7 +51,7 @@ int DoIPConnection::receiveTcpMessage() {
             unsigned int receivedPayloadBytes = receiveFixedNumberOfBytesFromTCP(m_receiveBuf.data(), payloadLength);
             if (receivedPayloadBytes < payloadLength) {
                 DOIP_LOG_ERROR("DoIP message completely incomplete");
-                m_stateMachine.processEvent(DoIPEvent::InvalidMessage);
+                m_stateMachine.processEvent(DoIPServerEvent::InvalidMessage);
                 closeSocket();
                 return -2;
             }
@@ -135,7 +135,7 @@ void DoIPConnection::closeConnection(DoIPCloseReason reason) {
     m_isClosing = true;
     DOIP_LOG_INFO("Closing connection, reason: {}", fmt::streamed(reason));
 
-    m_stateMachine.processEvent(DoIPEvent::CloseRequestReceived);
+    m_stateMachine.processEvent(DoIPServerEvent::CloseRequestReceived);
     close(m_tcpSocket);
     m_tcpSocket = 0;
 

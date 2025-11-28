@@ -39,7 +39,7 @@ public:
     DoIPDiagnosticAck diagnosticResponse = std::nullopt;
 
     // Callbacks for test verification
-    std::function<void(DoIPState, DoIPState)> transitionCallback;
+    std::function<void(DoIPServerState, DoIPServerState)> transitionCallback;
 
     // IConnectionContext implementation
     ssize_t sendProtocolMessage(const DoIPMessage &msg) override {
@@ -96,14 +96,14 @@ TEST_SUITE("Server state machine") {
         DoIPServerStateMachine sm{mockContext};
         std::shared_ptr<spdlog::logger> m_log = Logger::get("test");
 
-        void handleStateChanged(DoIPState from, DoIPState to) {
+        void handleStateChanged(DoIPServerState from, DoIPServerState to) {
             INFO("State changed from ", from, " to ", to);
             m_log->info("State changed from {} to {}", fmt::streamed(from), fmt::streamed(to));
             REQUIRE(from != to);
         }
 
         ServerStateMachineFixture() {
-            sm.setTransitionCallback([this](DoIPState from, DoIPState to) {
+            sm.setTransitionCallback([this](DoIPServerState from, DoIPServerState to) {
                 handleStateChanged(from, to);
             });
         }
@@ -112,9 +112,9 @@ TEST_SUITE("Server state machine") {
     };
 
     TEST_CASE_FIXTURE(ServerStateMachineFixture, "Normal state flow") {
-        REQUIRE(sm.getState() == DoIPState::WaitRoutingActivation);
+        REQUIRE(sm.getState() == DoIPServerState::WaitRoutingActivation);
         sm.processMessage(message::makeRoutingActivationRequest(DoIPAddress(0xE0, 0x00)));
-        REQUIRE(sm.getState() == DoIPState::RoutingActivated);
+        REQUIRE(sm.getState() == DoIPServerState::RoutingActivated);
         REQUIRE(mockContext.getLastSentMessageType() == DoIPPayloadType::RoutingActivationResponse);
 
         sm.processMessage(message::makeDiagnosticMessage(
@@ -123,15 +123,15 @@ TEST_SUITE("Server state machine") {
             ByteArray{0x03, 0x22, 0xFD, 0x11}));
         REQUIRE(mockContext.getLastSentMessageType() == DoIPPayloadType::DiagnosticMessageAck);
 
-        REQUIRE(sm.getState() == DoIPState::RoutingActivated);
+        REQUIRE(sm.getState() == DoIPServerState::RoutingActivated);
     }
 
     TEST_CASE_FIXTURE(ServerStateMachineFixture, "Timeout after init") {
-        REQUIRE(sm.getState() == DoIPState::WaitRoutingActivation);
+        REQUIRE(sm.getState() == DoIPServerState::WaitRoutingActivation);
         std::this_thread::sleep_for(times::server::InitialInactivityTimeout);
         std::this_thread::sleep_for(extraDelay);
 
-        REQUIRE(sm.getState() == DoIPState::Closed);
+        REQUIRE(sm.getState() == DoIPServerState::Closed);
         REQUIRE(mockContext.connectionClosed);
     }
 
@@ -141,22 +141,22 @@ TEST_SUITE("Server state machine") {
         sm.setGeneralInactivityTimeout(generalInactivityTimeout);
 
         // Activate routing
-        REQUIRE(sm.getState() == DoIPState::WaitRoutingActivation);
+        REQUIRE(sm.getState() == DoIPServerState::WaitRoutingActivation);
         sm.processMessage(message::makeRoutingActivationRequest(DoIPAddress(0xE0, 0x00)));
-        REQUIRE(sm.getState() == DoIPState::RoutingActivated);
+        REQUIRE(sm.getState() == DoIPServerState::RoutingActivated);
         REQUIRE(mockContext.getLastSentMessageType() == DoIPPayloadType::RoutingActivationResponse);
 
-        REQUIRE(sm.getState() == DoIPState::RoutingActivated);
-        WAIT_FOR_STATE(DoIPState::WaitAliveCheckResponse, 300);
+        REQUIRE(sm.getState() == DoIPServerState::RoutingActivated);
+        WAIT_FOR_STATE(DoIPServerState::WaitAliveCheckResponse, 300);
 
-        REQUIRE(sm.getState() == DoIPState::WaitAliveCheckResponse);
+        REQUIRE(sm.getState() == DoIPServerState::WaitAliveCheckResponse);
         REQUIRE(mockContext.getLastSentMessageType() == DoIPPayloadType::AliveCheckRequest);
 
         // Send check alive response
         sm.processMessage(message::makeAliveCheckResponse(
             DoIPAddress(0xE0, 0x00)));
         // Server should be fine again
-        REQUIRE(sm.getState() == DoIPState::RoutingActivated);
+        REQUIRE(sm.getState() == DoIPServerState::RoutingActivated);
     }
 
     TEST_CASE_FIXTURE(ServerStateMachineFixture, "Alive check with diagnostic message response") {
@@ -165,15 +165,15 @@ TEST_SUITE("Server state machine") {
         sm.setGeneralInactivityTimeout(generalInactivityTimeout);
 
         // Activate routing
-        REQUIRE(sm.getState() == DoIPState::WaitRoutingActivation);
+        REQUIRE(sm.getState() == DoIPServerState::WaitRoutingActivation);
         sm.processMessage(message::makeRoutingActivationRequest(DoIPAddress(0xE0, 0x00)));
-        REQUIRE(sm.getState() == DoIPState::RoutingActivated);
+        REQUIRE(sm.getState() == DoIPServerState::RoutingActivated);
         REQUIRE(mockContext.getLastSentMessageType() == DoIPPayloadType::RoutingActivationResponse);
 
-        REQUIRE(sm.getState() == DoIPState::RoutingActivated);
-        WAIT_FOR_STATE(DoIPState::WaitAliveCheckResponse, 300);
+        REQUIRE(sm.getState() == DoIPServerState::RoutingActivated);
+        WAIT_FOR_STATE(DoIPServerState::WaitAliveCheckResponse, 300);
 
-        REQUIRE(sm.getState() == DoIPState::WaitAliveCheckResponse);
+        REQUIRE(sm.getState() == DoIPServerState::WaitAliveCheckResponse);
         REQUIRE(mockContext.getLastSentMessageType() == DoIPPayloadType::AliveCheckRequest);
 
         // Send diagnostic message instead of alive check response
@@ -181,7 +181,7 @@ TEST_SUITE("Server state machine") {
             DoIPAddress(0xE0, 0x00), DoIPAddress(0xE0, 0x01), ByteArray{0x03, 0x22, 0xFD, 0x11}));
         REQUIRE(mockContext.getLastSentMessageType() == DoIPPayloadType::DiagnosticMessageAck);
         // Server should be fine again
-        REQUIRE(sm.getState() == DoIPState::RoutingActivated);
+        REQUIRE(sm.getState() == DoIPServerState::RoutingActivated);
     }
 
     TEST_CASE_FIXTURE(ServerStateMachineFixture, "Alive check without response") {
@@ -189,13 +189,13 @@ TEST_SUITE("Server state machine") {
         sm.setGeneralInactivityTimeout(generalInactivityTimeout);
 
         // Activate routing
-        REQUIRE(sm.getState() == DoIPState::WaitRoutingActivation);
+        REQUIRE(sm.getState() == DoIPServerState::WaitRoutingActivation);
         sm.processMessage(message::makeRoutingActivationRequest(DoIPAddress(0xE0, 0x00)));
-        REQUIRE(sm.getState() == DoIPState::RoutingActivated);
+        REQUIRE(sm.getState() == DoIPServerState::RoutingActivated);
         REQUIRE(mockContext.getLastSentMessageType() == DoIPPayloadType::RoutingActivationResponse);
 
-        REQUIRE(sm.getState() == DoIPState::RoutingActivated);
+        REQUIRE(sm.getState() == DoIPServerState::RoutingActivated);
 
-        WAIT_FOR_STATE(DoIPState::Closed, 300);
+        WAIT_FOR_STATE(DoIPServerState::Closed, 300);
     }
 }
