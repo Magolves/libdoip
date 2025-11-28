@@ -18,6 +18,7 @@
 
 #include "ByteArray.h"
 #include "DoIPConnection.h"
+#include "DoIPConfig.h"
 #include "DoIPFurtherAction.h"
 #include "DoIPIdentifiers.h"
 #include "DoIPNegativeAck.h"
@@ -26,7 +27,7 @@
 
 namespace doip {
 
-const int DOIP_SERVER_PORT = 13400;
+constexpr int DOIP_SERVER_PORT = 13400;
 
 /**
  * @brief Callback invoked when a new TCP connection is established

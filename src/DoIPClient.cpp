@@ -20,7 +20,7 @@ void DoIPClient::startTcpConnection() {
         bool connectedFlag = false;
         const char *ipAddr = "127.0.0.1";
         _serverAddr.sin_family = AF_INET;
-        _serverAddr.sin_port = htons(_serverPortNr);
+        _serverAddr.sin_port = htons(DOIP_UDP_DISCOVERY_PORT);
         inet_aton(ipAddr, &(_serverAddr.sin_addr));
 
         while (!connectedFlag) {
@@ -41,11 +41,11 @@ void DoIPClient::startUdpConnection() {
         UDP_LOG_INFO("Client-UDP-Socket created successfully");
 
         _serverAddr.sin_family = AF_INET;
-        _serverAddr.sin_port = htons(_serverPortNr);
+        _serverAddr.sin_port = htons(DOIP_UDP_DISCOVERY_PORT);
         _serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
 
         _clientAddr.sin_family = AF_INET;
-        _clientAddr.sin_port = htons(_serverPortNr);
+        _clientAddr.sin_port = htons(DOIP_UDP_DISCOVERY_PORT);
         _clientAddr.sin_addr.s_addr = htonl(INADDR_ANY);
 
         // binds the socket to any IP DoIPAddress and the Port Number 13400
@@ -72,14 +72,14 @@ void DoIPClient::startAnnouncementListener() {
         }
 
         _announcementAddr.sin_family = AF_INET;
-        _announcementAddr.sin_port = htons(_announcementPortNr); // Port 13401
+        _announcementAddr.sin_port = htons(DOIP_UDP_TEST_EQUIPMENT_REQUEST_PORT); // Port 13401
         _announcementAddr.sin_addr.s_addr = htonl(INADDR_ANY);
 
         // Bind to port 13401 for Vehicle Announcements
         if (bind(_sockFd_announcement, reinterpret_cast<struct sockaddr *>(&_announcementAddr), sizeof(_announcementAddr)) < 0) {
-            UDP_LOG_ERROR("Failed to bind announcement socket to port {}: {}", _announcementPortNr, strerror(errno));
+            UDP_LOG_ERROR("Failed to bind announcement socket to port {}: {}", DOIP_UDP_TEST_EQUIPMENT_REQUEST_PORT, strerror(errno));
         } else {
-            UDP_LOG_INFO("Announcement socket bound to port {} successfully", _announcementPortNr);
+            UDP_LOG_INFO("Announcement socket bound to port {} successfully", DOIP_UDP_TEST_EQUIPMENT_REQUEST_PORT);
         }
     } else {
         UDP_LOG_ERROR("Failed to create announcement socket: {}", strerror(errno));
@@ -193,7 +193,7 @@ void DoIPClient::receiveVehicleAnnouncement() {
     unsigned int length = sizeof(_announcementAddr);
     int bytesRead;
 
-    UDP_LOG_DEBUG("Listening for Vehicle Announcements on port {}", _announcementPortNr);
+    UDP_LOG_DEBUG("Listening for Vehicle Announcements on port {}", DOIP_UDP_TEST_EQUIPMENT_REQUEST_PORT);
 
     // Set socket to non-blocking mode for timeout
     struct timeval timeout;

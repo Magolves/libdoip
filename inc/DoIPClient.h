@@ -10,12 +10,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "DoIPConfig.h"
 #include "DoIPMessage.h"
 
 namespace doip {
 
-const int _serverPortNr = 13400;
-const int _announcementPortNr = 13401;
 const int _maxDataSize = 64;
 
 using DoIPRequest = std::pair<size_t, const uint8_t *>;

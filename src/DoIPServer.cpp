@@ -121,13 +121,13 @@ bool DoIPServer::setupTcpSocket() {
 }
 
 bool DoIPServer::setupUdpSocket() {
-    UDP_LOG_DEBUG("Setting up UDP socket on port {}", DOIP_SERVER_PORT);
+    UDP_LOG_DEBUG("Setting up UDP socket on port {}", DOIP_UDP_DISCOVERY_PORT);
 
     m_udp_sock = socket(AF_INET, SOCK_DGRAM, 0);
 
     m_serverAddress.sin_family = AF_INET;
     m_serverAddress.sin_addr.s_addr = htonl(INADDR_ANY);
-    m_serverAddress.sin_port = htons(DOIP_SERVER_PORT);
+    m_serverAddress.sin_port = htons(DOIP_UDP_DISCOVERY_PORT);
 
     if (m_udp_sock < 0) {
         UDP_LOG_ERROR("Failed to create UDP socket: {}", strerror(errno));
@@ -142,7 +142,7 @@ bool DoIPServer::setupUdpSocket() {
 
     // setting the IP DoIPAddress for Multicast
     setMulticastGroup("224.0.0.2");
-    UDP_LOG_INFO("UDP socket successfully bound to port {} with multicast group", DOIP_SERVER_PORT);
+    UDP_LOG_INFO("UDP socket successfully bound to port {} with multicast group", DOIP_UDP_DISCOVERY_PORT);
     return true;
 }
 
