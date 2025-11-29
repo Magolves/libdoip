@@ -200,7 +200,7 @@ class DoIPServerStateMachine {
     void transitionTo(DoIPServerState new_state, DoIPCloseReason reason = DoIPCloseReason::None);
     void startTimer(StateMachineTimer timer_id, std::chrono::milliseconds duration);
     void stopTimer(StateMachineTimer timer_id);
-    void stopAllTimers();
+    void stopAll();
     ssize_t sendRoutingActivationResponse(const DoIPAddress &sourceAddress, DoIPRoutingActivationResult response_code);
     ssize_t sendAliveCheckRequest();
 
@@ -213,6 +213,7 @@ class DoIPServerStateMachine {
 
     // Inline helper functions for common timer operations
     inline void startGeneralInactivityTimer() {
+        stopAll();
         startTimer(StateMachineTimer::GeneralInactivity, m_generalInactivityTimeout);
     }
 
@@ -222,10 +223,12 @@ class DoIPServerStateMachine {
     }
 
     inline void startAliveCheckTimer() {
+        stopAll();
         startTimer(StateMachineTimer::AliveCheck, m_aliveCheckTimeout);
     }
 
     inline void startDownstreamResponseTimer() {
+        stopAll();
         startTimer(StateMachineTimer::DownstreamResponse, m_downstreamResponseTimeout);
     }
 

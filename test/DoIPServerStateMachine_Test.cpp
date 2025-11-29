@@ -3,7 +3,7 @@
 
 #include "DoIPConnection.h"
 #include "DoIPServerStateMachine.h"
-#include "IConnectionContext.h"
+#include "DoIPDefaultConnection.h"
 #include "Logger.h"
 
 using namespace doip;
@@ -27,8 +27,10 @@ static auto extraDelay = std::chrono::milliseconds(50);
         REQUIRE(sm.getState() == (s));                                        \
     }
 
+
+
 // Mock implementation of IConnectionContext for testing
-class MockConnectionContext : public IConnectionContext {
+class MockConnectionContext : public DoIPDefaultConnection {
 public:
     // Captured data
     std::vector<DoIPMessage> sentMessages;
@@ -38,12 +40,18 @@ public:
     bool connectionClosed = false;
     DoIPDiagnosticAck diagnosticResponse = std::nullopt;
 
+    std::shared_ptr<spdlog::logger> logger = Logger::get("mock");
+
     // Callbacks for test verification
     std::function<void(DoIPServerState, DoIPServerState)> transitionCallback;
+
+    MockConnectionContext()
+        : DoIPDefaultConnection(std::make_unique<DefaultDoIPServerModel>()) {}
 
     // IConnectionContext implementation
     ssize_t sendProtocolMessage(const DoIPMessage &msg) override {
         sentMessages.push_back(msg);
+        logger->info("Sent message: {}", fmt::streamed(msg));
         return static_cast<ssize_t>(msg.size());
     }
 
@@ -70,7 +78,7 @@ public:
     }
 
     void notifyConnectionClosed(DoIPCloseReason reason) override {
-        (void)reason;
+        logger->info("Connection closed, reason: {}", fmt::streamed(reason));
     }
 
     void notifyDiagnosticAckSent(DoIPDiagnosticAck ack) override {
@@ -88,6 +96,7 @@ public:
         }
         return sentMessages.back().getPayloadType();
     }
+
 };
 
 TEST_SUITE("Server state machine") {
@@ -111,7 +120,7 @@ TEST_SUITE("Server state machine") {
         ~ServerStateMachineFixture() {}
     };
 
-    TEST_CASE_FIXTURE(ServerStateMachineFixture, "Normal state flow") {
+    TEST_CASE_FIXTURE(ServerStateMachineFixture, "Normal state flow bugfix1") {
         REQUIRE(sm.getState() == DoIPServerState::WaitRoutingActivation);
         sm.processMessage(message::makeRoutingActivationRequest(DoIPAddress(0xE0, 0x00)));
         REQUIRE(sm.getState() == DoIPServerState::RoutingActivated);
@@ -123,6 +132,17 @@ TEST_SUITE("Server state machine") {
             ByteArray{0x03, 0x22, 0xFD, 0x11}));
         REQUIRE(mockContext.getLastSentMessageType() == DoIPPayloadType::DiagnosticMessageAck);
 
+        if (mockContext.hasDownstreamHandler()) {
+            WAIT_FOR_STATE(DoIPServerState::WaitDownstreamResponse, 300);
+            REQUIRE(sm.getState() == DoIPServerState::WaitDownstreamResponse);
+
+            // Simulate downstream response received
+            mockContext.receiveDownstreamResponse(
+                message::makeDiagnosticMessage(
+                    DoIPAddress(0xE0, 0x00),
+                    DoIPAddress(0xE0, 0x01),
+                    ByteArray{0x03, 0x62, 0xFD, 0x11, 0x66}));
+        }
         REQUIRE(sm.getState() == DoIPServerState::RoutingActivated);
     }
 

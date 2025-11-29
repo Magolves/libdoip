@@ -156,6 +156,14 @@ class TimerManager {
     }
 
     /**
+     * @brief Stops all timers and clears the timer list.
+     */
+    void stopAll() {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_timers.clear();
+    }
+
+    /**
      * @brief Check if specified timer exists.
      *
      * @param id the id of the timer

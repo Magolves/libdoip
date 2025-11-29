@@ -83,6 +83,7 @@ set(SOURCES
     src/DoIPServerStateMachine.cpp
     src/Logger.cpp
     src/MacAddress.cpp
+    src/DoIPDefaultConnection.cpp
 )
 
 

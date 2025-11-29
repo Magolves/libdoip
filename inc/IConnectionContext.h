@@ -4,6 +4,7 @@
 #include "DoIPAddress.h"
 #include "DoIPMessage.h"
 #include "DoIPNegativeDiagnosticAck.h"
+#include "DoIPDownstreamResult.h"
 #include "DoIPCloseReason.h"
 
 #include <cstdint>
@@ -21,6 +22,7 @@ namespace doip {
  * - Bridge between protocol layer (state machine) and application layer (user callbacks)
  * - Provide connection-level operations (send, close)
  * - Provide configuration queries (addresses)
+ * - Handle downstream (subnet) communication flow
  */
 class IConnectionContext {
 public:
@@ -33,6 +35,7 @@ public:
      * message (ACK, NACK, alive check, routing activation response, etc.)
      *
      * @param msg The DoIP message to send
+     * @return Number of bytes sent, or negative value on error
      */
     [[nodiscard]] virtual ssize_t sendProtocolMessage(const DoIPMessage &msg) = 0;
 
@@ -104,6 +107,72 @@ public:
      * @param ack The ACK/NACK that was sent (nullopt = positive ACK)
      */
     virtual void notifyDiagnosticAckSent(DoIPDiagnosticAck ack) = 0;
+
+    /**
+     * @brief Check if downstream forwarding is available
+     *
+     * This checks if the DoIPServerModel has a downstream handler configured.
+     * The state machine uses this to decide whether to forward messages
+     * downstream or handle them locally.
+     *
+     * @return true if downstream forwarding is configured, false otherwise
+     */
+    virtual bool hasDownstreamHandler() const = 0;
+
+    /**
+     * @brief Forward a diagnostic message to downstream (subnet device)
+     *
+     * Called by the state machine when a diagnostic message should be routed
+     * to a downstream device (e.g., ECU on CAN bus). The implementation
+     * delegates to DoIPServerModel::onDownstreamRequest.
+     *
+     * The downstream handler is responsible for:
+     * 1. Sending the message via the appropriate transport (CAN, LIN, etc.)
+     * 2. Storing the connection context for async response delivery
+     * 3. Calling receiveDownstreamResponse() when the response arrives
+     *
+     * The state machine handles:
+     * - Transition to WaitDownstreamResponse state
+     * - Starting the downstream response timeout timer
+     * - Processing the response when it arrives
+     *
+     * @param msg The diagnostic message to forward
+     * @return Result indicating if the request was initiated successfully
+     */
+    virtual DoIPDownstreamResult notifyDownstreamRequest(const DoIPMessage &msg) = 0;
+
+    /**
+     * @brief Receive a response from downstream device
+     *
+     * Called by the application layer when a response is received from
+     * a downstream device. This injects the response back into the
+     * state machine for processing.
+     *
+     * Thread-safety: This method may be called from a different thread
+     * than the one running the state machine. Implementations should
+     * ensure thread-safe access to the state machine.
+     *
+     * Typical call sequence:
+     * 1. State machine calls notifyDownstreamRequest(request)
+     * 2. Application sends request via CAN/LIN/etc.
+     * 3. Application receives response from downstream
+     * 4. Application calls receiveDownstreamResponse(response)
+     * 5. State machine processes response and sends to client
+     *
+     * @param response The diagnostic response from downstream
+     */
+    virtual void receiveDownstreamResponse(const DoIPMessage &response) = 0;
+
+    /**
+     * @brief Notify application that downstream response was received
+     *
+     * Optional callback invoked after a downstream response is received
+     * and before it is sent to the client. Allows for logging or inspection.
+     *
+     * @param request The original request that was sent downstream
+     * @param response The response received from downstream
+     */
+    virtual void notifyDownstreamResponseReceived(const DoIPMessage &request, const DoIPMessage &response) = 0;
 };
 
 } // namespace doip

@@ -9,9 +9,8 @@
 namespace doip {
 
 DoIPConnection::DoIPConnection(int tcpSocket, UniqueServerModelPtr model)
-    : m_tcpSocket(tcpSocket),
-      m_serverModel(std::move(model)),
-      m_stateMachine(*this) {
+        : DoIPDefaultConnection(std::move(model)),
+            m_tcpSocket(tcpSocket) {
 }
 
 /*
@@ -135,12 +134,11 @@ void DoIPConnection::closeConnection(DoIPCloseReason reason) {
     m_isClosing = true;
     DOIP_LOG_INFO("Closing connection, reason: {}", fmt::streamed(reason));
 
-    m_stateMachine.processEvent(DoIPServerEvent::CloseRequestReceived);
+    // Call base class to handle state machine and notification
+    DoIPDefaultConnection::closeConnection(reason);
+
     close(m_tcpSocket);
     m_tcpSocket = 0;
-
-    // Notify application
-    notifyConnectionClosed(reason);
 }
 
 DoIPAddress DoIPConnection::getServerAddress() const {
@@ -151,7 +149,7 @@ DoIPAddress DoIPConnection::getClientAddress() const {
     return m_gatewayAddress;
 }
 
-void DoIPConnection::setClientAddress(const DoIPAddress& address) {
+void DoIPConnection::setClientAddress(const DoIPAddress &address) {
     m_gatewayAddress = address;
 }
 
@@ -174,6 +172,27 @@ void DoIPConnection::notifyConnectionClosed(DoIPCloseReason reason) {
 void DoIPConnection::notifyDiagnosticAckSent(DoIPDiagnosticAck ack) {
     if (m_serverModel->onDiagnosticNotification) {
         m_serverModel->onDiagnosticNotification(*this, ack);
+    }
+}
+
+bool DoIPConnection::hasDownstreamHandler() const {
+    return m_serverModel->hasDownstreamHandler();
+}
+
+DoIPDownstreamResult DoIPConnection::notifyDownstreamRequest(const DoIPMessage &msg) {
+    if (m_serverModel->onDownstreamRequest) {
+        return m_serverModel->onDownstreamRequest(*this, msg);
+    }
+    return DoIPDownstreamResult::Error;
+}
+
+void DoIPConnection::receiveDownstreamResponse(const DoIPMessage &response) {
+    m_stateMachine.processEvent(DoIPServerEvent::DiagnosticMessageReceivedDownstream, response);
+}
+
+void DoIPConnection::notifyDownstreamResponseReceived(const DoIPMessage &request, const DoIPMessage &response) {
+    if (m_serverModel->onDownstreamResponse) {
+        m_serverModel->onDownstreamResponse(*this, request, response);
     }
 }
 

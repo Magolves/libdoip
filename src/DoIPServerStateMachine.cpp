@@ -7,7 +7,7 @@
 namespace doip {
 
 DoIPServerStateMachine::~DoIPServerStateMachine() {
-    stopAllTimers();
+    stopAll();
 }
 
 void DoIPServerStateMachine::processMessage(const DoIPMessage &message) {
@@ -170,6 +170,15 @@ void DoIPServerStateMachine::handleRoutingActivated(DoIPServerEvent event, OptDo
 
                 // Reset general inactivity timer
                 restartGeneralInactivityTimer();
+                if (m_context.hasDownstreamHandler()) {
+                    startDownstreamResponseTimer();
+                    auto result = m_context.notifyDownstreamRequest(*msg);
+                    if (result == DoIPDownstreamResult::Pending) {
+                        transitionTo(DoIPServerState::WaitDownstreamResponse);
+                    } else if (result == DoIPDownstreamResult::Error) {
+                        sendDiagnosticMessageResponse(sourceAddress.value(), DoIPNegativeDiagnosticAck::TargetUnreachable);
+                    }
+                }
             }
         }
         return;
@@ -186,8 +195,6 @@ void DoIPServerStateMachine::handleWaitAliveCheckResponse(DoIPServerEvent event,
     if (event == DoIPServerEvent::AliveCheckResponseReceived) {
         DOIP_LOG_INFO("Alive check response received");
         stopTimer(StateMachineTimer::AliveCheck);
-
-        // Restart general inactivity timer
         startGeneralInactivityTimer();
 
         transitionTo(DoIPServerState::RoutingActivated);
@@ -198,16 +205,9 @@ void DoIPServerStateMachine::handleWaitAliveCheckResponse(DoIPServerEvent event,
         // Diagnostic message acts as alive check response
         DOIP_LOG_INFO("Diagnostic message received - treating as alive check response");
         stopTimer(StateMachineTimer::AliveCheck);
+        transitionTo(DoIPServerState::RoutingActivated);
 
-        if (msg) {
-            auto sourceAddress = msg->getSourceAddress();
-            if (sourceAddress.has_value()) {
-                sendDiagnosticMessageAck(sourceAddress.value());
-            }
-        }
-
-        // startGeneralInactivityTimer();
-        // transitionTo(DoIPServerState::RoutingActivated);
+        handleRoutingActivated(event, msg);
         return;
     }
 
@@ -305,12 +305,15 @@ void DoIPServerStateMachine::transitionTo(DoIPServerState new_state, DoIPCloseRe
         break;
 
     case DoIPServerState::RoutingActivated:
-        // Start general inactivity timer
+        stopTimer(StateMachineTimer::InitialInactivity);
+        stopTimer(StateMachineTimer::AliveCheck);
         startGeneralInactivityTimer();
         break;
 
     case DoIPServerState::WaitAliveCheckResponse:
-        // Timer already started before transition
+        stopTimer(StateMachineTimer::InitialInactivity);
+        stopTimer(StateMachineTimer::GeneralInactivity);
+        startAliveCheckTimer();
         break;
 
     case DoIPServerState::WaitDownstreamResponse:
@@ -319,7 +322,7 @@ void DoIPServerStateMachine::transitionTo(DoIPServerState new_state, DoIPCloseRe
 
     case DoIPServerState::Finalize:
         DOIP_LOG_INFO("Entering Finalize state - closing connection");
-        stopAllTimers();
+        stopAll();
         // Close the connection (this will be called only once during transition to Finalize)
         m_context.closeConnection(reason);
         // Immediately transition to Closed
@@ -327,7 +330,7 @@ void DoIPServerStateMachine::transitionTo(DoIPServerState new_state, DoIPCloseRe
         break;
 
     case DoIPServerState::Closed:
-        stopAllTimers();
+        stopAll();
         break;
     }
 }
@@ -359,13 +362,9 @@ void DoIPServerStateMachine::stopTimer(StateMachineTimer timer_id) {
     }
 }
 
-void DoIPServerStateMachine::stopAllTimers() {
+void DoIPServerStateMachine::stopAll() {
     // Stop all known timers
-    m_timerManager.removeTimer(StateMachineTimer::InitialInactivity);
-    m_timerManager.removeTimer(StateMachineTimer::GeneralInactivity);
-    m_timerManager.removeTimer(StateMachineTimer::AliveCheck);
-
-    DOIP_LOG_DEBUG("Stopped all timers");
+    m_timerManager.stopAll();
 }
 
 ssize_t DoIPServerStateMachine::sendRoutingActivationResponse(const DoIPAddress &source_address, DoIPRoutingActivationResult response_code) {
