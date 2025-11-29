@@ -4,7 +4,10 @@
 namespace doip {
 
 DoIPDefaultConnection::DoIPDefaultConnection(UniqueServerModelPtr model)
-    : m_stateMachine(*this), m_serverModel(std::move(model)) {}
+    : m_stateMachine(*this), m_serverModel(std::move(model)) {
+        m_isOpen = true;
+        m_serverModel->onOpenConnection(*this);
+    }
 
 ssize_t DoIPDefaultConnection::sendProtocolMessage(const DoIPMessage &msg) {
     DOIP_LOG_INFO("Default connection: Sending protocol message: {}", fmt::streamed(msg));
@@ -13,6 +16,8 @@ ssize_t DoIPDefaultConnection::sendProtocolMessage(const DoIPMessage &msg) {
 
 void DoIPDefaultConnection::closeConnection(DoIPCloseReason reason) {
     DOIP_LOG_INFO("Default connection: Closing connection, reason: {}", fmt::streamed(reason));
+    m_closeReason = reason;
+    m_isOpen = false;
     notifyConnectionClosed(reason);
 }
 

@@ -350,9 +350,9 @@ void DoIPServerStateMachine::startTimer(StateMachineTimer timer_id, std::chrono:
     auto timerId = m_timerManager.addTimer(timer_id, duration, callback, false);
 
     if (timerId.has_value()) {
-        DOIP_LOG_DEBUG("Started timer " + std::to_string(static_cast<int>(timer_id)) + " for " + std::to_string(duration.count()) + "ms");
+        DOIP_LOG_DEBUG("Started timer {} for {}ms", fmt::streamed(timer_id), duration.count());
     } else {
-        DOIP_LOG_ERROR("Failed to start timer " + std::to_string(static_cast<int>(timer_id)));
+        DOIP_LOG_ERROR("Failed to start timer {}" , fmt::streamed(timer_id));
     }
 }
 

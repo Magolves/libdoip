@@ -50,6 +50,20 @@ public:
     virtual void closeConnection(DoIPCloseReason reason) = 0;
 
     /**
+     * @brief Check if the connection is currently open
+     *
+     * @return true if the connection is open, false otherwise
+     */
+    virtual bool isOpen() const = 0;
+
+    /**
+     * @brief Get the reason why the connection was closed
+     *
+     * @return The DoIPCloseReason for the closed connection
+     */
+    virtual DoIPCloseReason getCloseReason() const = 0;
+
+    /**
      * @brief Get the server's logical address
      *
      * Used by state machine for constructing response messages
@@ -173,6 +187,8 @@ public:
      * @param response The response received from downstream
      */
     virtual void notifyDownstreamResponseReceived(const DoIPMessage &request, const DoIPMessage &response) = 0;
+
+
 };
 
 } // namespace doip

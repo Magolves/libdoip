@@ -22,6 +22,15 @@ public:
     // === IConnectionContext interface implementation ===
     ssize_t sendProtocolMessage(const DoIPMessage &msg) override;
     void closeConnection(DoIPCloseReason reason) override;
+
+    bool isOpen() const override {
+        return m_isOpen;
+    }
+
+    DoIPCloseReason getCloseReason() const override {
+        return m_closeReason;
+    }
+
     DoIPAddress getServerAddress() const override;
     DoIPAddress getClientAddress() const override;
     void setClientAddress(const DoIPAddress& address) override;
@@ -36,11 +45,18 @@ public:
     DoIPServerState getState() const {
         return m_stateMachine.getState();
     }
-    
+
+    UniqueServerModelPtr& getServerModel() {
+        return m_serverModel;
+    }
+
 protected:
     DoIPServerStateMachine m_stateMachine;
     UniqueServerModelPtr m_serverModel;
     DoIPAddress m_routedClientAddress;
+    bool m_isOpen;
+    DoIPCloseReason m_closeReason = DoIPCloseReason::None;
+
 };
 
 } // namespace doip

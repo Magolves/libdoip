@@ -4,12 +4,12 @@
 #include <functional>
 
 #include "DoIPAddress.h"
-#include "DoIPServerEvent.h"
+#include "DoIPCloseReason.h"
+#include "DoIPDownstreamResult.h"
 #include "DoIPMessage.h"
 #include "DoIPNegativeDiagnosticAck.h"
-#include "DoIPDownstreamResult.h"
+#include "DoIPServerEvent.h"
 #include "DoIPServerState.h"
-#include "DoIPCloseReason.h"
 #include "Logger.h"
 
 namespace doip {
@@ -18,9 +18,10 @@ namespace doip {
 class IConnectionContext;
 
 // Callback type definitions
-using ServerModelCloseHandler = std::function<void(IConnectionContext&, DoIPCloseReason)>;
-using ServerModelDiagnosticHandler = std::function<DoIPDiagnosticAck(IConnectionContext&, const DoIPMessage &)>;
-using ServerModelDiagnosticNotificationHandler = std::function<void(IConnectionContext&, DoIPDiagnosticAck)>;
+using ServerModelOpenHandler = std::function<void(IConnectionContext &)>;
+using ServerModelCloseHandler = std::function<void(IConnectionContext &, DoIPCloseReason)>;
+using ServerModelDiagnosticHandler = std::function<DoIPDiagnosticAck(IConnectionContext &, const DoIPMessage &)>;
+using ServerModelDiagnosticNotificationHandler = std::function<void(IConnectionContext &, DoIPDiagnosticAck)>;
 
 /**
  * @brief Callback for downstream (subnet) request handling
@@ -41,7 +42,7 @@ using ServerModelDiagnosticNotificationHandler = std::function<void(IConnectionC
  *         - Handled: Message was handled synchronously, no state transition needed
  *         - Error: Failed to initiate request, connection should handle error
  */
-using ServerModelDownstreamHandler = std::function<DoIPDownstreamResult(IConnectionContext&, const DoIPMessage &)>;
+using ServerModelDownstreamHandler = std::function<DoIPDownstreamResult(IConnectionContext &, const DoIPMessage &)>;
 
 /**
  * @brief Callback for downstream response notification
@@ -54,7 +55,7 @@ using ServerModelDownstreamHandler = std::function<DoIPDownstreamResult(IConnect
  * @param request The original request that was sent downstream
  * @param response The response received from downstream
  */
-using ServerModelDownstreamResponseHandler = std::function<void(IConnectionContext&, const DoIPMessage &request, const DoIPMessage &response)>;
+using ServerModelDownstreamResponseHandler = std::function<void(IConnectionContext &, const DoIPMessage &request, const DoIPMessage &response)>;
 
 /**
  * @brief DoIP Server Model - Configuration and callbacks for a DoIP server connection
@@ -64,6 +65,8 @@ using ServerModelDownstreamResponseHandler = std::function<void(IConnectionConte
  * the protocol logic (in DoIPServerStateMachine) from the application logic.
  */
 struct DoIPServerModel {
+    /// Called when the connection is being opened
+    ServerModelOpenHandler onOpenConnection;
 
     /// Called when the connection is being closed
     ServerModelCloseHandler onCloseConnection;
@@ -98,7 +101,7 @@ struct DoIPServerModel {
     ServerModelDownstreamResponseHandler onDownstreamResponse;
 
     /// The logical address of this DoIP server
-    DoIPAddress serverAddress;
+    DoIPAddress serverAddress = DoIPAddress(0x0E, 0x00);
 
     /**
      * @brief Check if downstream forwarding is enabled
@@ -118,26 +121,27 @@ using UniqueServerModelPtr = std::unique_ptr<DoIPServerModel>;
  */
 struct DefaultDoIPServerModel : public DoIPServerModel {
     DefaultDoIPServerModel() {
-        DOIP_LOG_CRITICAL("Using DefaultDoIPServerModel - no callbacks are set!");
-
-        onCloseConnection = [](IConnectionContext& ctx, DoIPCloseReason reason) noexcept {
+        onOpenConnection = [this](IConnectionContext &ctx) noexcept {
             (void)ctx;
-            DOIP_LOG_CRITICAL("Close connection called on DefaultDoIPServerModel - reason {}", fmt::streamed(reason));
-            // Default no-op
         };
 
-        onDiagnosticMessage = [](IConnectionContext& ctx, const DoIPMessage &msg) noexcept -> DoIPDiagnosticAck {
+        onCloseConnection = [this](IConnectionContext &ctx, DoIPCloseReason reason) noexcept {
+            (void)ctx;
+            (void)reason;
+        };
+
+        onDiagnosticMessage = [](IConnectionContext &ctx, const DoIPMessage &msg) noexcept -> DoIPDiagnosticAck {
             (void)ctx;
             (void)msg;
-            DOIP_LOG_CRITICAL("Diagnostic message received on DefaultDoIPServerModel");
+            DOIP_LOG_DEBUG("Diagnostic message received on DefaultDoIPServerModel");
             // Default: always ACK
             return std::nullopt;
         };
 
-        onDiagnosticNotification = [](IConnectionContext& ctx, DoIPDiagnosticAck ack) noexcept {
+        onDiagnosticNotification = [](IConnectionContext &ctx, DoIPDiagnosticAck ack) noexcept {
             (void)ctx;
             (void)ack;
-            DOIP_LOG_CRITICAL("Diagnostic notification on DefaultDoIPServerModel");
+            DOIP_LOG_DEBUG("Diagnostic notification on DefaultDoIPServerModel");
             // Default no-op
         };
 
@@ -146,6 +150,7 @@ struct DefaultDoIPServerModel : public DoIPServerModel {
         onDownstreamRequest = nullptr;
         onDownstreamResponse = nullptr;
     }
+
 };
 
 } // namespace doip
