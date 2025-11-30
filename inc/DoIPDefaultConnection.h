@@ -19,8 +19,33 @@ enum class ConnectionTimers : uint8_t {
     UserDefined         // Placeholder for user-defined timers
 };
 
+inline std::ostream &operator<<(std::ostream &os, ConnectionTimers tid) {
+    switch (tid) {
+    case ConnectionTimers::InitialInactivity:
+        return os << "Initial Inactivity";
+    case ConnectionTimers::GeneralInactivity:
+        return os << "General Inactivity";
+    case ConnectionTimers::AliveCheck:
+        return os << "Alive Check";
+    case ConnectionTimers::DownstreamResponse:
+        return os << "Downstream Response";
+    case ConnectionTimers::UserDefined:
+        return os << "User Defined";
+    default:
+        return os << "Unknown(" << static_cast<int>(tid) << ")";
+    }
+}
+
+
 using MessageHandler = std::function<void(std::optional<DoIPMessage>)>;
 using TimeOutHandler = std::function<void(StateMachineTimer)>;
+
+constexpr std::array<std::pair<ConnectionTimers, std::chrono::milliseconds>, 5> DEFAULT_TIMER_DURATIONS{{{ConnectionTimers::InitialInactivity, doip::times::server::InitialInactivityTimeout},
+                                                                                                         {ConnectionTimers::GeneralInactivity, doip::times::server::GeneralInactivityTimeout},
+                                                                                                         {ConnectionTimers::AliveCheck, doip::times::server::AliveCheckResponseTimeout},
+                                                                                                         {ConnectionTimers::DownstreamResponse, 2000ms},
+                                                                                                         {ConnectionTimers::UserDefined, 0ms}}};
+
 /**
  * @brief Default implementation of IConnectionContext
  *
@@ -30,32 +55,30 @@ using TimeOutHandler = std::function<void(StateMachineTimer)>;
  */
 class DoIPDefaultConnection : public IConnectionContext {
     struct StateDescriptor {
-        StateDescriptor(DoIPServerState state,
-                        ConnectionTimers timer,
-                        DoIPServerState stateAfterTimeout,
-                        MessageHandler handler,
-                        TimeOutHandler timeoutHandler = nullptr,
-                        std::chrono::milliseconds timeoutDurationUser = std::chrono::milliseconds(0))
-            : state(state),
-              timer(timer),
-              stateAfterTimeout(stateAfterTimeout),
-              messageHandler(std::move(handler)),
-              timeoutHandler(std::move(timeoutHandler)),
-              timeoutDurationUser(timeoutDurationUser) {}
+        StateDescriptor(DoIPServerState state_,
+                        ConnectionTimers timer_,
+                        DoIPServerState stateAfterTimeout_,
+                        MessageHandler handler_,
+                        TimeOutHandler timeoutHandler_ = nullptr,
+                        std::chrono::milliseconds timeoutDurationUser_ = std::chrono::milliseconds(0))
+            : state(state_),
+              timer(timer_),
+              stateAfterTimeout(stateAfterTimeout_),
+              messageHandler(std::move(handler_)),
+              timeoutHandler(std::move(timeoutHandler_)),
+              timeoutDurationUser(timeoutDurationUser_) {}
 
         DoIPServerState state;
         ConnectionTimers timer;
         DoIPServerState stateAfterTimeout;
-        std::chrono::milliseconds timeoutDurationUser{0};
 
         MessageHandler messageHandler;
         TimeOutHandler timeoutHandler;
+        std::chrono::milliseconds timeoutDurationUser{0};
     };
 
   public:
     explicit DoIPDefaultConnection(UniqueServerModelPtr model);
-
-    std::array<StateDescriptor, 7> STATE_DESCRIPTORS;
 
     // === IConnectionContext interface implementation ===
     ssize_t sendProtocolMessage(const DoIPMessage &msg) override;
@@ -88,19 +111,58 @@ class DoIPDefaultConnection : public IConnectionContext {
         return m_serverModel;
     }
 
-    void handleMessage(const DoIPMessage &message);
+    void handleMessage2(const DoIPMessage &message);
 
   protected:
     DoIPServerStateMachine m_stateMachine;
     UniqueServerModelPtr m_serverModel;
+    std::array<StateDescriptor, 7> STATE_DESCRIPTORS;
     DoIPAddress m_routedClientAddress;
 
     bool m_isOpen;
     DoIPCloseReason m_closeReason = DoIPCloseReason::None;
     const StateDescriptor *m_state = nullptr;
+    std::array<std::pair<ConnectionTimers, std::chrono::milliseconds>, 5> m_timerDurations = DEFAULT_TIMER_DURATIONS;
     TimerManager<ConnectionTimers> m_timerManager;
 
     void transitionTo(DoIPServerState newState, DoIPCloseReason reason = DoIPCloseReason::None);
+
+    void startStateTimer(StateDescriptor const *stateDesc) {
+        assert(stateDesc != nullptr);
+        if (stateDesc == nullptr) {
+            return;
+        }
+
+        std::chrono::milliseconds duration = std::chrono::milliseconds(0);
+        auto timerDesc = std::find_if(
+            m_timerDurations.begin(),
+            m_timerDurations.end(),
+            [stateDesc](const auto &pair) { return pair.first == stateDesc->timer; });
+
+        if (stateDesc->timer == ConnectionTimers::UserDefined) {
+            duration = stateDesc->timeoutDurationUser;
+            // If user-defined timer duration is zero, transition immediately
+            if (duration.count() == 0) {
+                transitionTo(stateDesc->stateAfterTimeout);
+                return;
+            }
+        }
+
+        TimeOutHandler timeoutHandler = stateDesc->timeoutHandler;
+        if (timeoutHandler == nullptr) {
+            if (stateDesc->timeoutDurationUser.count() > 0) {
+                auto timerId = m_timerManager.addTimer(timerDesc->first, duration, []() {
+                // Default timeout handler does nothing
+                DOIP_LOG_CRITICAL("No timeout handler defined for user-defined timer - do something!"); }, false);
+
+                if (timerId.has_value()) {
+                    DOIP_LOG_DEBUG("Started user-defined timer {} for {}ms", fmt::streamed(timerDesc->first), duration.count());
+                } else {
+                    DOIP_LOG_ERROR("Failed to start user-defined timer {}", fmt::streamed(timerDesc->first));
+                }
+            }
+        }
+    }
 
     // handlers for each state
     void handleSocketInitialized(DoIPServerEvent event, OptDoIPMessage msg);

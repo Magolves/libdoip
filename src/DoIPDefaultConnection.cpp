@@ -88,19 +88,81 @@ void DoIPDefaultConnection::setClientAddress(const DoIPAddress& address) {
     m_routedClientAddress = address;
 }
 
-void DoIPDefaultConnection::handleMessage(const DoIPMessage &message) {
+void DoIPDefaultConnection::handleMessage2(const DoIPMessage &message) {
     m_state->messageHandler(message);
 }
 
 void DoIPDefaultConnection::transitionTo(DoIPServerState newState, DoIPCloseReason reason) {
+    if (m_state->state == newState) {
+        return;
+    }
     //DOIP_LOG_INFO("Transitioning from state {} to state {}", fmt::streamed(m_state.state), fmt::streamed(newState));
-    m_state = &STATE_DESCRIPTORS.at(static_cast<size_t>(newState));
+    auto it = std::find_if(
+        STATE_DESCRIPTORS.begin(),
+        STATE_DESCRIPTORS.end(),
+            [newState](const StateDescriptor &desc) {
+            return desc.state == newState;
+        }
+    );
+    if (it != STATE_DESCRIPTORS.end()) {
+        m_state = &(*it);
+    } else {
+        DOIP_LOG_ERROR("Invalid state transition to {}", fmt::streamed(newState));
+        return;
+    }
+
     if (newState == DoIPServerState::Closed) {
         closeConnection(reason);
     }
+    startStateTimer(m_state);
+}
+
+void DoIPDefaultConnection::handleSocketInitialized(DoIPServerEvent event, OptDoIPMessage msg) {
+    (void)event; // Unused parameter
+    (void)msg;   // Unused parameter
+
+    transitionTo(DoIPServerState::WaitRoutingActivation);
+
+}
+void DoIPDefaultConnection::handleWaitRoutingActivation(DoIPServerEvent event, OptDoIPMessage msg) {
+    (void)event; // Unused parameter
+    (void)msg;   // Unused parameter
+
+    // Implementation of handling routing activation would go here
 
 }
 
+void DoIPDefaultConnection::handleRoutingActivated(DoIPServerEvent event, OptDoIPMessage msg) {
+    (void)event; // Unused parameter
+    (void)msg;   // Unused parameter
+
+    // Implementation of handling routing activated would go here
+
+}
+
+void DoIPDefaultConnection::handleWaitAliveCheckResponse(DoIPServerEvent event, OptDoIPMessage msg) {
+    (void)event; // Unused parameter
+    (void)msg;   // Unused parameter
+
+    // Implementation of handling wait alive check response would go here
+
+}
+
+void DoIPDefaultConnection::handleWaitDownstreamResponse(DoIPServerEvent event, OptDoIPMessage msg) {
+    (void)event; // Unused parameter
+    (void)msg;   // Unused parameter
+
+    // Implementation of handling wait downstream response would go here
+
+}
+
+void DoIPDefaultConnection::handleFinalize(DoIPServerEvent event, OptDoIPMessage msg) {
+    (void)event; // Unused parameter
+    (void)msg;   // Unused parameter
+
+    // Implementation of handling finalize would go here
+
+}
 DoIPDiagnosticAck DoIPDefaultConnection::notifyDiagnosticMessage(const DoIPMessage &msg) {
     if (m_serverModel->onDiagnosticMessage) {
         return m_serverModel->onDiagnosticMessage(*this, msg);

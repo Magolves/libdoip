@@ -20,7 +20,7 @@ class TimerManager {
 
     struct TimerEntry {
         std::chrono::steady_clock::time_point expiry;
-        std::function<void()> callback;
+        std::function<void()> callback; // TODO: Pass timer id as parameter
         std::chrono::milliseconds interval;
         bool periodic;
         TimerId id;
