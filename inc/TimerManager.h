@@ -17,10 +17,11 @@ template <typename TimerIdType = uint8_t>
 class TimerManager {
   public:
     using TimerId = TimerIdType;
+    using TimerCallback = std::function<void(TimerId)>;
 
     struct TimerEntry {
         std::chrono::steady_clock::time_point expiry;
-        std::function<void()> callback; // TODO: Pass timer id as parameter
+        TimerCallback callback;
         std::chrono::milliseconds interval;
         bool periodic;
         TimerId id;
@@ -45,7 +46,7 @@ class TimerManager {
      */
     [[nodiscard]]
     std::optional<TimerId> addTimer(TimerId id, std::chrono::milliseconds duration,
-                                    std::function<void()> callback,
+                                    TimerCallback callback,
                                     bool periodic = false) {
         if (!callback) {
             return std::nullopt;
@@ -263,7 +264,7 @@ class TimerManager {
                 lock.unlock();
 
                 try {
-                    callback();
+                    callback(id);
                 } catch (...) {
                     // Swallow exceptions to prevent thread termination
                 }

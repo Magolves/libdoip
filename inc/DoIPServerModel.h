@@ -145,10 +145,16 @@ struct DefaultDoIPServerModel : public DoIPServerModel {
             // Default no-op
         };
 
+
+
         // Note: onDownstreamRequest is intentionally left as nullptr
         // This means downstream forwarding is disabled by default
         onDownstreamRequest = nullptr;
         onDownstreamResponse = nullptr;
+    }
+
+    ~DefaultDoIPServerModel()  {
+        
     }
 
 };

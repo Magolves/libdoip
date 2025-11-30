@@ -34,7 +34,8 @@ int DoIPConnection::receiveTcpMessage() {
 
         auto optHeader = DoIPMessage::tryParseHeader(genericHeader, DOIP_HEADER_SIZE);
         if (!optHeader.has_value()) {
-            m_stateMachine.processEvent(DoIPServerEvent::InvalidMessage);
+            //m_stateMachine.processEvent(DoIPServerEvent::InvalidMessage);
+            // TODO: Notify application of invalid message?
             DOIP_LOG_ERROR("DoIP message header parsing failed");
             closeSocket();
             return -2;
@@ -50,7 +51,8 @@ int DoIPConnection::receiveTcpMessage() {
             unsigned int receivedPayloadBytes = receiveFixedNumberOfBytesFromTCP(m_receiveBuf.data(), payloadLength);
             if (receivedPayloadBytes < payloadLength) {
                 DOIP_LOG_ERROR("DoIP message completely incomplete");
-                m_stateMachine.processEvent(DoIPServerEvent::InvalidMessage);
+                //m_stateMachine.processEvent(DoIPServerEvent::InvalidMessage);
+                // todo: Notify application of invalid message?
                 closeSocket();
                 return -2;
             }
@@ -60,7 +62,8 @@ int DoIPConnection::receiveTcpMessage() {
         }
 
         DoIPMessage message(plType, m_receiveBuf.data(), payloadLength);
-        m_stateMachine.processMessage(message);
+        // todo: process message in state machine
+        //m_stateMachine.processMessage(message);
 
         return 1;
     } else {
@@ -187,7 +190,9 @@ DoIPDownstreamResult DoIPConnection::notifyDownstreamRequest(const DoIPMessage &
 }
 
 void DoIPConnection::receiveDownstreamResponse(const DoIPMessage &response) {
-    m_stateMachine.processEvent(DoIPServerEvent::DiagnosticMessageReceivedDownstream, response);
+    //m_stateMachine.processEvent(DoIPServerEvent::DiagnosticMessageReceivedDownstream, response);
+    (void)response;
+    DOIP_LOG_ERROR("receiveDownstreamResponse not implemented yet");
 }
 
 void DoIPConnection::notifyDownstreamResponseReceived(const DoIPMessage &request, const DoIPMessage &response) {

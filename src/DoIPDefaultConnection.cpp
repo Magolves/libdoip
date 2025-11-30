@@ -1,67 +1,63 @@
 #include "DoIPDefaultConnection.h"
 #include "Logger.h"
 
+#include <execinfo.h>
+#include <iostream>
+
 namespace doip {
 
 DoIPDefaultConnection::DoIPDefaultConnection(UniqueServerModelPtr model)
-    : m_stateMachine(*this),
-      m_serverModel(std::move(model)),
+    : m_serverModel(std::move(model)),
       STATE_DESCRIPTORS{
-        StateDescriptor(
-            DoIPServerState::SocketInitialized,
-            ConnectionTimers::UserDefined,
-            DoIPServerState::WaitRoutingActivation,
-            [this](std::optional<DoIPMessage> msg) { this->handleSocketInitialized(DoIPServerEvent{}, msg); },
-            nullptr
-        ),
-        StateDescriptor(
-            DoIPServerState::WaitRoutingActivation,
-            ConnectionTimers::InitialInactivity,
-            DoIPServerState::Finalize,
-            [this](std::optional<DoIPMessage> msg) { this->handleWaitRoutingActivation(DoIPServerEvent{}, msg); },
-            nullptr
-        ),
-        StateDescriptor(
-            DoIPServerState::RoutingActivated,
-            ConnectionTimers::GeneralInactivity,
-            DoIPServerState::Finalize,
-            [this](std::optional<DoIPMessage> msg) { this->handleRoutingActivated(DoIPServerEvent{}, msg); },
-            nullptr
-        ),
-        StateDescriptor(
-            DoIPServerState::WaitAliveCheckResponse,
-            ConnectionTimers::AliveCheck,
-            DoIPServerState::Finalize,
-            [this](std::optional<DoIPMessage> msg) { this->handleWaitAliveCheckResponse(DoIPServerEvent{}, msg); },
-            nullptr
-        ),
-        StateDescriptor(
-            DoIPServerState::WaitDownstreamResponse,
-            ConnectionTimers::UserDefined,
-            DoIPServerState::Finalize,
-            [this](std::optional<DoIPMessage> msg) { this->handleWaitDownstreamResponse(DoIPServerEvent{}, msg); },
-            nullptr,
-            2s
-        ),
-        StateDescriptor(
-            DoIPServerState::Finalize,
-            ConnectionTimers::UserDefined,
-            DoIPServerState::Closed,
-            [this](std::optional<DoIPMessage> msg) { this->handleFinalize(DoIPServerEvent{}, msg); },
-            nullptr
-        ),
-        StateDescriptor(
-            DoIPServerState::Closed,
-            ConnectionTimers::UserDefined,
-            DoIPServerState::Closed,
-            nullptr,
-            nullptr
-        )
-      }
-{
+          StateDescriptor(
+              DoIPServerState::SocketInitialized,
+              ConnectionTimers::UserDefined,
+              DoIPServerState::WaitRoutingActivation,
+              [this](std::optional<DoIPMessage> msg) { this->handleSocketInitialized(DoIPServerEvent{}, msg); },
+              nullptr),
+          StateDescriptor(
+              DoIPServerState::WaitRoutingActivation,
+              ConnectionTimers::InitialInactivity,
+              DoIPServerState::Finalize,
+              [this](std::optional<DoIPMessage> msg) { this->handleWaitRoutingActivation(DoIPServerEvent{}, msg); },
+              nullptr),
+          StateDescriptor(
+              DoIPServerState::RoutingActivated,
+              ConnectionTimers::GeneralInactivity,
+              DoIPServerState::Finalize,
+              [this](std::optional<DoIPMessage> msg) { this->handleRoutingActivated(DoIPServerEvent{}, msg); },
+              nullptr),
+          StateDescriptor(
+              DoIPServerState::WaitAliveCheckResponse,
+              ConnectionTimers::AliveCheck,
+              DoIPServerState::Finalize,
+              [this](std::optional<DoIPMessage> msg) { this->handleWaitAliveCheckResponse(DoIPServerEvent{}, msg); },
+              nullptr),
+          StateDescriptor(
+              DoIPServerState::WaitDownstreamResponse,
+              ConnectionTimers::UserDefined,
+              DoIPServerState::Finalize,
+              [this](std::optional<DoIPMessage> msg) { this->handleWaitDownstreamResponse(DoIPServerEvent{}, msg); },
+              nullptr,
+              2s),
+          StateDescriptor(
+              DoIPServerState::Finalize,
+              ConnectionTimers::UserDefined,
+              DoIPServerState::Closed,
+              [this](std::optional<DoIPMessage> msg) { this->handleFinalize(DoIPServerEvent{}, msg); },
+              nullptr),
+          StateDescriptor(
+              DoIPServerState::Closed,
+              ConnectionTimers::UserDefined,
+              DoIPServerState::Closed,
+              nullptr,
+              nullptr)} {
     m_isOpen = true;
     m_serverModel->onOpenConnection(*this);
     m_state = &STATE_DESCRIPTORS[0];
+
+    DOIP_LOG_INFO("Default connection created, transitioning to SocketInitialized state...");
+    transitionTo(DoIPServerState::WaitRoutingActivation);
 }
 
 ssize_t DoIPDefaultConnection::sendProtocolMessage(const DoIPMessage &msg) {
@@ -70,10 +66,27 @@ ssize_t DoIPDefaultConnection::sendProtocolMessage(const DoIPMessage &msg) {
 }
 
 void DoIPDefaultConnection::closeConnection(DoIPCloseReason reason) {
-    DOIP_LOG_INFO("Default connection: Closing connection, reason: {}", fmt::streamed(reason));
-    m_closeReason = reason;
+    try {
+        DOIP_LOG_INFO("Default connection: Closing connection, reason: {}", fmt::streamed(reason));
+        transitionTo(DoIPServerState::Closed);
+        m_closeReason = reason;
+        m_timerManager.stopAll();
+        notifyConnectionClosed(reason);
+    } catch (const std::exception &e) {
+        DOIP_LOG_ERROR("Error notifying connection closed: {}", e.what());
+
+        void* callstack[128];
+        int frames = backtrace(callstack, 128);
+        char** strs = backtrace_symbols(callstack, frames);
+
+        DOIP_LOG_ERROR("Exception during closeConnection: {}", e.what())    ;
+        DOIP_LOG_ERROR("Stack trace:");
+        for (int i = 0; i < frames; ++i) {
+            DOIP_LOG_ERROR("{}", strs[i]);
+        }
+        free(strs);
+    }
     m_isOpen = false;
-    notifyConnectionClosed(reason);
 }
 
 DoIPAddress DoIPDefaultConnection::getServerAddress() const {
@@ -84,7 +97,7 @@ DoIPAddress DoIPDefaultConnection::getClientAddress() const {
     return m_routedClientAddress;
 }
 
-void DoIPDefaultConnection::setClientAddress(const DoIPAddress& address) {
+void DoIPDefaultConnection::setClientAddress(const DoIPAddress &address) {
     m_routedClientAddress = address;
 }
 
@@ -92,28 +105,26 @@ void DoIPDefaultConnection::handleMessage2(const DoIPMessage &message) {
     m_state->messageHandler(message);
 }
 
-void DoIPDefaultConnection::transitionTo(DoIPServerState newState, DoIPCloseReason reason) {
+void DoIPDefaultConnection::transitionTo(DoIPServerState newState) {
     if (m_state->state == newState) {
         return;
     }
-    //DOIP_LOG_INFO("Transitioning from state {} to state {}", fmt::streamed(m_state.state), fmt::streamed(newState));
+
+    DOIP_LOG_INFO("Transitioning from state {} to state {}", fmt::streamed(m_state->state), fmt::streamed(newState));
     auto it = std::find_if(
         STATE_DESCRIPTORS.begin(),
         STATE_DESCRIPTORS.end(),
-            [newState](const StateDescriptor &desc) {
+        [newState](const StateDescriptor &desc) {
             return desc.state == newState;
-        }
-    );
+        });
     if (it != STATE_DESCRIPTORS.end()) {
+        DOIP_LOG_INFO("Transitioning from state {} to state {}", fmt::streamed(m_state->state), fmt::streamed(newState));
         m_state = &(*it);
     } else {
         DOIP_LOG_ERROR("Invalid state transition to {}", fmt::streamed(newState));
         return;
     }
 
-    if (newState == DoIPServerState::Closed) {
-        closeConnection(reason);
-    }
     startStateTimer(m_state);
 }
 
@@ -122,14 +133,13 @@ void DoIPDefaultConnection::handleSocketInitialized(DoIPServerEvent event, OptDo
     (void)msg;   // Unused parameter
 
     transitionTo(DoIPServerState::WaitRoutingActivation);
-
 }
+
 void DoIPDefaultConnection::handleWaitRoutingActivation(DoIPServerEvent event, OptDoIPMessage msg) {
     (void)event; // Unused parameter
     (void)msg;   // Unused parameter
 
     // Implementation of handling routing activation would go here
-
 }
 
 void DoIPDefaultConnection::handleRoutingActivated(DoIPServerEvent event, OptDoIPMessage msg) {
@@ -137,7 +147,6 @@ void DoIPDefaultConnection::handleRoutingActivated(DoIPServerEvent event, OptDoI
     (void)msg;   // Unused parameter
 
     // Implementation of handling routing activated would go here
-
 }
 
 void DoIPDefaultConnection::handleWaitAliveCheckResponse(DoIPServerEvent event, OptDoIPMessage msg) {
@@ -145,7 +154,6 @@ void DoIPDefaultConnection::handleWaitAliveCheckResponse(DoIPServerEvent event, 
     (void)msg;   // Unused parameter
 
     // Implementation of handling wait alive check response would go here
-
 }
 
 void DoIPDefaultConnection::handleWaitDownstreamResponse(DoIPServerEvent event, OptDoIPMessage msg) {
@@ -153,7 +161,6 @@ void DoIPDefaultConnection::handleWaitDownstreamResponse(DoIPServerEvent event, 
     (void)msg;   // Unused parameter
 
     // Implementation of handling wait downstream response would go here
-
 }
 
 void DoIPDefaultConnection::handleFinalize(DoIPServerEvent event, OptDoIPMessage msg) {
@@ -161,8 +168,35 @@ void DoIPDefaultConnection::handleFinalize(DoIPServerEvent event, OptDoIPMessage
     (void)msg;   // Unused parameter
 
     // Implementation of handling finalize would go here
-
+    transitionTo(DoIPServerState::Closed);
 }
+
+void DoIPDefaultConnection::handleTimeout(ConnectionTimers timer_id) {
+    DOIP_LOG_WARN("SM2 Timeout '{}'", fmt::streamed(timer_id));
+
+    switch (timer_id) {
+    case ConnectionTimers::InitialInactivity:
+        closeConnection(DoIPCloseReason::InitialInactivityTimeout);
+        break;
+    case ConnectionTimers::GeneralInactivity:
+        closeConnection(DoIPCloseReason::GeneralInactivityTimeout);
+        break;
+    case ConnectionTimers::AliveCheck:
+        closeConnection(DoIPCloseReason::AliveCheckTimeout);
+        break;
+    case ConnectionTimers::DownstreamResponse:
+        DOIP_LOG_WARN("Downstream response timeout occurred");
+        transitionTo(DoIPServerState::RoutingActivated);
+
+        break;
+    case ConnectionTimers::UserDefined:
+        DOIP_LOG_WARN("User-defined timer -> must be handled separately");
+        break;
+    }
+
+    DOIP_LOG_ERROR("Unhandled timeout for timer id {}", fmt::streamed(timer_id));
+}
+
 DoIPDiagnosticAck DoIPDefaultConnection::notifyDiagnosticMessage(const DoIPMessage &msg) {
     if (m_serverModel->onDiagnosticMessage) {
         return m_serverModel->onDiagnosticMessage(*this, msg);
@@ -171,7 +205,7 @@ DoIPDiagnosticAck DoIPDefaultConnection::notifyDiagnosticMessage(const DoIPMessa
 }
 
 void DoIPDefaultConnection::notifyConnectionClosed(DoIPCloseReason reason) {
-    if (m_serverModel->onCloseConnection) {
+    if (m_serverModel && m_serverModel->onCloseConnection) {
         m_serverModel->onCloseConnection(*this, reason);
     }
 }
@@ -194,7 +228,8 @@ DoIPDownstreamResult DoIPDefaultConnection::notifyDownstreamRequest(const DoIPMe
 }
 
 void DoIPDefaultConnection::receiveDownstreamResponse(const DoIPMessage &response) {
-    m_stateMachine.processEvent(DoIPServerEvent::DiagnosticMessageReceivedDownstream, response);
+    (void)response;
+    // TODO: Implement state machine event processing for downstream response
 }
 
 void DoIPDefaultConnection::notifyDownstreamResponseReceived(const DoIPMessage &request, const DoIPMessage &response) {

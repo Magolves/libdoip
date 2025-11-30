@@ -82,12 +82,12 @@ void DoIPServerStateMachine::processEvent(DoIPServerEvent event, OptDoIPMessage 
     }
 }
 
-void DoIPServerStateMachine::handleTimeout(StateMachineTimer timer_id) {
+void DoIPServerStateMachine::handleTimeout(StateMachineTimer stateTimerId) {
     DoIPServerEvent event = DoIPServerEvent::SocketError; // Default value
 
-    DOIP_LOG_WARN("Timeout '{}'", fmt::streamed(timer_id));
+    DOIP_LOG_WARN("Timeout '{}'", fmt::streamed(stateTimerId));
 
-    switch (timer_id) {
+    switch (stateTimerId) {
     case StateMachineTimer::InitialInactivity:
         event = DoIPServerEvent::Initial_inactivity_timeout;
         break;
@@ -335,30 +335,30 @@ void DoIPServerStateMachine::transitionTo(DoIPServerState new_state, DoIPCloseRe
     }
 }
 
-void DoIPServerStateMachine::startTimer(StateMachineTimer timer_id, std::chrono::milliseconds duration) {
-    if (m_timerManager.hasTimer(timer_id)) {
+void DoIPServerStateMachine::startTimer(StateMachineTimer stateTimerId, std::chrono::milliseconds duration) {
+    if (m_timerManager.hasTimer(stateTimerId)) {
         // Stop existing timer if any
-        assert(m_timerManager.updateTimer(timer_id, duration));
+        assert(m_timerManager.updateTimer(stateTimerId, duration));
     }
 
     // Create timer callback
-    auto callback = [this, timer_id]() {
-        handleTimeout(timer_id);
+    auto callback = [this](StateMachineTimer tid) {
+        handleTimeout(tid);
     };
 
     // Add timer to manager
-    auto timerId = m_timerManager.addTimer(timer_id, duration, callback, false);
+    auto timerId = m_timerManager.addTimer(stateTimerId, duration, callback, false);
 
     if (timerId.has_value()) {
-        DOIP_LOG_DEBUG("Started timer {} for {}ms", fmt::streamed(timer_id), duration.count());
+        DOIP_LOG_DEBUG("Started timer {} for {}ms", fmt::streamed(stateTimerId), duration.count());
     } else {
-        DOIP_LOG_ERROR("Failed to start timer {}" , fmt::streamed(timer_id));
+        DOIP_LOG_ERROR("Failed to start timer {}" , fmt::streamed(stateTimerId));
     }
 }
 
-void DoIPServerStateMachine::stopTimer(StateMachineTimer timer_id) {
-    if (m_timerManager.disableTimer(timer_id)) {
-        DOIP_LOG_DEBUG("Stopped timer {}", fmt::streamed(timer_id));
+void DoIPServerStateMachine::stopTimer(StateMachineTimer timerId) {
+    if (m_timerManager.disableTimer(timerId)) {
+        DOIP_LOG_DEBUG("Stopped timer {}", fmt::streamed(timerId));
     }
 }
 

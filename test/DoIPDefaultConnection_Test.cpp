@@ -25,17 +25,22 @@ TEST_SUITE("DoIPDefaultConnection") {
         CHECK(connection->sendProtocolMessage(message) == 16);
     }
 
-    TEST_CASE_FIXTURE(DoIPDefaultConnectionTestFixture, "DoIPDefaultConnection: Close Connection") {
+    TEST_CASE("DoIPDefaultConnection: Close Connection focus") {
+        doip::Logger::setLevel(spdlog::level::debug);
+        std::unique_ptr<DoIPDefaultConnection> connection = std::make_unique<DoIPDefaultConnection>(std::make_unique<DefaultDoIPServerModel>());
         CHECK(connection->isOpen() == true);
+        CHECK(connection->getState() == DoIPServerState::WaitRoutingActivation);
         CHECK(connection->getCloseReason() == DoIPCloseReason::None);
         connection->closeConnection(DoIPCloseReason::ApplicationRequest);
         CHECK(connection->isOpen() == false);
         CHECK(connection->getCloseReason() == DoIPCloseReason::ApplicationRequest);
+        CHECK(connection->getState() == DoIPServerState::Closed);
     }
 
     TEST_CASE_FIXTURE(DoIPDefaultConnectionTestFixture, "DoIPDefaultConnection: Downstream Handler") {
         CHECK_FALSE(connection->hasDownstreamHandler());
     }
+
 }
 
 } // namespace doip
