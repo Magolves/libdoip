@@ -270,7 +270,26 @@ void DoIPDefaultConnection::handleWaitAliveCheckResponse(DoIPServerEvent event, 
     (void)msg;   // Unused parameter
 
     // Implementation of handling wait alive check response would go here
+    (void)event; // Unused parameter
 
+    if (!msg) {
+        closeConnection(DoIPCloseReason::SocketError);
+        return;
+    }
+
+    auto message = msg.value();
+
+    switch (message.getPayloadType()) {
+    case DoIPPayloadType::DiagnosticMessage: /* fall-through expected */
+    case DoIPPayloadType::AliveCheckResponse:
+        transitionTo(DoIPServerState::RoutingActivated);
+        return;
+    default:
+        DOIP_LOG_WARN("Received unsupported message type {} in Wait Alive Check Response state", fmt::streamed(message.getPayloadType()));
+        sendDiagnosticMessageResponse(DoIPAddress::ZeroAddress, DoIPNegativeDiagnosticAck::TransportProtocolError);
+        //closeConnection(DoIPCloseReason::InvalidMessage);
+        return;
+    }
 }
 
 void DoIPDefaultConnection::handleWaitDownstreamResponse(DoIPServerEvent event, OptDoIPMessage msg) {
