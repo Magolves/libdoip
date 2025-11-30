@@ -20,7 +20,7 @@ class TimerManager {
 
     struct TimerEntry {
         std::chrono::steady_clock::time_point expiry;
-        std::function<void()> callback;
+        std::function<void(TimerIdType)> callback;
         std::chrono::milliseconds interval;
         bool periodic;
         TimerId id;
@@ -45,7 +45,7 @@ class TimerManager {
      */
     [[nodiscard]]
     std::optional<TimerId> addTimer(TimerId id, std::chrono::milliseconds duration,
-                                    std::function<void()> callback,
+                                    std::function<void(TimerIdType)> callback,
                                     bool periodic = false) {
         if (!callback) {
             return std::nullopt;
@@ -62,6 +62,7 @@ class TimerManager {
         entry.enabled = true;
 
         m_timers[id] = std::move(entry);
+
         m_cv.notify_one();
 
         return id;
@@ -153,6 +154,18 @@ class TimerManager {
             m_cv.notify_one();
         }
         return true;
+    }
+
+    /**
+     * @brief Restarts a timer (disables and enables it).
+     *
+     * @param id the id of the timer
+     * @return true timer was restarted
+     * @return false timer with given id does not exist
+     */
+    [[nodiscard]]
+    bool resetTimer(TimerId id) {
+        return disableTimer(id) && enableTimer(id);
     }
 
     /**
@@ -263,7 +276,7 @@ class TimerManager {
                 lock.unlock();
 
                 try {
-                    callback();
+                    callback(id);
                 } catch (...) {
                     // Swallow exceptions to prevent thread termination
                 }

@@ -25,17 +25,54 @@ TEST_SUITE("DoIPDefaultConnection") {
         CHECK(connection->sendProtocolMessage(message) == 16);
     }
 
-    TEST_CASE_FIXTURE(DoIPDefaultConnectionTestFixture, "DoIPDefaultConnection: Close Connection") {
+    TEST_CASE("DoIPDefaultConnection: Close Connection basic") {
+        doip::Logger::setLevel(spdlog::level::debug);
+        std::unique_ptr<DoIPDefaultConnection> connection = std::make_unique<DoIPDefaultConnection>(std::make_unique<DefaultDoIPServerModel>());
         CHECK(connection->isOpen() == true);
+        CHECK(connection->getState() == DoIPServerState::WaitRoutingActivation);
         CHECK(connection->getCloseReason() == DoIPCloseReason::None);
         connection->closeConnection(DoIPCloseReason::ApplicationRequest);
         CHECK(connection->isOpen() == false);
         CHECK(connection->getCloseReason() == DoIPCloseReason::ApplicationRequest);
+        CHECK(connection->getState() == DoIPServerState::Closed);
+    }
+
+    TEST_CASE("DoIPDefaultConnection: Invalid message handling") {
+        doip::Logger::setLevel(spdlog::level::debug);
+        std::unique_ptr<DoIPDefaultConnection> connection = std::make_unique<DoIPDefaultConnection>(std::make_unique<DefaultDoIPServerModel>());
+        CHECK(connection->isOpen() == true);
+        CHECK(connection->getState() == DoIPServerState::WaitRoutingActivation);
+        CHECK(connection->getCloseReason() == DoIPCloseReason::None);
+
+        connection->handleMessage2(DoIPMessage()); // Invalid empty message
+
+        CHECK(connection->isOpen() == false);
+        CHECK(connection->getCloseReason() == DoIPCloseReason::InvalidMessage);
+        CHECK(connection->getState() == DoIPServerState::Closed);
+    }
+
+    TEST_CASE("DoIPDefaultConnection: Timeout after routing activation") {
+        doip::Logger::setLevel(spdlog::level::debug);
+        std::unique_ptr<DoIPDefaultConnection> connection = std::make_unique<DoIPDefaultConnection>(std::make_unique<DefaultDoIPServerModel>());
+        CHECK(connection->isOpen() == true);
+        CHECK(connection->getState() == DoIPServerState::WaitRoutingActivation);
+        CHECK(connection->getCloseReason() == DoIPCloseReason::None);
+
+        connection->handleMessage2(message::makeRoutingActivationRequest(DoIPAddress(0x0E, 0x00)));
+        CHECK(connection->getState() == DoIPServerState::RoutingActivated);
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(times::server::GeneralInactivityTimeout));
+        std::this_thread::sleep_for(10ms);
+
+        CHECK(connection->isOpen() == false);
+        CHECK(connection->getCloseReason() == DoIPCloseReason::GeneralInactivityTimeout);
+        CHECK(connection->getState() == DoIPServerState::Closed);
     }
 
     TEST_CASE_FIXTURE(DoIPDefaultConnectionTestFixture, "DoIPDefaultConnection: Downstream Handler") {
         CHECK_FALSE(connection->hasDownstreamHandler());
     }
+
 }
 
 } // namespace doip
