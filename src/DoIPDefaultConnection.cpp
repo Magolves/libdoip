@@ -75,11 +75,11 @@ void DoIPDefaultConnection::closeConnection(DoIPCloseReason reason) {
     } catch (const std::exception &e) {
         DOIP_LOG_ERROR("Error notifying connection closed: {}", e.what());
 
-        void* callstack[128];
+        void *callstack[128];
         int frames = backtrace(callstack, 128);
-        char** strs = backtrace_symbols(callstack, frames);
+        char **strs = backtrace_symbols(callstack, frames);
 
-        DOIP_LOG_ERROR("Exception during closeConnection: {}", e.what())    ;
+        DOIP_LOG_ERROR("Exception during closeConnection: {}", e.what());
         DOIP_LOG_ERROR("Stack trace:");
         for (int i = 0; i < frames; ++i) {
             DOIP_LOG_ERROR("{}", strs[i]);
@@ -140,6 +140,27 @@ void DoIPDefaultConnection::handleWaitRoutingActivation(DoIPServerEvent event, O
     (void)msg;   // Unused parameter
 
     // Implementation of handling routing activation would go here
+    if (!msg) {
+        closeConnection(DoIPCloseReason::SocketError);
+        return;
+    }
+
+    auto sourceAddress = msg->getSourceAddress();
+    bool hasAddress = sourceAddress.has_value();
+    bool rightPayloadType = (msg->getPayloadType() == DoIPPayloadType::RoutingActivationRequest);
+
+    if (!hasAddress || !rightPayloadType) {
+        DOIP_LOG_WARN("Invalid Routing Activation Request message");
+        closeConnection(DoIPCloseReason::InvalidMessage);
+        return;
+    }
+
+    // Set client address in context
+    setClientAddress(sourceAddress.value());
+    // Send Routing Activation Response
+    sendRoutingActivationResponse(sourceAddress.value(), DoIPRoutingActivationResult::RouteActivated);
+    // Transition to Routing Activated state
+    transitionTo(DoIPServerState::RoutingActivated);
 }
 
 void DoIPDefaultConnection::handleRoutingActivated(DoIPServerEvent event, OptDoIPMessage msg) {
@@ -192,9 +213,29 @@ void DoIPDefaultConnection::handleTimeout(ConnectionTimers timer_id) {
     case ConnectionTimers::UserDefined:
         DOIP_LOG_WARN("User-defined timer -> must be handled separately");
         break;
+    default:
+        DOIP_LOG_ERROR("Unhandled timeout for timer id {}", fmt::streamed(timer_id));
+        break;
     }
+}
 
-    DOIP_LOG_ERROR("Unhandled timeout for timer id {}", fmt::streamed(timer_id));
+ssize_t DoIPDefaultConnection::sendRoutingActivationResponse(const DoIPAddress &source_address, DoIPRoutingActivationResult response_code) {
+    // Create routing activation response message
+    DoIPAddress serverAddr = getServerAddress();
+
+    // Build response payload manually
+    ByteArray payload;
+    source_address.appendTo(payload);
+    serverAddr.appendTo(payload);
+    payload.push_back(static_cast<uint8_t>(response_code));
+    // Reserved 4 bytes
+    payload.insert(payload.end(), {0x00, 0x00, 0x00, 0x00});
+
+    DoIPMessage response(DoIPPayloadType::RoutingActivationResponse, std::move(payload));
+    // auto sentBytes = sendMessage(response); // todo: implement sendMessage
+    DOIP_LOG_INFO("Sent routing activation response: code=" + std::to_string(static_cast<unsigned int>(response_code)) + " to address=" + std::to_string(static_cast<unsigned int>(source_address.toUint16())));
+    // return sentBytes;
+    return -1;
 }
 
 DoIPDiagnosticAck DoIPDefaultConnection::notifyDiagnosticMessage(const DoIPMessage &msg) {

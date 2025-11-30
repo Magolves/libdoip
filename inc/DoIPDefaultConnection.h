@@ -36,7 +36,6 @@ inline std::ostream &operator<<(std::ostream &os, ConnectionTimers tid) {
     }
 }
 
-
 using MessageHandler = std::function<void(std::optional<DoIPMessage>)>;
 using TimeOutHandler = std::function<void(StateMachineTimer)>;
 
@@ -138,7 +137,9 @@ class DoIPDefaultConnection : public IConnectionContext {
             m_timerDurations.end(),
             [stateDesc](const auto &pair) { return pair.first == stateDesc->timer; });
 
-        DOIP_LOG_DEBUG("Starting timer for state {}: Timer ID {}", fmt::streamed(stateDesc->state), fmt::streamed(stateDesc->timer));
+        if (timerDesc != m_timerDurations.end()) {
+            duration = timerDesc->second;
+        }
 
         if (stateDesc->timer == ConnectionTimers::UserDefined) {
             duration = stateDesc->timeoutDurationUser;
@@ -150,18 +151,17 @@ class DoIPDefaultConnection : public IConnectionContext {
             }
         }
 
+        DOIP_LOG_DEBUG("Starting timer for state {}: Timer ID {}, duration {}ms", fmt::streamed(stateDesc->state), fmt::streamed(stateDesc->timer), duration.count());
+
         TimeOutHandler timeoutHandler = stateDesc->timeoutHandler;
         if (timeoutHandler == nullptr) {
-            if (stateDesc->timeoutDurationUser.count() > 0) {
-                auto id = m_timerManager.addTimer(timerDesc->first, duration, [this](ConnectionTimers timerId) {
-                    handleTimeout(timerId);
-                }, false);
+            // TODO: Handle user-defined timer timeout
+            auto id = m_timerManager.addTimer(timerDesc->first, duration, [this](ConnectionTimers timerId) { handleTimeout(timerId); }, false);
 
-                if (id.has_value()) {
-                    DOIP_LOG_DEBUG("Started user-defined timer {} for {}ms", fmt::streamed(timerDesc->first), duration.count());
-                } else {
-                    DOIP_LOG_ERROR("Failed to start user-defined timer {}", fmt::streamed(timerDesc->first));
-                }
+            if (id.has_value()) {
+                DOIP_LOG_DEBUG("Started user-defined timer {} for {}ms", fmt::streamed(timerDesc->first), duration.count());
+            } else {
+                DOIP_LOG_ERROR("Failed to start user-defined timer {}", fmt::streamed(timerDesc->first));
             }
         }
     }
@@ -177,10 +177,7 @@ class DoIPDefaultConnection : public IConnectionContext {
     // timeout handlers for each state
     void handleTimeout(ConnectionTimers timer_id);
 
-    // void handleInitialInactivityTimeout();
-    // void handleGeneralInactivityTimeout();
-    // void handleAliveCheckTimeout();
-    // void handleDownstreamTimeout();
+    ssize_t sendRoutingActivationResponse(const DoIPAddress &source_address, DoIPRoutingActivationResult response_code);
 };
 
 } // namespace doip

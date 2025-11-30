@@ -63,6 +63,7 @@ class TimerManager {
         entry.enabled = true;
 
         m_timers[id] = std::move(entry);
+
         m_cv.notify_one();
 
         return id;
