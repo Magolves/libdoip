@@ -80,9 +80,9 @@ set(SOURCES
     src/DoIPClient.cpp
     src/DoIPConnection.cpp
     src/DoIPServer.cpp
-    src/DoIPServerStateMachine.cpp
     src/Logger.cpp
     src/MacAddress.cpp
+    src/DoIPDefaultConnection.cpp
 )
 
 

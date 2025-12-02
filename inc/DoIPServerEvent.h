@@ -6,44 +6,50 @@
 namespace doip {
 
 // DoIP Events
-enum class DoIPEvent {
+enum class DoIPServerEvent {
     // Message events
     RoutingActivationReceived,
     AliveCheckResponseReceived,
     DiagnosticMessageReceived,
+    DiagnosticMessageReceivedDownstream,
     CloseRequestReceived,
 
     // Timer events
     Initial_inactivity_timeout,
     GeneralInactivityTimeout,
     AliveCheckTimeout,
+    DownstreamTimeout,
 
     // Error events
     InvalidMessage,
     SocketError
 };
 
-// Stream operator for DoIPEvent
-inline std::ostream &operator<<(std::ostream &os, DoIPEvent event) {
+// Stream operator for DoIPServerEvent
+inline std::ostream &operator<<(std::ostream &os, DoIPServerEvent event) {
     switch (event) {
-    case DoIPEvent::RoutingActivationReceived:
+    case DoIPServerEvent::RoutingActivationReceived:
         return os << "RoutingActivationReceived";
-    case DoIPEvent::AliveCheckResponseReceived:
+    case DoIPServerEvent::AliveCheckResponseReceived:
         return os << "AliveCheckResponseReceived";
-    case DoIPEvent::DiagnosticMessageReceived:
+    case DoIPServerEvent::DiagnosticMessageReceived:
         return os << "DiagnosticMessageReceived";
-    case DoIPEvent::CloseRequestReceived:
+    case DoIPServerEvent::DiagnosticMessageReceivedDownstream:
+        return os << "DiagnosticMessageReceivedDownstream";
+    case DoIPServerEvent::CloseRequestReceived:
         return os << "CloseRequestReceived";
-    case DoIPEvent::Initial_inactivity_timeout:
+    case DoIPServerEvent::Initial_inactivity_timeout:
         return os << "Initial_inactivity_timeout";
-    case DoIPEvent::GeneralInactivityTimeout:
+    case DoIPServerEvent::GeneralInactivityTimeout:
         return os << "GeneralInactivityTimeout";
-    case DoIPEvent::AliveCheckTimeout:
+    case DoIPServerEvent::AliveCheckTimeout:
         return os << "AliveCheckTimeout";
-    case DoIPEvent::InvalidMessage:
+    case DoIPServerEvent::InvalidMessage:
         return os << "InvalidMessage";
-    case DoIPEvent::SocketError:
+    case DoIPServerEvent::SocketError:
         return os << "SocketError";
+    case DoIPServerEvent::DownstreamTimeout:
+        return os << "DownstreamTimeout";
     default:
         return os << "Unknown(" << static_cast<int>(event) << ")";
     }

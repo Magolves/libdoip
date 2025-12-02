@@ -9,9 +9,8 @@
 namespace doip {
 
 DoIPConnection::DoIPConnection(int tcpSocket, UniqueServerModelPtr model)
-    : m_tcpSocket(tcpSocket),
-      m_serverModel(std::move(model)),
-      m_stateMachine(*this) {
+    : DoIPDefaultConnection(std::move(model)),
+      m_tcpSocket(tcpSocket) {
 }
 
 /*
@@ -35,7 +34,8 @@ int DoIPConnection::receiveTcpMessage() {
 
         auto optHeader = DoIPMessage::tryParseHeader(genericHeader, DOIP_HEADER_SIZE);
         if (!optHeader.has_value()) {
-            m_stateMachine.processEvent(DoIPEvent::InvalidMessage);
+            // m_stateMachine.processEvent(DoIPServerEvent::InvalidMessage);
+            //  TODO: Notify application of invalid message?
             DOIP_LOG_ERROR("DoIP message header parsing failed");
             closeSocket();
             return -2;
@@ -51,7 +51,8 @@ int DoIPConnection::receiveTcpMessage() {
             unsigned int receivedPayloadBytes = receiveFixedNumberOfBytesFromTCP(m_receiveBuf.data(), payloadLength);
             if (receivedPayloadBytes < payloadLength) {
                 DOIP_LOG_ERROR("DoIP message completely incomplete");
-                m_stateMachine.processEvent(DoIPEvent::InvalidMessage);
+                // m_stateMachine.processEvent(DoIPServerEvent::InvalidMessage);
+                //  todo: Notify application of invalid message?
                 closeSocket();
                 return -2;
             }
@@ -61,7 +62,8 @@ int DoIPConnection::receiveTcpMessage() {
         }
 
         DoIPMessage message(plType, m_receiveBuf.data(), payloadLength);
-        m_stateMachine.processMessage(message);
+        // todo: process message in state machine
+        // m_stateMachine.processMessage(message);
 
         return 1;
     } else {
@@ -135,12 +137,11 @@ void DoIPConnection::closeConnection(DoIPCloseReason reason) {
     m_isClosing = true;
     DOIP_LOG_INFO("Closing connection, reason: {}", fmt::streamed(reason));
 
-    m_stateMachine.processEvent(DoIPEvent::CloseRequestReceived);
+    // Call base class to handle state machine and notification
+    DoIPDefaultConnection::closeConnection(reason);
+
     close(m_tcpSocket);
     m_tcpSocket = 0;
-
-    // Notify application
-    notifyConnectionClosed(reason);
 }
 
 DoIPAddress DoIPConnection::getServerAddress() const {
@@ -151,7 +152,7 @@ DoIPAddress DoIPConnection::getClientAddress() const {
     return m_gatewayAddress;
 }
 
-void DoIPConnection::setClientAddress(const DoIPAddress& address) {
+void DoIPConnection::setClientAddress(const DoIPAddress &address) {
     m_gatewayAddress = address;
 }
 
@@ -174,6 +175,29 @@ void DoIPConnection::notifyConnectionClosed(DoIPCloseReason reason) {
 void DoIPConnection::notifyDiagnosticAckSent(DoIPDiagnosticAck ack) {
     if (m_serverModel->onDiagnosticNotification) {
         m_serverModel->onDiagnosticNotification(*this, ack);
+    }
+}
+
+bool DoIPConnection::hasDownstreamHandler() const {
+    return m_serverModel->hasDownstreamHandler();
+}
+
+DoIPDownstreamResult DoIPConnection::notifyDownstreamRequest(const DoIPMessage &msg) {
+    if (m_serverModel->onDownstreamRequest) {
+        return m_serverModel->onDownstreamRequest(*this, msg);
+    }
+    return DoIPDownstreamResult::Error;
+}
+
+void DoIPConnection::receiveDownstreamResponse(const DoIPMessage &response) {
+    // m_stateMachine.processEvent(DoIPServerEvent::DiagnosticMessageReceivedDownstream, response);
+    (void)response;
+    DOIP_LOG_ERROR("receiveDownstreamResponse not implemented yet");
+}
+
+void DoIPConnection::notifyDownstreamResponseReceived(const DoIPMessage &request, const DoIPMessage &response) {
+    if (m_serverModel->onDownstreamResponse) {
+        m_serverModel->onDownstreamResponse(*this, request, response);
     }
 }
 

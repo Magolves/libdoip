@@ -22,7 +22,8 @@ TEST_SUITE("TimerManager") {
         TimerManager<TimerTestId> manager;
         std::atomic<bool> callbackExecuted{false};
 
-        auto callback = [&callbackExecuted]() noexcept {
+        auto callback = [&callbackExecuted](TimerTestId id) noexcept {
+            (void)id;
             callbackExecuted = true;
         };
 
@@ -43,7 +44,8 @@ TEST_SUITE("TimerManager") {
         TimerManager<TimerTestId> manager;
         std::atomic<int> executionCount{0};
 
-        auto callback = [&executionCount]() noexcept {
+        auto callback = [&executionCount](TimerTestId id) noexcept {
+            (void)id;
             executionCount++;
         };
 
@@ -68,7 +70,8 @@ TEST_SUITE("TimerManager") {
         TimerManager<TimerTestId> manager;
         std::atomic<bool> callbackExecuted{false};
 
-        auto callback = [&callbackExecuted]() noexcept {
+        auto callback = [&callbackExecuted](TimerTestId id) noexcept {
+            (void)id;
             callbackExecuted = true;
         };
 
@@ -97,7 +100,8 @@ TEST_SUITE("TimerManager") {
         TimerManager<TimerTestId> manager;
         std::atomic<bool> callbackExecuted{false};
 
-        auto callback = [&callbackExecuted]() noexcept {
+        auto callback = [&callbackExecuted](TimerTestId id) noexcept {
+            (void)id;
             callbackExecuted = true;
         };
 
@@ -127,7 +131,8 @@ TEST_SUITE("TimerManager") {
         TimerManager<TimerTestId> manager;
         std::atomic<bool> callbackExecuted{false};
 
-        auto callback = [&callbackExecuted]() noexcept {
+        auto callback = [&callbackExecuted](TimerTestId id) noexcept {
+            (void)id;
             callbackExecuted = true;
         };
 
@@ -161,7 +166,8 @@ TEST_SUITE("TimerManager") {
             TimerManager<TimerTestId> manager;
             std::atomic<bool> callbackExecuted{false};
 
-            auto callback = [&callbackExecuted]() noexcept {
+            auto callback = [&callbackExecuted](TimerTestId id) noexcept {
+                (void)id;
                 callbackExecuted = true;
             };
 
@@ -197,9 +203,9 @@ TEST_SUITE("TimerManager") {
         std::atomic<int> counter2{0};
         std::atomic<int> counter3{0};
 
-        auto callback1 = [&counter1]() noexcept { counter1++; };
-        auto callback2 = [&counter2]() noexcept { counter2++; };
-        auto callback3 = [&counter3]() noexcept { counter3++; };
+        auto callback1 = [&counter1](TimerTestId tid) noexcept { (void) tid; counter1++; };
+        auto callback2 = [&counter2](TimerTestId tid) noexcept { (void) tid; counter2++; };
+        auto callback3 = [&counter3](TimerTestId tid) noexcept { (void) tid; counter3++; };
 
         auto timer1 = manager.addTimer(TimerTestId::TimerOne, 30ms, callback1, true);
         auto timer2 = manager.addTimer(TimerTestId::TimerTwo, 50ms, callback2, true);
@@ -240,11 +246,13 @@ TEST_SUITE("TimerManager") {
         std::atomic<bool> normalCallbackExecuted{false};
 
         // Add timer that throws exception
-        auto throwingCallback = []() {
+        auto throwingCallback = [](TimerTestId id)  {
+            (void)id;
             throw std::runtime_error("Test exception");
         };
 
-        auto normalCallback = [&normalCallbackExecuted]() noexcept {
+        auto normalCallback = [&normalCallbackExecuted](TimerTestId id) noexcept {
+            (void)id;
             normalCallbackExecuted = true;
         };
 
@@ -269,7 +277,8 @@ TEST_SUITE("TimerManager") {
 
         // Add timers with different intervals
         for (int i = 0; i < timerCount; ++i) {
-            auto callback = [&totalExecutions]() noexcept {
+            auto callback = [&totalExecutions](TimerTestId id) noexcept {
+                (void)id;
                 totalExecutions++;
             };
 

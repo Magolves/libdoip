@@ -6,7 +6,7 @@
 #include "DoIPNegativeAck.h"
 #include "DoIPNegativeDiagnosticAck.h"
 #include "DoIPServerModel.h"
-#include "IConnectionContext.h"
+#include "DoIPDefaultConnection.h"
 #include <arpa/inet.h>
 #include <array>
 #include <iostream>
@@ -16,14 +16,14 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include "DoIPServerStateMachine.h"
+
 
 namespace doip {
 
 /** Maximum size of the ISO-TP message - used as initial value for RX buffer to avoid reallocs */
 constexpr size_t MAX_ISOTP_MTU = 4095;
 
-class DoIPConnection : public IConnectionContext {
+class DoIPConnection : public DoIPDefaultConnection {
   public:
 
     DoIPConnection(int tcpSocket, UniqueServerModelPtr model);
@@ -39,18 +39,6 @@ class DoIPConnection : public IConnectionContext {
     void sendDiagnosticAck(const DoIPAddress &sourceAddress);
     void sendDiagnosticNegativeAck(const DoIPAddress &sourceAddress, DoIPNegativeDiagnosticAck ackCode);
 
-
-    /**
-     * @brief Gets the server model configuration
-     * @return Pointer to the current DoIPServerModel, or nullptr if not set
-     */
-    DoIPServerModel* getServerModel() const { return m_serverModel.get(); }
-
-    /**
-     * @brief Sets the server model configuration
-     * @param model The DoIPServerModel to use for this connection
-     */
-    void setServerModel(UniqueServerModelPtr model) { m_serverModel = std::move(model); }
 
     // === IConnectionContext interface implementation ===
 
@@ -103,17 +91,55 @@ class DoIPConnection : public IConnectionContext {
      */
     void notifyDiagnosticAckSent(DoIPDiagnosticAck ack) override;
 
+    // === Downstream (Subnet) Operations ===
+
+    /**
+     * @brief Check if downstream forwarding is available
+     * @return true if the server model has a downstream handler configured
+     */
+    bool hasDownstreamHandler() const override;
+
+    /**
+     * @brief Forward a diagnostic message to downstream
+     *
+     * Delegates to DoIPServerModel::onDownstreamRequest callback.
+     * The callback is responsible for sending the message via
+     * the appropriate transport (CAN, LIN, etc.).
+     *
+     * @param msg The diagnostic message to forward
+     * @return Result indicating if the request was initiated successfully
+     */
+    DoIPDownstreamResult notifyDownstreamRequest(const DoIPMessage &msg) override;
+
+    /**
+     * @brief Receive a response from downstream device
+     *
+     * Called by the application when a response arrives from downstream.
+     * This injects the response into the state machine via
+     * processEvent(DiagnosticMessageReceivedDownstream, response).
+     *
+     * @param response The diagnostic response from downstream
+     */
+    void receiveDownstreamResponse(const DoIPMessage &response) override;
+
+    /**
+     * @brief Notify application that downstream response was received
+     *
+     * Delegates to DoIPServerModel::onDownstreamResponse callback if set.
+     *
+     * @param request The original request that was sent downstream
+     * @param response The response received from downstream
+     */
+    void notifyDownstreamResponseReceived(const DoIPMessage &request, const DoIPMessage &response) override;
+
   private:
-    std::array<uint8_t, MAX_ISOTP_MTU> m_receiveBuf{};
-
-    int m_tcpSocket;
     DoIPAddress m_gatewayAddress;
-    DoIPAddress m_routedClientAddress;
 
-    UniqueServerModelPtr m_serverModel;
-    DoIPServerStateMachine m_stateMachine;
-
+    // TCP socket-specific members
+    int m_tcpSocket;
+    std::array<uint8_t, MAX_ISOTP_MTU> m_receiveBuf{};
     bool m_isClosing{false};  // TODO: Guard against recursive closeConnection calls -> solve this
+    std::optional<DoIPMessage> m_pendingDownstreamRequest;
 
     void closeSocket();
 
