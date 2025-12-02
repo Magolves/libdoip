@@ -7,19 +7,38 @@
 [![CMake](https://img.shields.io/badge/CMake-3.15+-blue.svg)](https://cmake.org/)
 [![doctest](https://img.shields.io/badge/Tests-doctest-green.svg)](https://github.com/doctest/doctest)
 
-C/C++ library for Diagnostics over IP (DoIP) (fork from https://github.com/GerritRiesch94/libdoip)
+C/C++ library for Diagnostics over IP (DoIP) (fork from https://github.com/AVL-DiTEST-DiagDev/libdoip)
 
-Despite the excellent work I saw some shortcomings in the design and refactored some parts - hopefully for the better.
+**CAUTION** The current API is under construction any may change at any time.
 
-The C++ standard is set to C++ 17. However, so far the code does not use C++ 17 features and could compile also with older standards like C++ 11 or 14.
 
-Changes in particular are
 
-- Introduced cmake build and test env
-- Replace `gtest`with `doctest` (just a personal preference - IMHO `gtest` sucks)
-- Introduced `DoIPAddress` struct, since the addresses had many different representations
-- Introduced value semantics (WIP)
-- ...
+
+## Dependencies
+
+`libdoip` uses `spdlog`. The lib is downloaded automatically. Or you may install it locally via
+
+```bash
+# Install Doxygen and Graphviz
+sudo apt install libspdlog-dev
+```
+
+See [Logging](./doc/LOGGING.md) for details.
+
+### Building Documentation Locally
+
+To generate the documentation locally:
+
+```bash
+# Install Doxygen and Graphviz
+sudo apt install doxygen graphviz
+
+# Generate documentation
+doxygen Doxyfile
+
+# Open the documentation
+xdg-open docs/html/index.html
+```
 
 ### Installing library for Diagnostics over IP
 
@@ -47,6 +66,14 @@ sudo make install
 
 ```bash
 sudo apt install doctest
+```
+
+## Debugging
+
+### Dump UDP
+
+```bash
+sudo tcpdump -i any udp port 13400 -X
 ```
 
 ## References

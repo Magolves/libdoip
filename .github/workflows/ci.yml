@@ -59,7 +59,7 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y ninja-build
+        sudo apt-get install -y ninja-build libspdlog-dev
         if [[ "${{ matrix.config.cxx }}" == "g++-11" ]]; then
           sudo apt-get install -y gcc-11 g++-11
         elif [[ "${{ matrix.config.cxx }}" == "g++-9" ]]; then
@@ -111,7 +111,7 @@ jobs:
     - name: Install static analysis tools
       run: |
         sudo apt-get update
-        sudo apt-get install -y clang-tidy cppcheck ninja-build gcc-11 g++-11
+        sudo apt-get install -y clang-tidy cppcheck ninja-build libspdlog-dev gcc-11 g++-11
 
     - name: Set up CMake
       uses: jwlawson/actions-setup-cmake@v1.14
@@ -134,7 +134,7 @@ jobs:
 
   # Sanitizers job (Debug builds only)
   sanitizers:
-    name: DoIPAddress & UB Sanitizers
+    name: Address & UB Sanitizers
     runs-on: ubuntu-22.04
 
     steps:
@@ -144,7 +144,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y ninja-build gcc-11 g++-11
+        sudo apt-get install -y ninja-build libspdlog-dev gcc-11 g++-11
 
     - name: Set up CMake
       uses: jwlawson/actions-setup-cmake@v1.14
@@ -177,6 +177,8 @@ jobs:
     name: Generate Documentation
     runs-on: ubuntu-22.04
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+    permissions:
+      contents: write
 
     steps:
     - name: Checkout repository
@@ -189,17 +191,7 @@ jobs:
 
     - name: Generate documentation
       run: |
-        mkdir -p docs
         doxygen --version
-        # Add Doxyfile generation or use existing one
-        echo "PROJECT_NAME = libdoip" > Doxyfile
-        echo "INPUT = libdoipcommon/include libdoipserver/include libdoipclient/include" >> Doxyfile
-        echo "OUTPUT_DIRECTORY = docs" >> Doxyfile
-        echo "GENERATE_HTML = YES" >> Doxyfile
-        echo "GENERATE_LATEX = NO" >> Doxyfile
-        echo "RECURSIVE = YES" >> Doxyfile
-        echo "EXTRACT_ALL = YES" >> Doxyfile
-        echo "HAVE_DOT = YES" >> Doxyfile
         doxygen Doxyfile
 
     - name: Deploy to GitHub Pages
@@ -208,6 +200,10 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./docs/html
+        force_orphan: true
+        user_name: 'github-actions[bot]'
+        user_email: 'github-actions[bot]@users.noreply.github.com'
+        commit_message: 'Deploy documentation to GitHub Pages'
 
   # Code coverage (only on main branch)
   coverage:
@@ -222,7 +218,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y ninja-build gcc-11 g++-11 lcov
+        sudo apt-get install -y ninja-build libspdlog-dev gcc-11 g++-11 lcov
 
     - name: Set up CMake
       uses: jwlawson/actions-setup-cmake@v1.14

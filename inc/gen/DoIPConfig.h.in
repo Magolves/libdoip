@@ -1,0 +1,24 @@
+#pragma once
+
+#define DOIP_TIMEOUT_MS @DOIP_TIMEOUT_MS@
+
+#define DOIP_MAX_CONNECTIONS @DOIP_MAX_CONNECTIONS@
+
+/**
+ * @brief Number of retries for DoIP alive check messages.
+ * @details Used in DoIPServerStateMachine for retrying alive check requests.
+ * @note This value is configurable via CMake option DOIP_ALIVE_CHECK_RETRIES.
+ * @note The standard does not mandate retries, so the default is 1 (no retries). For robustness, retries can be enabled.
+ */
+#define DOIP_ALIVE_CHECK_RETRIES @DOIP_ALIVE_CHECK_RETRIES@
+
+// Table 48: UDP Ports for DoIP
+/**
+ * @brief UDP discovery port for DoIP as per ISO 13400-2:2019
+ */
+constexpr int DOIP_UDP_DISCOVERY_PORT = 13400;
+
+/**
+ * @brief UDP test equipment request port for DoIP as per ISO 13400-2:2019
+ */
+constexpr int DOIP_UDP_TEST_EQUIPMENT_REQUEST_PORT = 13401;

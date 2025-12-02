@@ -28,15 +28,61 @@ include(cmake/projectSettings.cmake)
 # Find required packages
 find_package(Threads REQUIRED)
 
+# Find or fetch spdlog
+find_package(spdlog QUIET)
+if(NOT spdlog_FOUND)
+    include(FetchContent)
+    FetchContent_Declare(
+        spdlog
+        GIT_REPOSITORY https://github.com/gabime/spdlog.git
+        GIT_TAG        v1.12.0
+    )
+    # Install spdlog with the library
+    set(SPDLOG_INSTALL ON CACHE BOOL "Generate the install target" FORCE)
+    # Disable warnings as errors for spdlog to prevent compilation issues
+    set(SPDLOG_BUILD_WARNINGS OFF CACHE BOOL "Enable warnings for spdlog" FORCE)
+    FetchContent_MakeAvailable(spdlog)
+
+    # Remove warnings as errors from spdlog target if it exists
+    if(TARGET spdlog)
+        get_target_property(spdlog_options spdlog COMPILE_OPTIONS)
+        if(spdlog_options)
+            list(REMOVE_ITEM spdlog_options "-Werror")
+            set_target_properties(spdlog PROPERTIES COMPILE_OPTIONS "${spdlog_options}")
+        endif()
+        target_compile_options(spdlog PRIVATE -Wno-error)
+    endif()
+else()
+    message(STATUS "spdlog found")
+endif()
+
+# Configuration options
+set(DOIP_ALIVE_CHECK_RETRIES "1" CACHE STRING "Number of retries for DoIP alive check messages")
+
+# Validate numeric options
+foreach(VAR DOIP_ALIVE_CHECK_RETRIES)
+    if(NOT ${VAR} MATCHES "^[0-9]+$")
+        message(FATAL_ERROR "${VAR} must be a positive integer")
+    endif()
+endforeach()
+
+# Configure configuration header
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc/gen/DoIPConfig.h.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc/gen/DoIPConfig.h
+    @ONLY
+)
+
 set(DOIP_NAME iso13400 CACHE STRING "DoIP library name")
+
+
 set(SOURCES
-    src/AliveCheckTimer.cpp
-    src/DiagnosticMessageHandler.cpp
     src/DoIPClient.cpp
     src/DoIPConnection.cpp
     src/DoIPServer.cpp
+    src/Logger.cpp
     src/MacAddress.cpp
-    src/RoutingActivationHandler.cpp
+    src/DoIPDefaultConnection.cpp
 )
 
 
@@ -58,14 +104,20 @@ set_target_properties(${DOIP_NAME} PROPERTIES
 target_include_directories(${DOIP_NAME}
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc/gen>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/lib${DOIP_NAME}>
 )
 
 # Link dependencies
 target_link_libraries(${DOIP_NAME}
+    PUBLIC
+        spdlog::spdlog
     PRIVATE
         Threads::Threads
 )
+
+# Disable switch-default warning for this target since spdlog headers trigger it
+target_compile_options(${DOIP_NAME} PRIVATE -Wno-switch-default)
 
 # Install configuration
 include(GNUInstallDirs)
@@ -108,9 +160,6 @@ install(TARGETS ${DOIP_NAME}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
-
-message(STATUS "Lib dir ${CMAKE_INSTALL_LIBDIR}")
-message(STATUS "Inc dir ${CMAKE_INSTALL_INCLUDEDIR}")
 
 # Install headers
 install(DIRECTORY inc/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/{DOIP_NAME})

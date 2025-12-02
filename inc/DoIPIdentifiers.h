@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <array>
 #include <cstring>
+#include <iterator>
 #include <string>
 #include <sstream>
 
@@ -24,6 +25,15 @@ class GenericFixedId {
      * @brief Length of the identifier in bytes
      */
     static constexpr size_t ID_LENGTH = IdLength;
+
+    // STL container type aliases
+    using value_type = uint8_t;
+    using size_type = size_t;
+    using difference_type = std::ptrdiff_t;
+    using reference = uint8_t&;
+    using const_reference = const uint8_t&;
+    using iterator = typename std::array<uint8_t, IdLength>::iterator;
+    using const_iterator = typename std::array<uint8_t, IdLength>::const_iterator;
 
     /**
      * @brief Default constructor - creates an identifier filled with zeros
@@ -166,8 +176,8 @@ class GenericFixedId {
      *
      * @return ByteArray The identifier as byte array (always IdLength bytes)
      */
-    ByteArray toByteArray() const {
-        return ByteArray(m_id.begin(), m_id.end());
+    ByteArrayRef asByteArray() const {
+        return {m_id.data(), ID_LENGTH};
     }
 
     /**
@@ -270,6 +280,48 @@ class GenericFixedId {
     uint8_t constexpr getPadByte() {
         return static_cast<uint8_t>(padChar);
     }
+
+    /**
+     * @brief Iterator support - begin
+     *
+     * @return auto Iterator to the beginning of the identifier data
+     */
+    auto begin() noexcept { return m_id.begin(); }
+
+    /**
+     * @brief Iterator support - begin (const)
+     *
+     * @return auto Const iterator to the beginning of the identifier data
+     */
+    auto begin() const noexcept { return m_id.begin(); }
+
+    /**
+     * @brief Iterator support - cbegin
+     *
+     * @return auto Const iterator to the beginning of the identifier data
+     */
+    auto cbegin() const noexcept { return m_id.cbegin(); }
+
+    /**
+     * @brief Iterator support - end
+     *
+     * @return auto Iterator to the end of the identifier data
+     */
+    auto end() noexcept { return m_id.end(); }
+
+    /**
+     * @brief Iterator support - end (const)
+     *
+     * @return auto Const iterator to the end of the identifier data
+     */
+    auto end() const noexcept { return m_id.end(); }
+
+    /**
+     * @brief Iterator support - cend
+     *
+     * @return auto Const iterator to the end of the identifier data
+     */
+    auto cend() const noexcept { return m_id.cend(); }
 
     /**
      * @brief Static instance containing only zeros

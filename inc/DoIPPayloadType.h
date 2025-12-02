@@ -29,6 +29,10 @@ enum class DoIPPayloadType : uint16_t  {
     DiagnosticMessageAck = 0x8002, // positive response
     DiagnosticMessageNegativeAck = 0x8003, // negative response
     PeriodicDiagnosticMessage = 0x8004
+    // 0x8005 - 0x8FFF : reserved
+    // 0x9000 - 0x9FFF : subnet protocol
+    // 0xA000 - 0xEFFF : reserved
+    // 0xF000 - 0xFFFF : reserved for manufacturer
 };
 
 /**

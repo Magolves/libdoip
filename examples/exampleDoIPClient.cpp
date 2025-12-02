@@ -1,32 +1,77 @@
-#include "DoIPClient_h.h"
+#include "DoIPClient.h"
+#include "DoIPMessage.h"
+#include "Logger.h"
 
-#include<iostream>
-#include<iomanip>
-#include<thread>
+#include <iomanip>
+#include <iostream>
+#include <thread>
 
 using namespace doip;
 using namespace std;
 
-
 DoIPClient client;
 
+static void printUsage(const char *progName) {
+    cout << "Usage: " << progName << " [OPTIONS]\n";
+    cout << "Options:\n";
+    cout << "  --loopback            Use loopback (127.0.0.1) instead of multicast\n";
+    cout << "  --server <ip>         Connect to specific server IP\n";
+    cout << "  --help                Show this help message\n";
+}
 
-int main() {
-    client.startUdpConnection();
-    client.startTcpConnection();
+int main(int argc, char *argv[]) {
+    string serverAddress = "224.0.0.2"; // Default multicast address
 
-    auto retries = 10;
-    while(retries > 0 && !client.getConnected()) {
-        sleep(1);
-        std::cout << "Waiting for server...\n";
-        --retries;
+    // Parse command line arguments
+    for (int i = 1; i < argc; i++) {
+        string arg = argv[i];
+        if (arg == "--loopback") {
+            serverAddress = "127.0.0.1";
+            DOIP_LOG_INFO("Loopback mode enabled - using 127.0.0.1");
+        } else if (arg == "--server" && i + 1 < argc) {
+            serverAddress = argv[++i];
+            DOIP_LOG_INFO("Using custom server address: {}", serverAddress);
+        } else if (arg == "--help") {
+            printUsage(argv[0]);
+            return 0;
+        } else {
+            cout << "Unknown argument: " << arg << endl;
+            printUsage(argv[0]);
+            return 1;
+        }
     }
+
+    DOIP_LOG_INFO("Starting DoIP Client");
+
+    // Start UDP connections (don't start TCP yet)
+    client.startUdpConnection();
+    client.startAnnouncementListener(); // Listen for Vehicle Announcements on port 13401
+
+    // Listen for Vehicle Announcements first
+    DOIP_LOG_INFO("Listening for Vehicle Announcements...");
+    client.receiveVehicleAnnouncement();
+
+    // Send Vehicle Identification Request to configured address
+    if (client.sendVehicleIdentificationRequest(serverAddress.c_str()) > 0) {
+        DOIP_LOG_INFO("Vehicle Identification Request sent successfully");
+        client.receiveUdpMessage();
+    }
+
+    // Now start TCP connection for diagnostic communication
+    DOIP_LOG_INFO("Starting TCP connection for diagnostic messages");
+    client.startTcpConnection();
 
     if (client.sendRoutingActivationRequest() < 0) {
         std::cerr << "sendRoutingActivationRequest Failed";
+
         exit(EXIT_FAILURE);
     }
 
+    client.receiveMessage();
+
+    client.sendDiagnosticMessage({0x22, 0xF1, 0x90}); // Example: Read Data by Identifier (0xF190 = VIN)
+    client.receiveMessage();
+    client.sendDiagnosticMessage({0x22, 0xF2, 0x90}); // Example: Read Data by Identifier (0xF190 = VIN)
     client.receiveMessage();
 
     client.closeTcpConnection();
