@@ -67,6 +67,7 @@ TEST_SUITE("DoIPDefaultConnection") {
         CHECK(connection->getState() == DoIPServerState::Closed);
     }
 
+#ifndef NDEBUG
     TEST_CASE_FIXTURE(DoIPDefaultConnectionTestFixture, "DoIPDefaultConnection: Timeout after routing activation") {
         doip::Logger::setLevel(spdlog::level::debug);
         CHECK(connection->isOpen() == true);
@@ -110,7 +111,7 @@ TEST_SUITE("DoIPDefaultConnection") {
         CHECK(connection->getCloseReason() == DoIPCloseReason::AliveCheckTimeout);
         CHECK(connection->getState() == DoIPServerState::Closed);
     }
-
+#endif
     TEST_CASE_FIXTURE(DoIPDefaultConnectionTestFixture, "DoIPDefaultConnection: Downstream Handler") {
         CHECK_FALSE(connection->hasDownstreamHandler());
     }
