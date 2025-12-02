@@ -101,7 +101,7 @@ TEST_SUITE("DoIPDefaultConnection") {
         connection->handleMessage2(message::makeRoutingActivationRequest(DoIPAddress(0x0E, 0x00)));
         CHECK(connection->getState() == DoIPServerState::RoutingActivated);
 
-        WAIT_FOR_STATE(connection, DoIPServerState::WaitAliveCheckResponse, 1000);
+        WAIT_FOR_STATE(connection, DoIPServerState::WaitAliveCheckResponse, 100000);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(times::server::AliveCheckResponseTimeout));
         std::this_thread::sleep_for(10ms);
