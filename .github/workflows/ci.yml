@@ -193,7 +193,9 @@ jobs:
       run: |
         doxygen --version
         doxygen Doxyfile
-
+      working-directory: ${{ github.workspace }}
+    - name: List generated docs
+      run: ls -lR docs/html || echo "docs/html does not exist"
     - name: Deploy to GitHub Pages
       if: github.ref == 'refs/heads/main'
       uses: peaceiris/actions-gh-pages@v3
