@@ -12,8 +12,7 @@ DoIPDefaultConnection::DoIPDefaultConnection(UniqueServerModelPtr model)
           StateDescriptor(
               DoIPServerState::SocketInitialized,
               DoIPServerState::WaitRoutingActivation,
-              [this](std::optional<DoIPMessage> msg) { this->handleSocketInitialized(DoIPServerEvent{}, msg); }
-              ),
+              [this](std::optional<DoIPMessage> msg) { this->handleSocketInitialized(DoIPServerEvent{}, msg); }),
           StateDescriptor(
               DoIPServerState::WaitRoutingActivation,
               DoIPServerState::Finalize,
@@ -22,17 +21,15 @@ DoIPDefaultConnection::DoIPDefaultConnection(UniqueServerModelPtr model)
           StateDescriptor(
               DoIPServerState::RoutingActivated,
               DoIPServerState::Finalize,
-              [this](std::optional<DoIPMessage> msg) { this->handleRoutingActivated(DoIPServerEvent{}, msg);},
+              [this](std::optional<DoIPMessage> msg) { this->handleRoutingActivated(DoIPServerEvent{}, msg); },
               ConnectionTimers::GeneralInactivity,
-              [this]() noexcept { m_aliveCheckRetry = 0; }
-            ),
+              [this]() noexcept { m_aliveCheckRetry = 0; }),
           StateDescriptor(
               DoIPServerState::WaitAliveCheckResponse,
               DoIPServerState::Finalize,
               [this](std::optional<DoIPMessage> msg) { this->handleWaitAliveCheckResponse(DoIPServerEvent{}, msg); },
               ConnectionTimers::AliveCheck,
-              [this]() { ++m_aliveCheckRetry; DOIP_LOG_WARN("Alive check #{}/{}", m_aliveCheckRetry, m_aliveCheckRetryCount);}
-              ),
+              [this]() { ++m_aliveCheckRetry; DOIP_LOG_WARN("Alive check #{}/{}", m_aliveCheckRetry, m_aliveCheckRetryCount); }),
           StateDescriptor(
               DoIPServerState::WaitDownstreamResponse,
               DoIPServerState::Finalize,
@@ -44,8 +41,7 @@ DoIPDefaultConnection::DoIPDefaultConnection(UniqueServerModelPtr model)
           StateDescriptor(
               DoIPServerState::Finalize,
               DoIPServerState::Closed,
-              [this](std::optional<DoIPMessage> msg) { this->handleFinalize(DoIPServerEvent{}, msg); }
-              ),
+              [this](std::optional<DoIPMessage> msg) { this->handleFinalize(DoIPServerEvent{}, msg); }),
           StateDescriptor(
               DoIPServerState::Closed,
               DoIPServerState::Closed,
@@ -129,15 +125,19 @@ void DoIPDefaultConnection::transitionTo(DoIPServerState newState) {
 
 std::chrono::milliseconds DoIPDefaultConnection::getTimerDuration(StateDescriptor const *stateDesc) {
     assert(stateDesc);
-    switch(stateDesc->timer) {
-        case ConnectionTimers::AliveCheck: return m_aliveCheckTimeout;
-        case ConnectionTimers::InitialInactivity: return m_initialInactivityTimeout;
-        case ConnectionTimers::GeneralInactivity: return m_generalInactivityTimeout;
-        case ConnectionTimers::DownstreamResponse: return m_downstreamResponseTimeout;
-        case ConnectionTimers::UserDefined :
-            return stateDesc->timeoutDurationUser;
-        default:
-            return 0ms;
+    switch (stateDesc->timer) {
+    case ConnectionTimers::AliveCheck:
+        return m_aliveCheckTimeout;
+    case ConnectionTimers::InitialInactivity:
+        return m_initialInactivityTimeout;
+    case ConnectionTimers::GeneralInactivity:
+        return m_generalInactivityTimeout;
+    case ConnectionTimers::DownstreamResponse:
+        return m_downstreamResponseTimeout;
+    case ConnectionTimers::UserDefined:
+        return stateDesc->timeoutDurationUser;
+    default:
+        return 0ms;
     }
 }
 
@@ -149,7 +149,6 @@ void DoIPDefaultConnection::startStateTimer(StateDescriptor const *stateDesc) {
 
     m_timerManager.stopAll();
 
-    // todo: Optimize timer table lookup (and content)
     std::chrono::milliseconds duration = getTimerDuration(m_state);
 
     if (duration.count() == 0) {
@@ -161,7 +160,6 @@ void DoIPDefaultConnection::startStateTimer(StateDescriptor const *stateDesc) {
     DOIP_LOG_DEBUG("Starting timer for state {}: Timer ID {}, duration {}ms", fmt::streamed(stateDesc->state), fmt::streamed(stateDesc->timer), duration.count());
 
     std::function<void(ConnectionTimers)> timeoutHandler = [this](ConnectionTimers timerId) { handleTimeout(timerId); };
-
     if (stateDesc->timeoutHandler != nullptr) {
         timeoutHandler = stateDesc->timeoutHandler;
     }

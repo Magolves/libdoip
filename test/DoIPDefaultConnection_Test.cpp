@@ -5,19 +5,18 @@
 
 namespace doip {
 
-#define WAIT_FOR_STATE(sm, s, max)                                                \
+#define WAIT_FOR_STATE(sm, s, max)                                            \
     {                                                                         \
         int counter = 0;                                                      \
-        while (sm->getState() != (s) && ++counter < (max)) {                     \
+        while (sm->getState() != (s) && ++counter < (max)) {                  \
             std::this_thread::sleep_for(10ms);                                \
         };                                                                    \
         std::stringstream ss;                                                 \
         ss << "State " << (s) << " reached after " << ((max) * 10) << "ms\n"; \
         INFO("WAIT_FOR_STATE ", ss.str());                                    \
         CHECK(counter < (max));                                               \
-        REQUIRE(sm->getState() == (s));                                        \
+        REQUIRE(sm->getState() == (s));                                       \
     }
-
 
 TEST_SUITE("DoIPDefaultConnection") {
 
@@ -115,7 +114,6 @@ TEST_SUITE("DoIPDefaultConnection") {
     TEST_CASE_FIXTURE(DoIPDefaultConnectionTestFixture, "DoIPDefaultConnection: Downstream Handler") {
         CHECK_FALSE(connection->hasDownstreamHandler());
     }
-
 }
 
 } // namespace doip
