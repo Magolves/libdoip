@@ -8,26 +8,119 @@
 
 namespace doip {
 
-// Table 17
+
+
+/**
+ * @brief DoIP Payload Type identifiers according to ISO 13400-2
+ *
+ * This enumeration contains all payload types used in the DoIP protocol.
+ * The values correspond to the message types specified in ISO 13400-2.
+ */
 enum class DoIPPayloadType : uint16_t  {
+    /**
+     * @brief Generic Negative Acknowledgement (NACK)
+     * Sent when a message cannot be processed.
+     */
     NegativeAck = 0x0000,
+
+    /**
+     * @brief Vehicle Identification Request
+     * Request for vehicle identification.
+     */
     VehicleIdentificationRequest = 0x0001,
+
+    /**
+     * @brief Vehicle Identification Request with EID
+     * Request with EID (Entity Identifier).
+     */
     VehicleIdentificationRequestWithEid = 0x0002,
+
+    /**
+     * @brief Vehicle Identification Request with VIN
+     * Request with VIN (Vehicle Identification Number).
+     */
     VehicleIdentificationRequestWithVin = 0x0003,
-    VehicleIdentificationResponse = 0x0004, // aka Vehicle announcement message
+
+    /**
+     * @brief Vehicle Identification Response (Vehicle Announcement)
+     * Response to a Vehicle Identification Request or periodic announcement.
+     */
+    VehicleIdentificationResponse = 0x0004,
+
+    /**
+     * @brief Routing Activation Request
+     * Request to activate routing for a diagnostic connection.
+     */
     RoutingActivationRequest = 0x0005,
+
+    /**
+     * @brief Routing Activation Response
+     * Response to a Routing Activation Request.
+     */
     RoutingActivationResponse = 0x0006,
+
+    /**
+     * @brief Alive Check Request
+     * Request to check if the connection is still alive.
+     */
     AliveCheckRequest = 0x0007,
+
+    /**
+     * @brief Alive Check Response
+     * Response to an Alive Check Request.
+     */
     AliveCheckResponse = 0x0008,
+
     // 0x0009 - 0x4000: reserved
+
+    /**
+     * @brief Entity Status Request
+     * Request for the status of a DoIP entity.
+     */
     EntityStatusRequest = 0x4001,
+
+    /**
+     * @brief Entity Status Response
+     * Response to an Entity Status Request.
+     */
     EntityStatusResponse = 0x4002,
+
+    /**
+     * @brief Diagnostic Power Mode Request
+     * Request for the current power mode.
+     */
     DiagnosticPowerModeRequest = 0x4003,
+
+    /**
+     * @brief Diagnostic Power Mode Response
+     * Response to a Diagnostic Power Mode Request.
+     */
     DiagnosticPowerModeResponse = 0x4004,
+
     // 0x4005 - 0x8000: reserved
+
+    /**
+     * @brief Diagnostic Message
+     * Payload for diagnostic communication (UDS, KWP, etc.).
+     */
     DiagnosticMessage = 0x8001,
-    DiagnosticMessageAck = 0x8002, // positive response
-    DiagnosticMessageNegativeAck = 0x8003, // negative response
+
+    /**
+     * @brief Diagnostic Message Positive Acknowledgement
+     * Positive acknowledgement of a diagnostic message.
+     */
+    DiagnosticMessageAck = 0x8002,
+
+    /**
+     * @brief Diagnostic Message Negative Acknowledgement
+     * Negative acknowledgement of a diagnostic message.
+     */
+    DiagnosticMessageNegativeAck = 0x8003,
+
+    /**
+     * @brief Periodic Diagnostic Message
+     * Periodically sent diagnostic message.
+     */
     PeriodicDiagnosticMessage = 0x8004
     // 0x8005 - 0x8FFF : reserved
     // 0x9000 - 0x9FFF : subnet protocol
