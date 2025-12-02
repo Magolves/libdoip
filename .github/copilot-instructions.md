@@ -16,7 +16,6 @@
 ### Core Components
 - **DoIP Server**: TCP/UDP socket handling, vehicle announcement, routing activation
 - **DoIP Client**: Diagnostic client implementation
-- **State Machines**: Connection state management and protocol compliance
 - **Message Handling**: DoIP protocol message parsing and generation
 - **Threading**: Timer management, thread-safe queues, alive check timers
 
