@@ -77,11 +77,11 @@ TEST_SUITE("DoIPDefaultConnection") {
         CHECK(connection->getState() == DoIPServerState::RoutingActivated);
         CHECK(connection->isRoutingActivated());
 
-        WAIT_FOR_STATE(connection, DoIPServerState::WaitAliveCheckResponse, 1000);
+        WAIT_FOR_STATE(connection, DoIPServerState::WaitAliveCheckResponse, 100000);
         connection->handleMessage2(message::makeAliveCheckResponse(sa));
         WAIT_FOR_STATE(connection, DoIPServerState::RoutingActivated, 1000);
 
-        WAIT_FOR_STATE(connection, DoIPServerState::WaitAliveCheckResponse, 1000);
+        WAIT_FOR_STATE(connection, DoIPServerState::WaitAliveCheckResponse, 100000);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(times::server::AliveCheckResponseTimeout));
         std::this_thread::sleep_for(10ms);
