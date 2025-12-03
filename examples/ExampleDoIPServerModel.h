@@ -15,8 +15,9 @@ using namespace doip;
 class ExampleDoIPServerModel : public DoIPServerModel {
   public:
     ExampleDoIPServerModel() {
-        onCloseConnection = [](IConnectionContext &ctx, DoIPCloseReason reason) noexcept {
+        onCloseConnection = [this](IConnectionContext &ctx, DoIPCloseReason reason) noexcept {
             (void)ctx;
+            stopWorker();
             DOIP_LOG_WARN("Connection closed ({})", fmt::streamed(reason));
         };
 
@@ -46,35 +47,61 @@ class ExampleDoIPServerModel : public DoIPServerModel {
             // auto [data, size] = msg.getDiagnosticMessagePayload();
             // m_tx.push(ByteArray(data, size));
             m_downstreamCallback = callback;
+            if (!m_downstreamCallback) {
+                DOIP_LOG_ERROR("onDownstreamRequest: No callback function passed");
+                return DoIPDownstreamResult::Error;
+            }
             return DoIPDownstreamResult::Pending;
         };
+
+        startWorker();
     }
 
-    private:
-        ServerModelDownstreamResponseHandler m_downstreamCallback = nullptr;
-        ThreadSafeQueue<ByteArray> m_rx;
-        ThreadSafeQueue<ByteArray> m_tx;
-        uds::UdsMock uds;
+  private:
+    ServerModelDownstreamResponseHandler m_downstreamCallback = nullptr;
+    ThreadSafeQueue<ByteArray> m_rx;
+    ThreadSafeQueue<ByteArray> m_tx;
+    uds::UdsMock m_uds;
+    std::thread m_worker;
+    bool m_running = true;
 
-
-        void downstream_thread() {
-            if (m_tx.size()) {
-                // simulate send
-                ByteArray req;
-                m_tx.pop(req);
-                sleep(1);
-                m_rx.push(uds.handleDiagnosticRequest(req));
+    void startWorker() {
+        m_worker = std::thread([this] {
+            while (m_running) {
+                downstream_thread();
             }
+        });
+    }
+    void stopWorker() {
+        m_running = false;
+        if (m_worker.joinable())
+            m_worker.join();
+        DOIP_LOG_INFO("Stopped worker thread");
+    }
 
-            if (m_rx.size()) {
-                ByteArray rsp;
-                m_rx.pop(rsp);
-                if (m_downstreamCallback) {
-                    m_downstreamCallback(rsp, DoIPDownstreamResult::Handled);
-                }
-            }
-            std::this_thread::sleep_for(10ms);
+    /**
+     * @brief Thread simulating downstream communication (e. g. CAN).
+     */
+    void downstream_thread() {
+        if (m_tx.size()) {
+            // simulate send. In a real environment we could send a CAN message
+            ByteArray req;
+            m_tx.pop(req);
+            sleep(1); // wait for response
+            // simulate receive
+            m_rx.push(m_uds.handleDiagnosticRequest(req));
         }
+
+        if (m_rx.size()) {
+            ByteArray rsp;
+            m_rx.pop(rsp);
+            if (m_downstreamCallback) {
+                m_downstreamCallback(rsp, DoIPDownstreamResult::Handled);
+                m_downstreamCallback = nullptr;
+            }
+        }
+        std::this_thread::sleep_for(10ms);
+    }
 };
 
 #endif /* EXAMPLEDOIPSERVERMODEL_H */
