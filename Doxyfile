@@ -179,8 +179,9 @@ HTML_FILE_EXTENSION    = .html
 HTML_HEADER            =
 HTML_FOOTER            =
 HTML_STYLESHEET        =
-HTML_EXTRA_STYLESHEET = doxygen-awesome.css
-HTML_EXTRA_FILES      = doxygen-awesome-darkmode-toggle.js
+# See https://github.com/jothepro/doxygen-awesome-css
+HTML_EXTRA_STYLESHEET  = doxygen-awesome.css
+HTML_EXTRA_FILES       = doxygen-awesome-darkmode-toggle.js
 HTML_COLORSTYLE        = AUTO_LIGHT
 HTML_COLORSTYLE_HUE    = 220
 HTML_COLORSTYLE_SAT    = 100
