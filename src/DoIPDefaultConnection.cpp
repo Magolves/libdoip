@@ -111,7 +111,7 @@ void DoIPDefaultConnection::transitionTo(DoIPServerState newState) {
             return desc.state == newState;
         });
     if (it != STATE_DESCRIPTORS.end()) {
-        DOIP_LOG_INFO("Transitioning from state {} to state {}", fmt::streamed(m_state->state), fmt::streamed(newState));
+        DOIP_LOG_INFO("-> Transitioning from state {} to state {}", fmt::streamed(m_state->state), fmt::streamed(newState));
         m_state = &(*it);
         startStateTimer(m_state);
         if (m_state->enterStateHandler) {
@@ -255,8 +255,16 @@ void DoIPDefaultConnection::handleRoutingActivated(DoIPServerEvent event, OptDoI
 
     // Reset general inactivity timer
     restartStateTimer();
+
+    // nack -> stop here
+    if (ack.has_value()) {
+        transitionTo(DoIPServerState::RoutingActivated);
+        return;
+    }
+
     if (hasDownstreamHandler()) {
         auto result = notifyDownstreamRequest(message);
+        DOIP_LOG_DEBUG("Downstream req -> {}", fmt::streamed(result));
         if (result == DoIPDownstreamResult::Pending) {
             // wait for downstream response
             transitionTo(DoIPServerState::WaitDownstreamResponse);
@@ -302,6 +310,8 @@ void DoIPDefaultConnection::handleWaitDownstreamResponse(DoIPServerEvent event, 
     (void)msg;   // Unused parameter
 
     // Implementation of handling wait downstream response would go here
+    DOIP_LOG_CRITICAL("handleWaitDownstreamResponse NOT IMPL");
+
 }
 
 void DoIPDefaultConnection::handleFinalize(DoIPServerEvent event, OptDoIPMessage msg) {
@@ -313,7 +323,7 @@ void DoIPDefaultConnection::handleFinalize(DoIPServerEvent event, OptDoIPMessage
 }
 
 void DoIPDefaultConnection::handleTimeout(ConnectionTimers timer_id) {
-    DOIP_LOG_WARN("SM2 Timeout '{}'", fmt::streamed(timer_id));
+    DOIP_LOG_WARN("Timeout '{}'", fmt::streamed(timer_id));
 
     switch (timer_id) {
     case ConnectionTimers::InitialInactivity:
@@ -437,11 +447,13 @@ DoIPDownstreamResult DoIPDefaultConnection::notifyDownstreamRequest(const DoIPMe
 void DoIPDefaultConnection::receiveDownstreamResponse(const ByteArray &response, DoIPDownstreamResult result) {
     DoIPAddress sa = getServerAddress();
     DoIPAddress ta = getClientAddress();
+    DOIP_LOG_INFO("Downstream rsp: {} ({})", fmt::streamed(response), fmt::streamed(result));
     if (result == DoIPDownstreamResult::Handled) {
         sendProtocolMessage(message::makeDiagnosticMessage(sa, ta, response));
     } else {
         sendProtocolMessage(message::makeDiagnosticNegativeResponse(sa, ta, DoIPNegativeDiagnosticAck::TargetUnreachable, {}));
     }
+    transitionTo(DoIPServerState::RoutingActivated);
 }
 
 } // namespace doip

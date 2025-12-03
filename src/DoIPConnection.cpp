@@ -50,7 +50,7 @@ int DoIPConnection::receiveTcpMessage() {
             DOIP_LOG_DEBUG("Waiting for {} bytes of payload...", payloadLength);
             unsigned int receivedPayloadBytes = receiveFixedNumberOfBytesFromTCP(m_receiveBuf.data(), payloadLength);
             if (receivedPayloadBytes < payloadLength) {
-                DOIP_LOG_ERROR("DoIP message completely incomplete");
+                DOIP_LOG_ERROR("DoIP message incomplete");
                 // m_stateMachine.processEvent(DoIPServerEvent::InvalidMessage);
                 //  todo: Notify application of invalid message?
                 closeSocket();
@@ -62,8 +62,7 @@ int DoIPConnection::receiveTcpMessage() {
         }
 
         DoIPMessage message(plType, m_receiveBuf.data(), payloadLength);
-        // todo: process message in state machine
-        // m_stateMachine.processMessage(message);
+        handleMessage2(message);
 
         return 1;
     } else {

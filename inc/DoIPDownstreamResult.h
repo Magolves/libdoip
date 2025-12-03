@@ -1,6 +1,8 @@
 #ifndef DOIPDOWNSTREAMRESULT_H
 #define DOIPDOWNSTREAMRESULT_H
 
+#include "AnsiColors.h"
+
 namespace doip {
 
 /**
@@ -11,6 +13,21 @@ enum class DoIPDownstreamResult {
     Handled,        ///< Request was handled synchronously (no downstream needed)
     Error           ///< Failed to initiate downstream request
 };
+
+inline std::ostream &operator<<(std::ostream &os, DoIPDownstreamResult result) {
+    switch(result) {
+        case DoIPDownstreamResult::Pending:
+            os << ansi::yellow << "Pending" << ansi::reset;
+            break;
+        case DoIPDownstreamResult::Handled:
+            os << ansi::green << "Handled" << ansi::reset;
+            break;
+        case DoIPDownstreamResult::Error:
+            os << ansi::red << "Error" << ansi::reset;
+            break;
+    }
+    return os;
+}
 
 } // namespace doip
 
