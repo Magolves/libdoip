@@ -1,0 +1,3 @@
+<map id="doip::DoIPAddress" name="doip::DoIPAddress">
+<area shape="rect" id="node1" title="Represents a 16&#45;bit DoIP address consisting of high and low significant bytes." alt="" coords="5,5,144,32"/>
+</map>
