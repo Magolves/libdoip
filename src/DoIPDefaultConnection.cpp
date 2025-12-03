@@ -250,20 +250,25 @@ void DoIPDefaultConnection::handleRoutingActivated(DoIPServerEvent event, OptDoI
         return;
     }
 
-    auto ack = notifyDiagnosticMessage(*msg);
+    auto ack = notifyDiagnosticMessage(message);
     sendDiagnosticMessageResponse(sourceAddress.value(), ack);
 
     // Reset general inactivity timer
     restartStateTimer();
-    // if (m_context.hasDownstreamHandler()) {
-    //     startDownstreamResponseTimer();
-    //     auto result = m_context.notifyDownstreamRequest(*msg);
-    //     if (result == DoIPDownstreamResult::Pending) {
-    //         transitionTo(DoIPServerState::WaitDownstreamResponse);
-    //     } else if (result == DoIPDownstreamResult::Error) {
-    //         sendDiagnosticMessageResponse(sourceAddress.value(), DoIPNegativeDiagnosticAck::TargetUnreachable);
-    //     }
-    // }
+    if (hasDownstreamHandler()) {
+        auto result = notifyDownstreamRequest(message);
+        if (result == DoIPDownstreamResult::Pending) {
+            // wait for downstream response
+            transitionTo(DoIPServerState::WaitDownstreamResponse);
+        } else if (result == DoIPDownstreamResult::Handled) {
+            // no downstream response expected -> go back to "idle"
+            transitionTo(DoIPServerState::RoutingActivated);
+        } else if (result == DoIPDownstreamResult::Error) {
+            // request could not be handled -> issue error and back to idle
+            sendDiagnosticMessageResponse(sourceAddress.value(), DoIPNegativeDiagnosticAck::TargetUnreachable);
+            transitionTo(DoIPServerState::RoutingActivated);
+        }
+    }
 }
 
 void DoIPDefaultConnection::handleWaitAliveCheckResponse(DoIPServerEvent event, OptDoIPMessage msg) {
@@ -288,7 +293,6 @@ void DoIPDefaultConnection::handleWaitAliveCheckResponse(DoIPServerEvent event, 
     default:
         DOIP_LOG_WARN("Received unsupported message type {} in Wait Alive Check Response state", fmt::streamed(message.getPayloadType()));
         sendDiagnosticMessageResponse(DoIPAddress::ZeroAddress, DoIPNegativeDiagnosticAck::TransportProtocolError);
-        // closeConnection(DoIPCloseReason::InvalidMessage);
         return;
     }
 }
@@ -388,6 +392,13 @@ ssize_t DoIPDefaultConnection::sendDiagnosticMessageResponse(const DoIPAddress &
     return sentBytes;
 }
 
+ssize_t DoIPDefaultConnection::sendDownstreamResponse(const DoIPAddress &sourceAddress, const ByteArray& payload) {
+    DoIPAddress targetAddress = getServerAddress();
+    DoIPMessage message = message::makeDiagnosticMessage(sourceAddress, targetAddress, payload);
+
+    return sendProtocolMessage(message);
+}
+
 DoIPDiagnosticAck DoIPDefaultConnection::notifyDiagnosticMessage(const DoIPMessage &msg) {
     if (m_serverModel->onDiagnosticMessage) {
         return m_serverModel->onDiagnosticMessage(*this, msg);
@@ -411,21 +422,25 @@ bool DoIPDefaultConnection::hasDownstreamHandler() const {
     return m_serverModel->hasDownstreamHandler();
 }
 
+
+
 DoIPDownstreamResult DoIPDefaultConnection::notifyDownstreamRequest(const DoIPMessage &msg) {
     if (m_serverModel->onDownstreamRequest) {
-        return m_serverModel->onDownstreamRequest(*this, msg);
+        auto handler = [this](const ByteArray &response, DoIPDownstreamResult result) {
+            this->receiveDownstreamResponse(response, result);
+        };
+        return m_serverModel->onDownstreamRequest(*this, msg, handler);
     }
     return DoIPDownstreamResult::Error;
 }
 
-void DoIPDefaultConnection::receiveDownstreamResponse(const DoIPMessage &response) {
-    (void)response;
-    // TODO: Implement state machine event processing for downstream response
-}
-
-void DoIPDefaultConnection::notifyDownstreamResponseReceived(const DoIPMessage &request, const DoIPMessage &response) {
-    if (m_serverModel->onDownstreamResponse) {
-        m_serverModel->onDownstreamResponse(*this, request, response);
+void DoIPDefaultConnection::receiveDownstreamResponse(const ByteArray &response, DoIPDownstreamResult result) {
+    DoIPAddress sa = getServerAddress();
+    DoIPAddress ta = getClientAddress();
+    if (result == DoIPDownstreamResult::Handled) {
+        sendProtocolMessage(message::makeDiagnosticMessage(sa, ta, response));
+    } else {
+        sendProtocolMessage(message::makeDiagnosticNegativeResponse(sa, ta, DoIPNegativeDiagnosticAck::TargetUnreachable, {}));
     }
 }
 

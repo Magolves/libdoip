@@ -24,6 +24,16 @@ using ServerModelDiagnosticHandler = std::function<DoIPDiagnosticAck(IConnection
 using ServerModelDiagnosticNotificationHandler = std::function<void(IConnectionContext &, DoIPDiagnosticAck)>;
 
 /**
+ * @brief Callback for downstream response notification
+ *
+ * @param response the downstream response (maybe empty)
+ * @param result the downstream result
+ *
+ * @param ctx The connection context
+ */
+using ServerModelDownstreamResponseHandler = std::function<void(const ByteArray &response, DoIPDownstreamResult result)>;
+
+/**
  * @brief Callback for downstream (subnet) request handling
  *
  * This callback is invoked when a diagnostic message needs to be forwarded
@@ -37,25 +47,15 @@ using ServerModelDiagnosticNotificationHandler = std::function<void(IConnectionC
  *
  * @param ctx The connection context (use for receiveDownstreamResponse callback)
  * @param msg The diagnostic message to forward downstream
+ * @param callback the callback method to call when the downstream response arrived
  * @return DoIPDownstreamResult indicating the result of the request initiation
  *         - Pending: Async request initiated, response will come via receiveDownstreamResponse
  *         - Handled: Message was handled synchronously, no state transition needed
  *         - Error: Failed to initiate request, connection should handle error
  */
-using ServerModelDownstreamHandler = std::function<DoIPDownstreamResult(IConnectionContext &ctx, const DoIPMessage &msg)>;
-
-/**
- * @brief Callback for downstream response notification
- *
- * Optional callback invoked when a downstream response is received and
- * about to be sent back to the client. This allows the application to
- * inspect or log the response.
- *
- * @param ctx The connection context
- * @param request The original request that was sent downstream
- * @param response The response received from downstream
- */
-using ServerModelDownstreamResponseHandler = std::function<void(IConnectionContext &ctx, const DoIPMessage &request, const DoIPMessage &response)>;
+using ServerModelDownstreamHandler = std::function<DoIPDownstreamResult(IConnectionContext &ctx,
+                                                                        const DoIPMessage &msg,
+                                                                        ServerModelDownstreamResponseHandler callback)>;
 
 /**
  * @brief DoIP Server Model - Configuration and callbacks for a DoIP server connection
@@ -91,14 +91,6 @@ struct DoIPServerModel {
      * - Leave unset for end-node ECUs that handle messages locally
      */
     ServerModelDownstreamHandler onDownstreamRequest;
-
-    /**
-     * @brief Optional notification when downstream response is received
-     *
-     * Called before the response is sent back to the DoIP client.
-     * Useful for logging, metrics, or response modification.
-     */
-    ServerModelDownstreamResponseHandler onDownstreamResponse;
 
     /// The logical address of this DoIP server
     DoIPAddress serverAddress = DoIPAddress(0x0E, 0x00);
@@ -145,18 +137,13 @@ struct DefaultDoIPServerModel : public DoIPServerModel {
             // Default no-op
         };
 
-
-
         // Note: onDownstreamRequest is intentionally left as nullptr
         // This means downstream forwarding is disabled by default
         onDownstreamRequest = nullptr;
-        onDownstreamResponse = nullptr;
     }
 
-    ~DefaultDoIPServerModel()  {
-
+    ~DefaultDoIPServerModel() {
     }
-
 };
 
 } // namespace doip

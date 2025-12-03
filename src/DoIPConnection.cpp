@@ -182,23 +182,4 @@ bool DoIPConnection::hasDownstreamHandler() const {
     return m_serverModel->hasDownstreamHandler();
 }
 
-DoIPDownstreamResult DoIPConnection::notifyDownstreamRequest(const DoIPMessage &msg) {
-    if (m_serverModel->onDownstreamRequest) {
-        return m_serverModel->onDownstreamRequest(*this, msg);
-    }
-    return DoIPDownstreamResult::Error;
-}
-
-void DoIPConnection::receiveDownstreamResponse(const DoIPMessage &response) {
-    // m_stateMachine.processEvent(DoIPServerEvent::DiagnosticMessageReceivedDownstream, response);
-    (void)response;
-    DOIP_LOG_ERROR("receiveDownstreamResponse not implemented yet");
-}
-
-void DoIPConnection::notifyDownstreamResponseReceived(const DoIPMessage &request, const DoIPMessage &response) {
-    if (m_serverModel->onDownstreamResponse) {
-        m_serverModel->onDownstreamResponse(*this, request, response);
-    }
-}
-
 } // namespace doip
