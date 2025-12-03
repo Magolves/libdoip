@@ -1,21 +1,21 @@
 #ifndef DOIPMESSAGE_IMPROVED_H
 #define DOIPMESSAGE_IMPROVED_H
 
+#include <iomanip>
+#include <iostream>
+#include <memory>
 #include <optional>
 #include <stdint.h>
-#include <iostream>
-#include <iomanip>
-#include <memory>
 
 #include "AnsiColors.h"
 #include "ByteArray.h"
 #include "DoIPAddress.h"
-#include "DoIPRoutingActivationType.h"
+#include "DoIPFurtherAction.h"
+#include "DoIPIdentifiers.h"
 #include "DoIPNegativeAck.h"
 #include "DoIPNegativeDiagnosticAck.h"
 #include "DoIPPayloadType.h"
-#include "DoIPIdentifiers.h"
-#include "DoIPFurtherAction.h"
+#include "DoIPRoutingActivationType.h"
 #include "DoIPSyncStatus.h"
 
 namespace doip {
@@ -64,7 +64,6 @@ constexpr size_t DOIP_DIAG_HEADER_SIZE = DOIP_HEADER_SIZE + 4;
 class DoIPMessage;
 using OptDoIPMessage = std::optional<DoIPMessage>;
 
-
 /**
  * @brief Represents a complete DoIP message with internal ByteArray representation.
  *
@@ -82,8 +81,7 @@ using OptDoIPMessage = std::optional<DoIPMessage>;
  */
 class DoIPMessage {
 
-
-public:
+  public:
     /**
      * @brief Default constructor - creates invalid empty message
      */
@@ -221,7 +219,7 @@ public:
      *
      * @return const uint8_t* Pointer to the message data
      */
-    const uint8_t* data() const {
+    const uint8_t *data() const {
         return m_data.data();
     }
 
@@ -239,7 +237,7 @@ public:
      *
      * @return const ByteArray& Reference to the complete message data
      */
-    const ByteArray& asByteArray() const {
+    const ByteArray &asByteArray() const {
         return m_data;
     }
 
@@ -259,10 +257,14 @@ public:
      */
     std::optional<DoIPAddress> getSourceAddress() const {
         auto payloadRef = getPayload();
+        // todo: Simplify
         if (getPayloadType() == DoIPPayloadType::DiagnosticMessage && payloadRef.second >= 2) {
             return DoIPAddress(payloadRef.first, 0);
         }
         if (getPayloadType() == DoIPPayloadType::RoutingActivationRequest && payloadRef.second >= 2) {
+            return DoIPAddress(payloadRef.first, 0);
+        }
+        if (getPayloadType() == DoIPPayloadType::AliveCheckResponse && payloadRef.second >= 2) {
             return DoIPAddress(payloadRef.first, 0);
         }
         return std::nullopt;
@@ -292,14 +294,14 @@ public:
                getPayloadSize() == getPayloadLengthFromHeader();
     }
 
-        /**
+    /**
      * @brief Checks if the protocol version is valid.
      * @param data Pointer to the byte array
      * @param length Length of the data
      * @param offset Offset to start checking from (default: 0)
      * @return bool True if valid
      */
-    static bool isValidProtocolVersion(const uint8_t *data, size_t length, size_t offset = 0)  {
+    static bool isValidProtocolVersion(const uint8_t *data, size_t length, size_t offset = 0) {
         if (length < 2) {
             return false;
         }
@@ -320,7 +322,8 @@ public:
      * @return std::optional<DoIPPayloadType> The payload type if valid
      */
     static std::optional<std::pair<DoIPPayloadType, uint32_t>> tryParseHeader(const uint8_t *data, size_t length) {
-        if (!data || length < DOIP_HEADER_SIZE) return std::nullopt;
+        if (!data || length < DOIP_HEADER_SIZE)
+            return std::nullopt;
 
         if (!isValidProtocolVersion(data, length)) {
             return std::nullopt;
@@ -362,7 +365,7 @@ public:
         return msg;
     }
 
-protected:
+  protected:
     ByteArray m_data; ///< Complete message data (header + payload)
 
     /**
@@ -427,201 +430,200 @@ protected:
  */
 namespace message {
 
-    /**
-     * @brief Creates a vehicle identification request message.
-     *
-     * @return DoIPMessage the vehicle identification request
-     */
-    inline DoIPMessage makeVehicleIdentificationRequest() {
-        return DoIPMessage(DoIPPayloadType::VehicleIdentificationRequest, {});
+/**
+ * @brief Creates a vehicle identification request message.
+ *
+ * @return DoIPMessage the vehicle identification request
+ */
+inline DoIPMessage makeVehicleIdentificationRequest() {
+    return DoIPMessage(DoIPPayloadType::VehicleIdentificationRequest, {});
+}
+
+/**
+ * @brief Creates a vehicle identification response message.
+ *
+ * @param vin the vehicle identification number (VIN)
+ * @param logicalAddress the logical address of the entity
+ * @param entityType the entity identifier (EID)
+ * @param groupId the group identifier (GID)
+ * @param furtherAction the further action code
+ * @param syncStatus the synchronization status
+ * @return DoIPMessage the vehicle identification response message
+ */
+inline DoIPMessage makeVehicleIdentificationResponse(
+    const DoIPVIN &vin,
+    const DoIPAddress &logicalAddress,
+    const DoIPEID &entityType,
+    const DoIPGID &groupId,
+    DoIPFurtherAction furtherAction = DoIPFurtherAction::NoFurtherAction,
+    DoIPSyncStatus syncStatus = DoIPSyncStatus::GidVinSynchronized) {
+
+    ByteArray payload;
+    payload.reserve(vin.size() + logicalAddress.size() + entityType.size() + groupId.size() + 2);
+
+    payload.insert(payload.end(), vin.begin(), vin.end());
+    payload.writeU16(logicalAddress.toUint16());
+    payload.insert(payload.end(), entityType.begin(), entityType.end());
+    payload.insert(payload.end(), groupId.begin(), groupId.end());
+    payload.writeEnum(furtherAction);
+    payload.writeEnum(syncStatus);
+
+    return DoIPMessage(DoIPPayloadType::VehicleIdentificationResponse, std::move(payload));
+}
+
+/**
+ * @brief Creates a generic DoIP negative response (NACK).
+ *
+ * @param nack the negative response code
+ * @return DoIPMessage the DoIP message
+ */
+inline DoIPMessage makeNegativeAckMessage(DoIPNegativeAck nack) {
+    return DoIPMessage(DoIPPayloadType::NegativeAck, {static_cast<uint8_t>(nack)});
+}
+
+/**
+ * @brief Creates a diagnostic message.
+ *
+ * @param sa the source address
+ * @param ta the target address
+ * @param msg_payload the original diagnostic messages (e.g. UDS message)
+ * @return DoIPMessage the DoIP message
+ */
+inline DoIPMessage makeDiagnosticMessage(
+    const DoIPAddress &sa,
+    const DoIPAddress &ta,
+    const ByteArray &msg_payload) {
+
+    ByteArray payload;
+    payload.reserve(sa.size() + ta.size() + msg_payload.size());
+
+    sa.appendTo(payload);
+    ta.appendTo(payload);
+    payload.insert(payload.end(), msg_payload.begin(), msg_payload.end());
+
+    return DoIPMessage(DoIPPayloadType::DiagnosticMessage, std::move(payload));
+}
+
+/** void b
+ * @brief Creates a diagnostic positive ACK message.
+ *
+ * @param sa the source address
+ * @param ta the target address
+ * @param msg_payload the original diagnostic messages (e.g. UDS message)
+ * @return DoIPMessage the DoIP message
+ */
+inline DoIPMessage makeDiagnosticPositiveResponse(
+    const DoIPAddress &sa,
+    const DoIPAddress &ta,
+    const ByteArray &msg_payload) {
+
+    ByteArray payload;
+    payload.reserve(sa.size() + ta.size() + msg_payload.size() + 1);
+
+    sa.appendTo(payload);
+    ta.appendTo(payload);
+    payload.emplace_back(DIAGNOSTIC_MESSAGE_ACK);
+    payload.insert(payload.end(), msg_payload.begin(), msg_payload.end());
+
+    return DoIPMessage(DoIPPayloadType::DiagnosticMessageAck, std::move(payload));
+}
+
+/**
+ * @brief Creates a diagnostic negative ACK message (NACK).
+ *
+ * @param sa the source address
+ * @param ta the target address
+ * @param nack the negative acknowledgment code
+ * @param msg_payload the original diagnostic messages (e.g. UDS message)
+ * @return DoIPMessage the DoIP message
+ */
+inline DoIPMessage makeDiagnosticNegativeResponse(
+    const DoIPAddress &sa,
+    const DoIPAddress &ta,
+    DoIPNegativeDiagnosticAck nack,
+    const ByteArray &msg_payload) {
+
+    ByteArray payload;
+    payload.reserve(sa.size() + ta.size() + msg_payload.size() + 1);
+
+    sa.appendTo(payload);
+    ta.appendTo(payload);
+    payload.emplace_back(static_cast<uint8_t>(nack));
+    payload.insert(payload.end(), msg_payload.begin(), msg_payload.end());
+
+    return DoIPMessage(DoIPPayloadType::DiagnosticMessageNegativeAck, std::move(payload));
+}
+
+/**
+ * @brief Create an 'alive check' request
+ *
+ * @return DoIPMessage
+ */
+inline DoIPMessage makeAliveCheckRequest() {
+    return DoIPMessage(DoIPPayloadType::AliveCheckRequest, {});
+}
+
+/**
+ * @brief Create an 'alive check' response
+ *
+ * @param sa the source address
+ * @return DoIPMessage
+ */
+inline DoIPMessage makeAliveCheckResponse(const DoIPAddress &sa) {
+    ByteArray payload;
+    payload.writeU16(sa.toUint16());
+    return DoIPMessage(DoIPPayloadType::AliveCheckResponse, std::move(payload));
+}
+
+/**
+ * @brief Creates a routing activation request message.
+ *
+ * @param ea the entity address
+ * @param actType the activation type
+ * @return DoIPMessage the activation request message
+ */
+inline DoIPMessage makeRoutingActivationRequest(
+    const DoIPAddress &ea,
+    DoIPRoutingActivationType actType = DoIPRoutingActivationType::Default) {
+
+    ByteArray payload;
+    payload.reserve(ea.size() + 1 + 4);
+    payload.writeU16(ea.toUint16());
+    payload.writeEnum(actType);
+    // Reserved 4 bytes for future use
+    payload.insert(payload.end(), {0, 0, 0, 0});
+
+    return DoIPMessage(DoIPPayloadType::RoutingActivationRequest, std::move(payload));
+}
+
+/**
+ * @brief Creates a routing activation response message.
+ *
+ * @param routingReq the routing request message
+ * @param ea the entity address
+ * @param actType the activation type
+ * @return DoIPMessage the activation response message
+ */
+inline DoIPMessage makeRoutingActivationResponse(
+    const DoIPMessage &routingReq,
+    const DoIPAddress &ea,
+    DoIPRoutingActivationType actType = DoIPRoutingActivationType::Default) {
+
+    ByteArray payload;
+    payload.reserve(ea.size() + 1 + 4);
+
+    auto sourceAddr = routingReq.getSourceAddress();
+    if (sourceAddr) {
+        sourceAddr.value().appendTo(payload);
     }
 
-    /**
-     * @brief Creates a vehicle identification response message.
-     *
-     * @param vin the vehicle identification number (VIN)
-     * @param logicalAddress the logical address of the entity
-     * @param entityType the entity identifier (EID)
-     * @param groupId the group identifier (GID)
-     * @param furtherAction the further action code
-     * @param syncStatus the synchronization status
-     * @return DoIPMessage the vehicle identification response message
-     */
-    inline DoIPMessage makeVehicleIdentificationResponse(
-        const DoIPVIN& vin,
-        const DoIPAddress& logicalAddress,
-        const DoIPEID& entityType,
-        const DoIPGID& groupId,
-        DoIPFurtherAction furtherAction = DoIPFurtherAction::NoFurtherAction,
-        DoIPSyncStatus syncStatus = DoIPSyncStatus::GidVinSynchronized) {
+    ea.appendTo(payload);
+    payload.emplace_back(static_cast<uint8_t>(actType));
+    // Reserved 4 bytes for future use
+    payload.insert(payload.end(), {0, 0, 0, 0});
 
-        ByteArray payload;
-        payload.reserve(vin.size() + logicalAddress.size() + entityType.size() + groupId.size() + 2);
-
-        payload.insert(payload.end(), vin.begin(), vin.end());
-        payload.writeU16(logicalAddress.toUint16());
-        payload.insert(payload.end(), entityType.begin(), entityType.end());
-        payload.insert(payload.end(), groupId.begin(), groupId.end());
-        payload.writeEnum(furtherAction);
-        payload.writeEnum(syncStatus);
-
-
-        return DoIPMessage(DoIPPayloadType::VehicleIdentificationResponse, std::move(payload));
-    }
-
-    /**
-     * @brief Creates a generic DoIP negative response (NACK).
-     *
-     * @param nack the negative response code
-     * @return DoIPMessage the DoIP message
-     */
-    inline DoIPMessage makeNegativeAckMessage(DoIPNegativeAck nack) {
-        return DoIPMessage(DoIPPayloadType::NegativeAck, {static_cast<uint8_t>(nack)});
-    }
-
-    /**
-     * @brief Creates a diagnostic message.
-     *
-     * @param sa the source address
-     * @param ta the target address
-     * @param msg_payload the original diagnostic messages (e.g. UDS message)
-     * @return DoIPMessage the DoIP message
-     */
-    inline DoIPMessage makeDiagnosticMessage(
-        const DoIPAddress &sa,
-        const DoIPAddress &ta,
-        const ByteArray &msg_payload) {
-
-        ByteArray payload;
-        payload.reserve(sa.size() + ta.size() + msg_payload.size());
-
-        sa.appendTo(payload);
-        ta.appendTo(payload);
-        payload.insert(payload.end(), msg_payload.begin(), msg_payload.end());
-
-        return DoIPMessage(DoIPPayloadType::DiagnosticMessage, std::move(payload));
-    }
-
-    /** void b
-     * @brief Creates a diagnostic positive ACK message.
-     *
-     * @param sa the source address
-     * @param ta the target address
-     * @param msg_payload the original diagnostic messages (e.g. UDS message)
-     * @return DoIPMessage the DoIP message
-     */
-    inline DoIPMessage makeDiagnosticPositiveResponse(
-        const DoIPAddress &sa,
-        const DoIPAddress &ta,
-        const ByteArray &msg_payload) {
-
-        ByteArray payload;
-        payload.reserve(sa.size() + ta.size() + msg_payload.size() + 1);
-
-        sa.appendTo(payload);
-        ta.appendTo(payload);
-        payload.emplace_back(DIAGNOSTIC_MESSAGE_ACK);
-        payload.insert(payload.end(), msg_payload.begin(), msg_payload.end());
-
-        return DoIPMessage(DoIPPayloadType::DiagnosticMessageAck, std::move(payload));
-    }
-
-    /**
-     * @brief Creates a diagnostic negative ACK message (NACK).
-     *
-     * @param sa the source address
-     * @param ta the target address
-     * @param nack the negative acknowledgment code
-     * @param msg_payload the original diagnostic messages (e.g. UDS message)
-     * @return DoIPMessage the DoIP message
-     */
-    inline DoIPMessage makeDiagnosticNegativeResponse(
-        const DoIPAddress &sa,
-        const DoIPAddress &ta,
-        DoIPNegativeDiagnosticAck nack,
-        const ByteArray &msg_payload) {
-
-        ByteArray payload;
-        payload.reserve(sa.size() + ta.size() + msg_payload.size() + 1);
-
-        sa.appendTo(payload);
-        ta.appendTo(payload);
-        payload.emplace_back(static_cast<uint8_t>(nack));
-        payload.insert(payload.end(), msg_payload.begin(), msg_payload.end());
-
-        return DoIPMessage(DoIPPayloadType::DiagnosticMessageNegativeAck, std::move(payload));
-    }
-
-    /**
-     * @brief Create an 'alive check' request
-     *
-     * @return DoIPMessage
-     */
-    inline DoIPMessage makeAliveCheckRequest() {
-        return DoIPMessage(DoIPPayloadType::AliveCheckRequest, {});
-    }
-
-    /**
-     * @brief Create an 'alive check' response
-     *
-     * @param sa the source address
-     * @return DoIPMessage
-     */
-    inline DoIPMessage makeAliveCheckResponse(const DoIPAddress &sa) {
-        ByteArray payload;
-        payload.writeU16(sa.toUint16());
-        return DoIPMessage(DoIPPayloadType::AliveCheckResponse, std::move(payload));
-    }
-
-    /**
-     * @brief Creates a routing activation request message.
-     *
-     * @param ea the entity address
-     * @param actType the activation type
-     * @return DoIPMessage the activation request message
-     */
-    inline DoIPMessage makeRoutingActivationRequest(
-        const DoIPAddress &ea,
-        DoIPRoutingActivationType actType = DoIPRoutingActivationType::Default) {
-
-        ByteArray payload;
-        payload.reserve(ea.size() + 1 + 4);
-        payload.writeU16(ea.toUint16());
-        payload.writeEnum(actType);
-        // Reserved 4 bytes for future use
-        payload.insert(payload.end(), {0, 0, 0, 0});
-
-        return DoIPMessage(DoIPPayloadType::RoutingActivationRequest, std::move(payload));
-    }
-
-    /**
-     * @brief Creates a routing activation response message.
-     *
-     * @param routingReq the routing request message
-     * @param ea the entity address
-     * @param actType the activation type
-     * @return DoIPMessage the activation response message
-     */
-    inline DoIPMessage makeRoutingActivationResponse(
-        const DoIPMessage &routingReq,
-        const DoIPAddress &ea,
-        DoIPRoutingActivationType actType = DoIPRoutingActivationType::Default) {
-
-        ByteArray payload;
-        payload.reserve(ea.size() + 1 + 4);
-
-        auto sourceAddr = routingReq.getSourceAddress();
-        if (sourceAddr) {
-            sourceAddr.value().appendTo(payload);
-        }
-
-        ea.appendTo(payload);
-        payload.emplace_back(static_cast<uint8_t>(actType));
-        // Reserved 4 bytes for future use
-        payload.insert(payload.end(), {0, 0, 0, 0});
-
-        return DoIPMessage(DoIPPayloadType::RoutingActivationResponse, std::move(payload));
-    }
+    return DoIPMessage(DoIPPayloadType::RoutingActivationResponse, std::move(payload));
+}
 
 } // namespace message
 
@@ -634,20 +636,49 @@ namespace message {
  * @param msg DoIPMessage to print
  * @return std::ostream& Reference to the output stream
  */
-inline std::ostream& operator<<(std::ostream& os, const DoIPMessage& msg) {
-    os << ansi::dim <<
-       "V" << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
-       << static_cast<unsigned int>(PROTOCOL_VERSION) << std::dec << ansi::reset
-       << "|" << ansi::cyan << msg.getPayloadType() << ansi::reset
-       << "|L" << msg.getPayloadSize()
-       << "| Payload: ";
+inline std::ostream &operator<<(std::ostream &os, const DoIPMessage &msg) {
+    os << ansi::dim << "V" << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
+       << static_cast<unsigned int>(PROTOCOL_VERSION) << std::dec << ansi::reset;
 
-    auto payload = msg.getPayload();
-    os << ansi::bold_white;
-    for (size_t i = 0; i < payload.second; ++i) {
-        if (i > 0) os << '.';
-        os << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
-           << static_cast<unsigned int>(payload.first[i]);
+
+    if (msg.getPayloadType() == DoIPPayloadType::DiagnosticMessageNegativeAck) {
+        auto payload = msg.getDiagnosticMessagePayload();
+        os << ansi::red << "|Diag NACK " << static_cast<DoIPNegativeDiagnosticAck>(payload.first[0]);
+    } else if (msg.getPayloadType() == DoIPPayloadType::AliveCheckRequest) {
+        os << ansi::yellow << "|Alive Check?";
+    } else if (msg.getPayloadType() == DoIPPayloadType::AliveCheckResponse) {
+        auto sa = msg.getSourceAddress();
+        os << ansi::green << "|Alive Check! " << sa.value();
+    } else if (msg.getPayloadType() == DoIPPayloadType::DiagnosticMessage) {
+        auto payload = msg.getDiagnosticMessagePayload();
+        auto sa = msg.getSourceAddress();
+        auto ta = msg.getTargetAddress();
+        os << "|Diag ";
+        os << ansi::bold_magenta << sa.value();
+        os << ansi::reset << " -> ";
+        os << ansi::bold_magenta << ta.value();
+
+        os << ansi::reset << ": ";
+        os << ansi::bold_blue;
+        for (size_t i = 0; i < payload.second; ++i) {
+            if (i > 0)
+                os << '.';
+            os << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
+               << static_cast<unsigned int>(payload.first[i]);
+        }
+    } else {
+        os << "|" << ansi::cyan << msg.getPayloadType() << ansi::reset;
+        auto payload = msg.getPayload();
+        os << "|L" << msg.getPayloadSize()
+           << "| Payload: ";
+
+        os << ansi::bold_white;
+        for (size_t i = 0; i < payload.second; ++i) {
+            if (i > 0)
+                os << '.';
+            os << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
+               << static_cast<unsigned int>(payload.first[i]);
+        }
     }
     os << ansi::reset;
     os << std::dec;
