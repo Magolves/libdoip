@@ -13,8 +13,8 @@ doip_client = DoIPClient(ecu_ip, ecu_logical_address)
 conn = DoIPClientUDSConnector(doip_client)
 with Client(conn, request_timeout=2) as client:
    try:
-      client.change_session(DiagnosticSessionControl.Session.extendedDiagnosticSession)  # integer with value of 3
-      client.unlock_security_access(MyCar.debug_level)                                   # Fictive security level. Integer coming from fictive lib, let's say its value is 5
+      client.change_session(1)  # integer with value of 3
+      #client.unlock_security_access(MyCar.debug_level)                                   # Fictive security level. Integer coming from fictive lib, let's say its value is 5
       client.write_data_by_identifier(udsoncan.DataIdentifier.VIN, 'ABC123456789')       # Standard ID for VIN is 0xF190. Codec is set in the client configuration
       print('Vehicle Identification Number successfully changed.')
       client.ecu_reset(ECUReset.ResetType.hardReset)                                     # HardReset = 0x01
