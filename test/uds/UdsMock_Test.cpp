@@ -24,10 +24,13 @@ TEST_SUITE("UdsMock") {
     }
 
     TEST_CASE("UdsMock custom handler returns positive response") {
-        uds::UdsMock udsMock([](const ByteArray &request) {
-            // Custom handler that always returns OK
-            return std::make_pair(uds::UdsResponseCode::OK, ByteArray{request[1]}); // Positive response
-        });
+        uds::UdsMock udsMock;
+
+        udsMock.registerService(uds::UdsService::DiagnosticSessionControl,
+                                    [](const ByteArray &request) {
+                                        // Custom handler that returns positive response
+                                        return std::make_pair(uds::UdsResponseCode::OK, ByteArray{request[1]});
+                                    });
 
         ByteArray request = {0x10, 0x01}; // Example UDS request (Diagnostic Session Control)
         ByteArray response = udsMock.handleDiagnosticRequest(request);
