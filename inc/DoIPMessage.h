@@ -387,7 +387,7 @@ class DoIPMessage {
 
         // Payload length (big-endian uint32_t)
         uint32_t payloadLength = static_cast<uint32_t>(payload.size());
-        m_data.writeU32(payloadLength);
+        m_data.writeU32BE(payloadLength);
 
         // Payload data
         m_data.insert(m_data.end(), payload.begin(), payload.end());
@@ -462,7 +462,7 @@ inline DoIPMessage makeVehicleIdentificationResponse(
     payload.reserve(vin.size() + logicalAddress.size() + entityType.size() + groupId.size() + 2);
 
     payload.insert(payload.end(), vin.begin(), vin.end());
-    payload.writeU16(logicalAddress.toUint16());
+    payload.writeU16BE(logicalAddress.toUint16());
     payload.insert(payload.end(), entityType.begin(), entityType.end());
     payload.insert(payload.end(), groupId.begin(), groupId.end());
     payload.writeEnum(furtherAction);
@@ -571,7 +571,7 @@ inline DoIPMessage makeAliveCheckRequest() {
  */
 inline DoIPMessage makeAliveCheckResponse(const DoIPAddress &sa) {
     ByteArray payload;
-    payload.writeU16(sa.toUint16());
+    payload.writeU16BE(sa.toUint16());
     return DoIPMessage(DoIPPayloadType::AliveCheckResponse, std::move(payload));
 }
 
@@ -588,7 +588,7 @@ inline DoIPMessage makeRoutingActivationRequest(
 
     ByteArray payload;
     payload.reserve(ea.size() + 1 + 4);
-    payload.writeU16(ea.toUint16());
+    payload.writeU16BE(ea.toUint16());
     payload.writeEnum(actType);
     // Reserved 4 bytes for future use
     payload.insert(payload.end(), {0, 0, 0, 0});

@@ -40,7 +40,7 @@ TEST_SUITE("DoIPMessage") {
     }
 
     TEST_CASE("Message factory - makeDiagnosticMessage") {
-        DoIPMessage msg = message::makeDiagnosticMessage(DoIPAddress(0xca, 0xfe), DoIPAddress(0xba, 0xbe), {0xde, 0xad, 0xbe, 0xef});
+        DoIPMessage msg = message::makeDiagnosticMessage(DoIPAddress(0xcafe), DoIPAddress(0xbabe), {0xde, 0xad, 0xbe, 0xef});
         ByteArray expected{
             0x04, 0xfb,             // protocol version + inv
             0x80, 0x01,             // payload type
@@ -61,10 +61,10 @@ TEST_SUITE("DoIPMessage") {
     }
 
     TEST_CASE("Message factory - makeDiagnosticPositiveResponse") {
-        DoIPMessage msg = message::makeDiagnosticPositiveResponse(DoIPAddress(0xca, 0xfe), DoIPAddress(0xba, 0xbe), {0xde, 0xad, 0xbe, 0xef});
+        DoIPMessage msg = message::makeDiagnosticPositiveResponse(DoIPAddress(0xcafe), DoIPAddress(0xbabe), {0xde, 0xad, 0xbe, 0xef});
         ByteArray expected{
             0x04, 0xfb,             // protocol version + inv
-            0x80, 0x02,             // payload tyByteArray raw = message::makeAliveCheckResponse(DoIPAddress(0xa0, 0xb0));pe
+            0x80, 0x02,             // payload tyByteArray raw = message::makeAliveCheckResponse(DoIPAddress(0xa0b0));pe
             0x00, 0x00, 0x00, 0x09, // payload length
             0xca, 0xfe,             // sa
             0xba, 0xbe,             // ta
@@ -84,8 +84,8 @@ TEST_SUITE("DoIPMessage") {
 
     TEST_CASE("Message factory - makeDiagnosticNegativeResponse") {
         DoIPMessage msg = message::makeDiagnosticNegativeResponse(
-            DoIPAddress(0xca, 0xfe),
-            DoIPAddress(0xba, 0xbe),
+            DoIPAddress(0xcafe),
+            DoIPAddress(0xbabe),
             DoIPNegativeDiagnosticAck::TargetBusy,
             {0xde, 0xad, 0xbe, 0xef});
 
@@ -118,7 +118,7 @@ TEST_SUITE("DoIPMessage") {
     }
 
     TEST_CASE("Message factory - makeAliveCheckResponse") {
-        DoIPMessage msg = message::makeAliveCheckResponse(DoIPAddress(0xa0, 0xb0));
+        DoIPMessage msg = message::makeAliveCheckResponse(DoIPAddress(0xa0b0));
         ByteArray expected{
             0x04, 0xfb, // protocol version + inv
             0x00, 0x08,                      // payload type

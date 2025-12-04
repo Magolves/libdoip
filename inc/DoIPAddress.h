@@ -28,10 +28,9 @@ struct DoIPAddress {
     /**
      * @brief Constructs an DoIPAddress with specified high and low significant bytes.
      *
-     * @param hsb High significant byte (default: 0)
-     * @param lsb Low significant byte (default: 0)
+     * @param address the address
      */
-    constexpr explicit DoIPAddress(uint8_t hsb = 0, uint8_t lsb = 0) : m_bytes{{hsb, lsb}} {}
+    constexpr explicit DoIPAddress(uint16_t address = 0x0000) : m_bytes{static_cast<uint8_t>(address >> 8), static_cast<uint8_t>(address & 0xff)} {}
 
     /**
      * @brief Constructs an DoIPAddress from a byte array starting at the specified offset.

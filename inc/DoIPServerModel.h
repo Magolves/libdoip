@@ -93,7 +93,7 @@ struct DoIPServerModel {
     ServerModelDownstreamHandler onDownstreamRequest;
 
     /// The logical address of this DoIP server
-    DoIPAddress serverAddress = DoIPAddress(0x0E, 0x00);
+    DoIPAddress serverAddress = DoIPAddress(0x0E00);
 
     /**
      * @brief Check if downstream forwarding is enabled
