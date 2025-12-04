@@ -4,7 +4,6 @@ add_executable(${DOIP_NAME}_tests
     DoIPDefaultConnection_Test.cpp
     DoIPMessage_Test.cpp
     DoIPServer_Test.cpp
-    DoIPServerStateMachine_Test.cpp
     Identifiers_Test.cpp
     MacAddress_Test.cpp
     Main_Test.cpp

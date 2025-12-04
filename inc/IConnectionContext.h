@@ -2,10 +2,10 @@
 #define ICONNECTIONCONTEXT_H
 
 #include "DoIPAddress.h"
+#include "DoIPCloseReason.h"
+#include "DoIPDownstreamResult.h"
 #include "DoIPMessage.h"
 #include "DoIPNegativeDiagnosticAck.h"
-#include "DoIPDownstreamResult.h"
-#include "DoIPCloseReason.h"
 
 #include <cstdint>
 
@@ -25,7 +25,7 @@ namespace doip {
  * - Handle downstream (subnet) communication flow
  */
 class IConnectionContext {
-public:
+  public:
     virtual ~IConnectionContext() = default;
 
     /**
@@ -88,7 +88,7 @@ public:
      *
      * @param address The client's source address
      */
-    virtual void setClientAddress(const DoIPAddress& address) = 0;
+    virtual void setClientAddress(const DoIPAddress &address) = 0;
 
     /**
      * @brief Handle an incoming diagnostic message (application callback)
@@ -187,8 +187,6 @@ public:
      * @param response The response received from downstream
      */
     virtual void notifyDownstreamResponseReceived(const DoIPMessage &request, const DoIPMessage &response) = 0;
-
-
 };
 
 } // namespace doip

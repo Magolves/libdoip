@@ -21,7 +21,7 @@ class TimerManager {
 
     struct TimerEntry {
         std::chrono::steady_clock::time_point expiry;
-        TimerCallback callback;
+        std::function<void(TimerIdType)> callback;
         std::chrono::milliseconds interval;
         bool periodic;
         TimerId id;
@@ -46,7 +46,7 @@ class TimerManager {
      */
     [[nodiscard]]
     std::optional<TimerId> addTimer(TimerId id, std::chrono::milliseconds duration,
-                                    TimerCallback callback,
+                                    std::function<void(TimerIdType)> callback,
                                     bool periodic = false) {
         if (!callback) {
             return std::nullopt;
@@ -155,6 +155,18 @@ class TimerManager {
             m_cv.notify_one();
         }
         return true;
+    }
+
+    /**
+     * @brief Restarts a timer (disables and enables it).
+     *
+     * @param id the id of the timer
+     * @return true timer was restarted
+     * @return false timer with given id does not exist
+     */
+    [[nodiscard]]
+    bool resetTimer(TimerId id) {
+        return disableTimer(id) && enableTimer(id);
     }
 
     /**

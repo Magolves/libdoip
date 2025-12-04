@@ -42,7 +42,7 @@ using ServerModelDiagnosticNotificationHandler = std::function<void(IConnectionC
  *         - Handled: Message was handled synchronously, no state transition needed
  *         - Error: Failed to initiate request, connection should handle error
  */
-using ServerModelDownstreamHandler = std::function<DoIPDownstreamResult(IConnectionContext &, const DoIPMessage &)>;
+using ServerModelDownstreamHandler = std::function<DoIPDownstreamResult(IConnectionContext &ctx, const DoIPMessage &msg)>;
 
 /**
  * @brief Callback for downstream response notification
@@ -55,7 +55,7 @@ using ServerModelDownstreamHandler = std::function<DoIPDownstreamResult(IConnect
  * @param request The original request that was sent downstream
  * @param response The response received from downstream
  */
-using ServerModelDownstreamResponseHandler = std::function<void(IConnectionContext &, const DoIPMessage &request, const DoIPMessage &response)>;
+using ServerModelDownstreamResponseHandler = std::function<void(IConnectionContext &ctx, const DoIPMessage &request, const DoIPMessage &response)>;
 
 /**
  * @brief DoIP Server Model - Configuration and callbacks for a DoIP server connection
@@ -121,11 +121,11 @@ using UniqueServerModelPtr = std::unique_ptr<DoIPServerModel>;
  */
 struct DefaultDoIPServerModel : public DoIPServerModel {
     DefaultDoIPServerModel() {
-        onOpenConnection = [this](IConnectionContext &ctx) noexcept {
+        onOpenConnection = [](IConnectionContext &ctx) noexcept {
             (void)ctx;
         };
 
-        onCloseConnection = [this](IConnectionContext &ctx, DoIPCloseReason reason) noexcept {
+        onCloseConnection = [](IConnectionContext &ctx, DoIPCloseReason reason) noexcept {
             (void)ctx;
             (void)reason;
         };
@@ -154,7 +154,7 @@ struct DefaultDoIPServerModel : public DoIPServerModel {
     }
 
     ~DefaultDoIPServerModel()  {
-        
+
     }
 
 };
