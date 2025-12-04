@@ -9,6 +9,7 @@
 #include "DoIPServerModel.h"
 #include "ThreadSafeQueue.h"
 #include "uds/UdsMock.h"
+#include "uds/UdsResponseCode.h"
 
 using namespace doip;
 
@@ -62,10 +63,29 @@ class ExampleDoIPServerModel : public DoIPServerModel {
             return DoIPDownstreamResult::Pending;
         };
 
+        m_uds.registerDefaultServices();
+
+        m_uds.registerDiagnosticSessionControlHandler([this](uint8_t sessionType) {
+            m_loguds->info("Diagnostic Session Control requested, sessionType={:02X}", sessionType);
+            return std::make_pair(uds::UdsResponseCode::PositiveResponse, ByteArray{0x50, sessionType}); // Positive response
+        });
+
+        m_uds.registerReadDataByIdentifierHandler([this](uint16_t did) {
+            m_loguds->info("Read Data By Identifier requested, DID={:04X}", did);
+            if (did == 0xF190) {
+                // Return example VIN
+                ByteArray vinPayload = {'1', 'H', 'G', 'C', 'M', '8', '2', '6', '3', '3', 'A', '0', '0', '0', '0', '1'};
+                ByteArray response = {0x62, static_cast<uint8_t>((did >> 8) & 0xFF), static_cast<uint8_t>(did & 0xFF)};
+                response.insert(response.end(), vinPayload.begin(), vinPayload.end());
+                return std::make_pair(uds::UdsResponseCode::PositiveResponse, response); // Positive response
+            }
+            return std::make_pair(uds::UdsResponseCode::RequestOutOfRange, ByteArray{0x22}); // Positive response
+        });
     }
 
   private:
     std::shared_ptr<spdlog::logger> m_log = Logger::get("smodel");
+    std::shared_ptr<spdlog::logger> m_loguds = Logger::get("uds");
     ServerModelDownstreamResponseHandler m_downstreamCallback = nullptr;
     ThreadSafeQueue<ByteArray> m_rx;
     ThreadSafeQueue<ByteArray> m_tx;

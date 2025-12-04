@@ -6,13 +6,15 @@
 #include <sstream>
 
 #include "uds/UdsMock.h"
+#include "../doctest_aux.h"
 
 using namespace doip;
+using namespace doip::uds;
 
 TEST_SUITE("UdsMock") {
 
     TEST_CASE("UdsMock default behavior returns ServiceNotSupported") {
-        uds::UdsMock udsMock;
+        UdsMock udsMock;
 
         ByteArray request = {0x10, 0x01}; // Example UDS request (Diagnostic Session Control)
         ByteArray response = udsMock.handleDiagnosticRequest(request);
@@ -24,7 +26,7 @@ TEST_SUITE("UdsMock") {
     }
 
     TEST_CASE("UdsMock custom handler returns positive response") {
-        uds::UdsMock udsMock;
+        UdsMock udsMock;
 
         udsMock.registerService(uds::UdsService::DiagnosticSessionControl,
                                     [](const ByteArray &request) {
@@ -39,5 +41,38 @@ TEST_SUITE("UdsMock") {
         ByteArray expectedResponse = {0x50, 0x01};
 
         CHECK(response == expectedResponse);
+    }
+
+    TEST_CASE("UdsMock custom RDBI handler returns positive response") {
+        UdsMock udsMock;
+
+        udsMock.registerService(UdsService::ReadDataByIdentifier,
+                                    [](const ByteArray &request) {
+                                        // Extract DID from request
+                                        if (request.size() < 3) {
+                                            return std::make_pair(uds::UdsResponseCode::IncorrectMessageLengthOrInvalidFormat, ByteArray{});
+                                        }
+                                        uint16_t did = request.readU16BE(1);
+                                        // Custom handler that returns positive response with dummy data
+                                        ByteArray responseData;
+                                        responseData.writeU16BE(did); // Echo back the DID
+                                        responseData.push_back(0x12); // Dummy data byte 1
+                                        responseData.push_back(0x34); // Dummy data byte 2
+                                        return std::make_pair(uds::UdsResponseCode::OK, responseData);
+                                    });
+        ByteArray request = {0x22, 0x01, 0x02}; // Example UDS request (Diagnostic Session Control)
+        ByteArray response = udsMock.handleDiagnosticRequest(request);
+
+        // Expected positive response: 0x50, 0x01
+        ByteArray expectedResponse = {0x62, 0x01, 0x02, 0x12, 0x34};
+
+        CHECK_BYTE_ARRAY_EQ(response , expectedResponse);
+
+        // bad request
+        request = {0x22, 0x01}; // Example UDS request (Diagnostic Session Control)
+        response = udsMock.handleDiagnosticRequest(request);
+        expectedResponse = {0x7f, 0x22, 0x13};
+
+        CHECK_BYTE_ARRAY_EQ(response, expectedResponse);
     }
 }
