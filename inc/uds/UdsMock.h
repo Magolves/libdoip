@@ -3,95 +3,123 @@
 
 #include <functional>
 #include <unordered_map>
+#include <array>
+#include <memory>
 
 #include "DoIPMessage.h"
 #include "UdsResponseCode.h"
+#include "IUdsServiceHandler.h"
+#include "LambdaUdsHandler.h"
+#include "UdsServices.h"
 
 using namespace doip;
 
 namespace doip::uds {
 
-using UdsResponse = std::pair<UdsResponseCode, ByteArray>;
-using UdsServiceHandler = std::function<UdsResponse(const ByteArray &request)>;
-
-struct UdsServiceDescriptor {
-    uint8_t serviceId;
-    size_t requestMinLength;
-    size_t responseMinLength;
-    UdsServiceHandler handler;
-};
-
 constexpr uint8_t UDS_POSITIVE_RESPONSE_OFFSET = 0x40;
 
-// Lookup table
-/*
-const std::array<UdsServiceDescriptor, 14> UdsServiceLookupTable = {{
-    {0x10, 2, 2, [](const ByteArray& request) { return handleDiagnosticSessionControl(request); }},
-    {0x11, 2, 2, [](const ByteArray& request) { return handleECUReset(request); }},
-    {0x27, 2, 2, [](const ByteArray& request) { return handleSecurityAccess(request); }},
-    {0x28, 2, 2, [](const ByteArray& request) { return handleCommunicationControl(request); }},
-    {0x3E, 1, 1, [](const ByteArray& request) { return handleTesterPresent(request); }},
-    {0x83, 2, 2, [](const ByteArray& request) { return handleAccessTimingParameters(request); }},
-    {0x84, 2, 2, [](const ByteArray& request) { return handleSecuredDataTransmission(request); }},
-    {0x85, 2, 2, [](const ByteArray& request) { return handleControlDTCSetting(request); }},
-    {0x86, 2, 2, [](const ByteArray& request) { return handleResponseOnEvent(request); }},
-    {0x87, 2, 2, [](const ByteArray& request) { return handleLinkControl(request); }},
-    {0x22, 3, 2, [](const ByteArray& request) { return handleReadDataByIdentifier(request); }},
-    {0x23, 5, 2, [](const ByteArray& request) { return handleReadMemoryByAddress(request); }},
-    {0x24, 3, 2, [](const ByteArray& request) { return handleReadScalingDataByIdentifier(request); }},
-    {0x2A, 3, 2, [](const ByteArray& request) { return handleReadDataByPeriodicIdentifier(request); }},
-    {0x2C, 3, 2, [](const ByteArray& request) { return handleDynamicallyDefineDataIdentifier(request); }},
-    {0x2E, 3, 2, [](const ByteArray& request) { return handleWriteDataByIdentifier(request); }},
-    {0x3D, 5, 2, [](const ByteArray& request) { return handleWriteMemoryByAddress(request); }},
-    {0x14, 2, 2, [](const ByteArray& request) { return handleClearDiagnosticInformation(request); }},
-    {0x19, 2, 2, [](const ByteArray& request) { return handleReadDTCInformation(request); }},
-}};
-*/
-
-//static_assert(UdsServiceLookupTable.size() == 14, "Update the lookup table if new services are added!");
-
-/**
- * @brief Mock UDS service class for testing purposes
- *
- * This class simulates UDS service behavior for unit tests.
- */
 class UdsMock {
-  public:
-    explicit UdsMock(const UdsServiceHandler& handler = UdsMock::defaultHandler) : m_serviceHandler(handler) {}
+public:
+    UdsMock() = default;
 
-    /**
-     * @brief Simulates handling a UDS diagnostic request
-     * @param request The incoming UDS request payload
-     * @return The simulated UDS response payload
-     */
-    ByteArray handleDiagnosticRequest(const ByteArray &request) {
-        // Simple echo behavior for testing
-        auto response = m_serviceHandler(request);
-        return makeResponse(request, response.first, response.second);
+    // Register a handler owning pointer
+    void registerService(UdsService serviceId, IUdsServiceHandlerPtr handler) {
+        m_handlers[static_cast<uint8_t>(serviceId)] = std::move(handler);
     }
 
-  private:
-    ByteArray makeResponse(const ByteArray &request, UdsResponseCode responseCode = UdsResponseCode::OK, const ByteArray &extraData = {}) {
+    // Register a lambda/function
+    void registerService(UdsService serviceId, std::function<UdsResponse(const ByteArray&)> fn) {
+        m_handlers[static_cast<uint8_t>(serviceId)] = std::make_unique<LambdaUdsHandler>(std::move(fn));
+    }
+
+    // Unregister
+    void unregisterService(UdsService serviceId) {
+        m_handlers.erase(static_cast<uint8_t>(serviceId));
+    }
+
+    // Convenience: clear all
+    void clear() { m_handlers.clear(); }
+
+    // --- Typed registration helpers (convenience wrappers) ---
+    // Diagnostic Session Control (0x10): handler(sessionType)
+    void registerDiagnosticSessionControlHandler(std::function<UdsResponse(uint8_t sessionType)> handler);
+
+    // ECU Reset (0x11): handler(resetType)
+    void registerECUResetHandler(std::function<UdsResponse(uint8_t resetType)> handler);
+
+    // Read Data By Identifier (0x22): handler(did, params)
+    void registerReadDataByIdentifierHandler(std::function<UdsResponse(uint16_t did)> handler);
+
+    // Tester Present (0x3E): handler(subFunction)
+    void registerTesterPresentHandler(std::function<UdsResponse(uint8_t subFunction)> handler);
+
+    ByteArray handleDiagnosticRequest(const ByteArray &request) {
+        if (request.empty()) return {};
+        uint8_t sid = request[0];
+        UdsResponse resp = defaultResponse(request);
+        auto it = m_handlers.find(sid);
+        if (it != m_handlers.end() && it->second) {
+            resp = it->second->handle(request);
+        }
+        return makeResponse(request, resp.first, resp.second);
+    }
+
+    // Register default handlers for all known services.
+    // By default these handlers simply return ServiceNotSupported. Tests
+    // can register custom handlers afterwards to override behavior.
+    void registerDefaultServices() {
+        const std::array<UdsService, 19> services = {
+            UdsService::DiagnosticSessionControl,
+            UdsService::ECUReset,
+            UdsService::SecurityAccess,
+            UdsService::CommunicationControl,
+            UdsService::TesterPresent,
+            UdsService::AccessTimingParameters,
+            UdsService::SecuredDataTransmission,
+            UdsService::ControlDTCSetting,
+            UdsService::ResponseOnEvent,
+            UdsService::LinkControl,
+            UdsService::ReadDataByIdentifier,
+            UdsService::ReadMemoryByAddress,
+            UdsService::ReadScalingDataByIdentifier,
+            UdsService::ReadDataByPeriodicIdentifier,
+            UdsService::DynamicallyDefineDataIdentifier,
+            UdsService::WriteDataByIdentifier,
+            UdsService::WriteMemoryByAddress,
+            UdsService::ClearDiagnosticInformation,
+            UdsService::ReadDTCInformation,
+        };
+
+        for (auto s : services) {
+            registerService(s, [](const ByteArray &req) -> UdsResponse {
+                (void)req;
+                return {UdsResponseCode::ServiceNotSupported, {}};
+            });
+        }
+    }
+
+private:
+    static UdsResponse defaultResponse(const ByteArray &request) {
+        (void)request;
+        return {UdsResponseCode::ServiceNotSupported, {}};
+    }
+
+    static ByteArray makeResponse(const ByteArray &request, UdsResponseCode responseCode = UdsResponseCode::OK, const ByteArray &extraData = {}) {
         if (responseCode != UdsResponseCode::OK) {
             ByteArray negativeResponse;
             negativeResponse.emplace_back(0x7F);                               // Negative response indicator
-            negativeResponse.emplace_back(request[0]);                         // Original service ID
+            negativeResponse.emplace_back(request.empty() ? 0x00 : request[0]); // Original service ID or 0
             negativeResponse.emplace_back(static_cast<uint8_t>(responseCode)); // NRC
             return negativeResponse;
         }
 
         ByteArray positiveResponse;
-        positiveResponse.emplace_back(static_cast<uint8_t>(request[0] + UDS_POSITIVE_RESPONSE_OFFSET)); // Positive response SID
+        positiveResponse.emplace_back(static_cast<uint8_t>((request.empty() ? 0x00 : request[0]) + UDS_POSITIVE_RESPONSE_OFFSET)); // Positive response SID
         positiveResponse.insert(positiveResponse.end(), extraData.begin(), extraData.end());
         return positiveResponse;
     }
 
-    static UdsResponse defaultHandler(const ByteArray &request) {
-        (void)request; // Unused
-        return {UdsResponseCode::ServiceNotSupported, {}};
-    }
-
-    UdsServiceHandler m_serviceHandler;
+    std::unordered_map<uint8_t, IUdsServiceHandlerPtr> m_handlers;
 };
 
 } // namespace doip::uds
