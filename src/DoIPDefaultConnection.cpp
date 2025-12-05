@@ -366,16 +366,12 @@ ssize_t DoIPDefaultConnection::sendRoutingActivationResponse(const DoIPAddress &
     payload.insert(payload.end(), {0x00, 0x00, 0x00, 0x00});
 
     DoIPMessage response(DoIPPayloadType::RoutingActivationResponse, std::move(payload));
-    auto sentBytes = sendProtocolMessage(response);
-    DOIP_LOG_INFO("Sent routing activation response: code=" + std::to_string(static_cast<unsigned int>(response_code)) + " to address=" + std::to_string(static_cast<unsigned int>(source_address.toUint16())));
-    return sentBytes;
+    return sendProtocolMessage(response);
 }
 
 ssize_t DoIPDefaultConnection::sendAliveCheckRequest() {
     auto request = message::makeAliveCheckRequest();
-    auto sentBytes = sendProtocolMessage(request);
-    DOIP_LOG_INFO("Sent alive check request");
-    return sentBytes;
+    return sendProtocolMessage(request);
 }
 
 ssize_t DoIPDefaultConnection::sendDiagnosticMessageResponse(const DoIPAddress &sourceAddress, DoIPDiagnosticAck ack) {

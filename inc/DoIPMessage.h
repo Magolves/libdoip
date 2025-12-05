@@ -264,6 +264,9 @@ class DoIPMessage {
         if (getPayloadType() == DoIPPayloadType::RoutingActivationRequest && payloadRef.second >= 2) {
             return DoIPAddress(payloadRef.first, 0);
         }
+        if (getPayloadType() == DoIPPayloadType::RoutingActivationResponse && payloadRef.second >= 2) {
+            return DoIPAddress(payloadRef.first, 0);
+        }
         if (getPayloadType() == DoIPPayloadType::AliveCheckResponse && payloadRef.second >= 2) {
             return DoIPAddress(payloadRef.first, 0);
         }
@@ -640,7 +643,6 @@ inline std::ostream &operator<<(std::ostream &os, const DoIPMessage &msg) {
     os << ansi::dim << "V" << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
        << static_cast<unsigned int>(PROTOCOL_VERSION) << std::dec << ansi::reset;
 
-
     if (msg.getPayloadType() == DoIPPayloadType::DiagnosticMessageNegativeAck) {
         auto payload = msg.getDiagnosticMessagePayload();
         os << ansi::red << "|Diag NACK " << static_cast<DoIPNegativeDiagnosticAck>(payload.first[0]);
@@ -648,7 +650,14 @@ inline std::ostream &operator<<(std::ostream &os, const DoIPMessage &msg) {
         os << ansi::yellow << "|Alive Check?";
     } else if (msg.getPayloadType() == DoIPPayloadType::AliveCheckResponse) {
         auto sa = msg.getSourceAddress();
-        os << ansi::green << "|Alive Check! " << sa.value();
+        os << ansi::green << "|Alive Check " << sa.value() << " ✓";
+    } else if (msg.getPayloadType() == DoIPPayloadType::RoutingActivationRequest) {
+        auto sa = msg.getSourceAddress();
+        os << ansi::yellow << "|Routing activation? " << sa.value();
+    } else if (msg.getPayloadType() == DoIPPayloadType::RoutingActivationResponse) {
+        auto sa = msg.getSourceAddress();
+
+        os << ansi::green << "|Routing activation " << sa.value() << " ✓";
     } else if (msg.getPayloadType() == DoIPPayloadType::DiagnosticMessage) {
         auto payload = msg.getDiagnosticMessagePayload();
         auto sa = msg.getSourceAddress();
