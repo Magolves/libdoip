@@ -31,11 +31,11 @@ class ExampleDoIPServerModel : public DoIPServerModel {
             m_log->info("Received Diagnostic message (from ExampleDoIPServerModel)", fmt::streamed(msg));
 
             // Example: Access payload using getPayload()
-            auto payload = msg.getDiagnosticMessagePayload();
-            if (payload.second >= 3 && payload.first[0] == 0x22 && payload.first[1] == 0xF1 && payload.first[2] == 0x90) {
-                m_log->info(" - Detected Read Data by Identifier for VIN (0xF190) -> send NACK");
-                return DoIPNegativeDiagnosticAck::UnknownTargetAddress;
-            }
+            // auto payload = msg.getDiagnosticMessagePayload();
+            // if (payload.second >= 3 && payload.first[0] == 0x22 && payload.first[1] == 0xF1 && payload.first[2] == 0x90) {
+            //     m_log->info(" - Detected Read Data by Identifier for VIN (0xF190) -> send NACK");
+            //     return DoIPNegativeDiagnosticAck::UnknownTargetAddress;
+            // }
 
             return std::nullopt;
         };
@@ -67,19 +67,29 @@ class ExampleDoIPServerModel : public DoIPServerModel {
 
         m_uds.registerDiagnosticSessionControlHandler([this](uint8_t sessionType) {
             m_loguds->info("Diagnostic Session Control requested, sessionType={:02X}", sessionType);
-            return std::make_pair(uds::UdsResponseCode::PositiveResponse, ByteArray{0x50, sessionType}); // Positive response
+            auto response = ByteArray{sessionType}; // Positive response SID = 0x50
+            response.writeU16BE(m_p2_ms);
+            response.writeU16BE(m_p2star_10ms);
+            return std::make_pair(uds::UdsResponseCode::PositiveResponse, response); // Positive response
         });
 
         m_uds.registerReadDataByIdentifierHandler([this](uint16_t did) {
             m_loguds->info("Read Data By Identifier requested, DID={:04X}", did);
             if (did == 0xF190) {
                 // Return example VIN
-                ByteArray vinPayload = {'1', 'H', 'G', 'C', 'M', '8', '2', '6', '3', '3', 'A', '0', '0', '0', '0', '1'};
-                ByteArray response = {0x62, static_cast<uint8_t>((did >> 8) & 0xFF), static_cast<uint8_t>(did & 0xFF)};
+                ByteArray vinPayload = {'1', 'H', 'G', 'C', 'M',
+                                        '8', '2', '6', '3', '3',
+                                        'A', '0', '0', '0', '0', '1', 'Z'};
+                ByteArray response = {static_cast<uint8_t>((did >> 8) & 0xFF), static_cast<uint8_t>(did & 0xFF)};
                 response.insert(response.end(), vinPayload.begin(), vinPayload.end());
                 return std::make_pair(uds::UdsResponseCode::PositiveResponse, response); // Positive response
             }
             return std::make_pair(uds::UdsResponseCode::RequestOutOfRange, ByteArray{0x22}); // Positive response
+        });
+
+        m_uds.registerTesterPresentHandler([this](uint8_t subFunction) {
+            m_loguds->info("Tester Present requested, subFunction={:02X}", subFunction);
+            return std::make_pair(uds::UdsResponseCode::PositiveResponse, ByteArray{0x00}); // Positive response SID = 0x7E
         });
     }
 
@@ -92,6 +102,9 @@ class ExampleDoIPServerModel : public DoIPServerModel {
     uds::UdsMock m_uds;
     std::thread m_worker;
     bool m_running = true;
+    uint16_t m_p2_ms = 1000;
+    uint16_t m_p2star_10ms = 200;
+
 
     void startWorker() {
         m_worker = std::thread([this] {
