@@ -23,11 +23,16 @@ with Client(conn, request_timeout=2, config=config) as client:
    try:
       client.change_session(1)  # integer with value of 3
       #client.unlock_security_access(MyCar.debug_level)                                   # Fictive security level. Integer coming from fictive lib, let's say its value is 5
-      vin = client.read_data_by_identifier(udsoncan.DataIdentifier.VIN)
+      # Read VIN once and handle response type (udsoncan may return bytes or str)
       vin_response = client.read_data_by_identifier(udsoncan.DataIdentifier.VIN)
-      vin_bytes = vin_response.service_data.values[udsoncan.DataIdentifier.VIN]
-      print('Current Vehicle Identification Number is: %s' % vin_bytes.decode('ascii'))
-      
+      vin_value = vin_response.service_data.values[udsoncan.DataIdentifier.VIN]
+      if isinstance(vin_value, bytes):
+         vin_str = vin_value.decode('ascii', errors='ignore')
+      else:
+         # already a str
+         vin_str = str(vin_value)
+      print('Current Vehicle Identification Number is: %s' % vin_str)
+
       client.write_data_by_identifier(udsoncan.DataIdentifier.VIN, 'ABC123456789GHIJK')       # Standard ID for VIN is 0xF190. Codec is set in the client configuration
       print('Vehicle Identification Number successfully changed.')
       client.ecu_reset(ECUReset.ResetType.hardReset)                                     # HardReset = 0x01

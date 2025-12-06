@@ -73,6 +73,11 @@ class ExampleDoIPServerModel : public DoIPServerModel {
             return std::make_pair(uds::UdsResponseCode::PositiveResponse, response); // Positive response
         });
 
+        m_uds.registerECUResetHandler([this](uint8_t resetType) {
+            m_loguds->info("ECU Reset requested, resetType={:02X}", resetType);
+            return std::make_pair(uds::UdsResponseCode::PositiveResponse, ByteArray{resetType}); // Positive response SID = 0x61
+        });
+
         m_uds.registerReadDataByIdentifierHandler([this](uint16_t did) {
             m_loguds->info("Read Data By Identifier requested, DID={:04X}", did);
             if (did == 0xF190) {
@@ -85,6 +90,15 @@ class ExampleDoIPServerModel : public DoIPServerModel {
                 return std::make_pair(uds::UdsResponseCode::PositiveResponse, response); // Positive response
             }
             return std::make_pair(uds::UdsResponseCode::RequestOutOfRange, ByteArray{0x22}); // Positive response
+        });
+
+        m_uds.registerWriteDataByIdentifierHandler([this](uint16_t did, ByteArray value) {
+            m_loguds->info("Write Data By Identifier requested, DID={:04X}, value={}", did, fmt::streamed(value));
+            if (did == 0xF190) {
+                // Accept VIN write
+                return std::make_pair(uds::UdsResponseCode::PositiveResponse, ByteArray{static_cast<uint8_t>((did >> 8) & 0xFF), static_cast<uint8_t>(did & 0xFF)}); // Positive response
+            }
+            return std::make_pair(uds::UdsResponseCode::RequestOutOfRange, ByteArray{0x2E}); // NRC for WriteDataByIdentifier
         });
 
         m_uds.registerTesterPresentHandler([this](uint8_t subFunction) {

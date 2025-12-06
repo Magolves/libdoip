@@ -1,15 +1,15 @@
 #ifndef UDSMOCK_H
 #define UDSMOCK_H
 
-#include <functional>
-#include <unordered_map>
 #include <array>
+#include <functional>
 #include <memory>
+#include <unordered_map>
 
 #include "DoIPMessage.h"
-#include "UdsResponseCode.h"
 #include "IUdsServiceHandler.h"
 #include "LambdaUdsHandler.h"
+#include "UdsResponseCode.h"
 #include "UdsServices.h"
 
 using namespace doip;
@@ -19,7 +19,7 @@ namespace doip::uds {
 constexpr uint8_t UDS_POSITIVE_RESPONSE_OFFSET = 0x40;
 
 class UdsMock {
-public:
+  public:
     UdsMock() = default;
 
     // Register a handler owning pointer
@@ -28,7 +28,7 @@ public:
     }
 
     // Register a lambda/function
-    void registerService(UdsService serviceId, std::function<UdsResponse(const ByteArray&)> fn) {
+    void registerService(UdsService serviceId, std::function<UdsResponse(const ByteArray &)> fn) {
         m_handlers[static_cast<uint8_t>(serviceId)] = std::make_unique<LambdaUdsHandler>(std::move(fn));
     }
 
@@ -50,17 +50,45 @@ public:
     // Read Data By Identifier (0x22): handler(did, params)
     void registerReadDataByIdentifierHandler(std::function<UdsResponse(uint16_t did)> handler);
 
+    // Write Data By Identifier (0x2E): handler(did, data)
+    void registerWriteDataByIdentifierHandler(std::function<UdsResponse(uint16_t did, ByteArray value)> handler);
+
     // Tester Present (0x3E): handler(subFunction)
     void registerTesterPresentHandler(std::function<UdsResponse(uint8_t subFunction)> handler);
 
+    
     ByteArray handleDiagnosticRequest(const ByteArray &request) {
-        if (request.empty()) return {};
+        if (request.empty())
+            return {};
         uint8_t sid = request[0];
+        UdsService service = static_cast<UdsService>(sid);
+
+        const UdsServiceDescriptor *desc = findServiceDescriptor(service);
+        if (!desc) {
+            return makeResponse(request, UdsResponseCode::ServiceNotSupported, {});
+        }
+
+        if (request.size() < desc->minReqLength || request.size() > desc->maxReqLength) {
+            std::cerr << "UdsMock: Request length " << request.size()
+                      << " out of bounds for service 0x" << std::hex <<  static_cast<int>(service) << std::dec
+                      << " (expected " << desc->minReqLength << "-" << desc->maxReqLength << ")\n";
+            return makeResponse(request, UdsResponseCode::IncorrectMessageLengthOrInvalidFormat, {});
+        }
+
         UdsResponse resp = defaultResponse(request);
         auto it = m_handlers.find(sid);
         if (it != m_handlers.end() && it->second) {
             resp = it->second->handle(request);
         }
+
+        auto rspSize = resp.second.size() + 1; // +1 for the SID
+        if (rspSize < desc->minRspLength || rspSize > desc->maxRspLength) {
+            std::cerr << "UdsMock: Response length " << resp.second.size()
+                      << " out of bounds for service 0x" << std::hex <<  static_cast<int>(service) << std::dec
+                      << " (expected " << desc->minRspLength << "-" << desc->maxRspLength << ")\n";
+            return makeResponse(request, UdsResponseCode::GeneralProgrammingFailure, {});
+        }
+
         return makeResponse(request, resp.first, resp.second);
     }
 
@@ -98,7 +126,7 @@ public:
         }
     }
 
-private:
+  private:
     static UdsResponse defaultResponse(const ByteArray &request) {
         (void)request;
         return {UdsResponseCode::ServiceNotSupported, {}};
@@ -107,9 +135,9 @@ private:
     static ByteArray makeResponse(const ByteArray &request, UdsResponseCode responseCode = UdsResponseCode::OK, const ByteArray &extraData = {}) {
         if (responseCode != UdsResponseCode::OK) {
             ByteArray negativeResponse;
-            negativeResponse.emplace_back(0x7F);                               // Negative response indicator
+            negativeResponse.emplace_back(0x7F);                                // Negative response indicator
             negativeResponse.emplace_back(request.empty() ? 0x00 : request[0]); // Original service ID or 0
-            negativeResponse.emplace_back(static_cast<uint8_t>(responseCode)); // NRC
+            negativeResponse.emplace_back(static_cast<uint8_t>(responseCode));  // NRC
             return negativeResponse;
         }
 
