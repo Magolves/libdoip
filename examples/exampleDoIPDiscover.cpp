@@ -51,7 +51,10 @@ int main(int argc, char *argv[]) {
 
     // Listen for Vehicle Announcements first
     LOG_DOIP_INFO("Listening for Vehicle Announcements...");
-    client.receiveVehicleAnnouncement();
+    if (!client.receiveVehicleAnnouncement()) {
+        LOG_DOIP_WARN("No Vehicle Announcement received");
+        return EXIT_FAILURE;
+    }
 
     // Send Vehicle Identification Request to configured address
     if (client.sendVehicleIdentificationRequest(serverAddress.c_str()) > 0) {

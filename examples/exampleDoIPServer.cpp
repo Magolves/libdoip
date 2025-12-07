@@ -69,7 +69,7 @@ static void printUsage(const char *progName) {
 
 int main(int argc, char *argv[]) {
     bool useLoopback = false;
-    bool daemonize = true;
+    bool daemonize = false;
     std::string eid_str;
     std::string gid_str;
     std::string vin_str = "EXAMPLESERVER";
@@ -135,13 +135,8 @@ int main(int argc, char *argv[]) {
     }
 
     server = std::make_unique<DoIPServer>(cfg);
-    server->setAnnouncementMode(cfg.loopback);
-    server->setLogicalGatewayAddress(cfg.logicalAddress);
-    server->setVIN(cfg.vin);
     // Apply defaults used previously in example
-    server->setGID(0);
     server->setFAR(DoIPFurtherAction::NoFurtherAction);
-    server->setEID(0);
     server->setAnnounceInterval(2000);
     server->setAnnounceNum(10);
 

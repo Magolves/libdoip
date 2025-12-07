@@ -29,7 +29,8 @@ class DoIPClient {
     ssize_t sendVehicleIdentificationRequest(const char *inet_address);
     void receiveRoutingActivationResponse();
     void receiveUdpMessage();
-    void receiveVehicleAnnouncement();
+    [[nodiscard]]
+    bool receiveVehicleAnnouncement();
     /*
      * Send the builded request over the tcp-connection to server
      */

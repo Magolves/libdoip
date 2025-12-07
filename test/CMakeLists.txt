@@ -29,3 +29,21 @@ doctest_discover_tests(${DOIP_NAME}_tests
         TIMEOUT 30
 )
 
+# Integration fixture: start exampleDoIPServer as a daemon
+add_test(NAME Integration_StartExampleServer
+    COMMAND $<TARGET_FILE:exampleDoIPServer> --daemonize
+)
+set_tests_properties(Integration_StartExampleServer PROPERTIES FIXTURES_SETUP example_server TIMEOUT 10)
+
+# Integration test: run discover against the running server
+add_test(NAME Integration_DiscoverRuns
+    COMMAND $<TARGET_FILE:exampleDoIPDiscover>
+)
+set_tests_properties(Integration_DiscoverRuns PROPERTIES FIXTURES_REQUIRED example_server TIMEOUT 10)
+
+# Teardown fixture: stop exampleDoIPServer
+add_test(NAME Integration_StopExampleServer
+    COMMAND pkill -f exampleDoIPServer
+)
+set_tests_properties(Integration_StopExampleServer PROPERTIES FIXTURES_CLEANUP example_server TIMEOUT 10)
+

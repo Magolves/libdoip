@@ -192,7 +192,7 @@ void DoIPClient::receiveUdpMessage() {
     LOG_UDP_INFO("RX: {}", fmt::streamed(msg));
 }
 
-void DoIPClient::receiveVehicleAnnouncement() {
+bool DoIPClient::receiveVehicleAnnouncement() {
     unsigned int length = sizeof(_announcementAddr);
     int bytesRead;
 
@@ -212,13 +212,13 @@ void DoIPClient::receiveVehicleAnnouncement() {
         } else {
             LOG_UDP_ERROR("Error receiving Vehicle Announcement: {}", strerror(errno));
         }
-        return;
+        return false;
     }
 
     auto optMsg = DoIPMessage::tryParse(_receivedData, static_cast<size_t>(bytesRead));
     if (!optMsg.has_value()) {
         LOG_UDP_ERROR("Failed to parse Vehicle Announcement message");
-        return;
+        return false;
     }
 
     DoIPMessage msg = optMsg.value();
@@ -228,7 +228,9 @@ void DoIPClient::receiveVehicleAnnouncement() {
     if (msg.getPayloadType() == DoIPPayloadType::VehicleIdentificationResponse) {
         parseVIResponseInformation(msg.data());
         displayVIResponseInformation();
+        return true;
     }
+    return false;
 }
 
 ssize_t DoIPClient::sendVehicleIdentificationRequest(const char *inet_address) {
@@ -250,6 +252,7 @@ ssize_t DoIPClient::sendVehicleIdentificationRequest(const char *inet_address) {
     DoIPMessage vehicleIdReq = message::makeVehicleIdentificationRequest();
 
     ssize_t bytesSent = sendto(_sockFd_udp, vehicleIdReq.data(), vehicleIdReq.size(), 0, reinterpret_cast<struct sockaddr *>(&_serverAddr), sizeof(_serverAddr));
+    LOG_UDP_INFO("Sent Vehicle Identification Request to {}:{}", inet_address, ntohs(_serverAddr.sin_port));
 
     if (bytesSent > 0) {
         LOG_DOIP_INFO("Sending Vehicle Identification Request");

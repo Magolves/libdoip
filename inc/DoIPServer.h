@@ -46,8 +46,10 @@ struct ServerConfig {
     bool loopback = false;
 
     // Run the server as a daemon by default
-    bool daemonize = true;
+    bool daemonize = false;
 };
+
+const ServerConfig DefaultServerConfig{};
 
 
 constexpr int DOIP_SERVER_PORT = 13400;
@@ -70,8 +72,7 @@ using ConnectionAcceptedHandler = std::function<std::optional<DoIPServerModel>(D
 class DoIPServer {
 
   public:
-    explicit DoIPServer();
-    explicit DoIPServer(const ServerConfig &config);
+    explicit DoIPServer(const ServerConfig &config = DefaultServerConfig);
 
     ~DoIPServer();
 
