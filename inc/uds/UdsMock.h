@@ -56,41 +56,8 @@ class UdsMock {
     // Tester Present (0x3E): handler(subFunction)
     void registerTesterPresentHandler(std::function<UdsResponse(uint8_t subFunction)> handler);
 
-    
-    ByteArray handleDiagnosticRequest(const ByteArray &request) {
-        if (request.empty())
-            return {};
-        uint8_t sid = request[0];
-        UdsService service = static_cast<UdsService>(sid);
 
-        const UdsServiceDescriptor *desc = findServiceDescriptor(service);
-        if (!desc) {
-            return makeResponse(request, UdsResponseCode::ServiceNotSupported, {});
-        }
-
-        if (request.size() < desc->minReqLength || request.size() > desc->maxReqLength) {
-            std::cerr << "UdsMock: Request length " << request.size()
-                      << " out of bounds for service 0x" << std::hex <<  static_cast<int>(service) << std::dec
-                      << " (expected " << desc->minReqLength << "-" << desc->maxReqLength << ")\n";
-            return makeResponse(request, UdsResponseCode::IncorrectMessageLengthOrInvalidFormat, {});
-        }
-
-        UdsResponse resp = defaultResponse(request);
-        auto it = m_handlers.find(sid);
-        if (it != m_handlers.end() && it->second) {
-            resp = it->second->handle(request);
-        }
-
-        auto rspSize = resp.second.size() + 1; // +1 for the SID
-        if (rspSize < desc->minRspLength || rspSize > desc->maxRspLength) {
-            std::cerr << "UdsMock: Response length " << resp.second.size()
-                      << " out of bounds for service 0x" << std::hex <<  static_cast<int>(service) << std::dec
-                      << " (expected " << desc->minRspLength << "-" << desc->maxRspLength << ")\n";
-            return makeResponse(request, UdsResponseCode::GeneralProgrammingFailure, {});
-        }
-
-        return makeResponse(request, resp.first, resp.second);
-    }
+    ByteArray handleDiagnosticRequest(const ByteArray &request) const;
 
     // Register default handlers for all known services.
     // By default these handlers simply return ServiceNotSupported. Tests
@@ -127,11 +94,6 @@ class UdsMock {
     }
 
   private:
-    static UdsResponse defaultResponse(const ByteArray &request) {
-        (void)request;
-        return {UdsResponseCode::ServiceNotSupported, {}};
-    }
-
     static ByteArray makeResponse(const ByteArray &request, UdsResponseCode responseCode = UdsResponseCode::OK, const ByteArray &extraData = {}) {
         if (responseCode != UdsResponseCode::OK) {
             ByteArray negativeResponse;

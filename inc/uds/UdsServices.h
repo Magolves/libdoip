@@ -71,9 +71,12 @@ constexpr std::array<UdsServiceDescriptor, 19> UDS_SERVICE_DESCRIPTORS = {{
  * @return const UdsServiceDescriptor* the service descriptor or nullptr if not found
  */
 inline const UdsServiceDescriptor* findServiceDescriptor(UdsService sid) {
-    for (const auto& desc : UDS_SERVICE_DESCRIPTORS) {
-        if (desc.service == sid)
-            return &desc;
+    auto it = std::find_if(UDS_SERVICE_DESCRIPTORS.begin(), UDS_SERVICE_DESCRIPTORS.end(),
+                               [sid](const UdsServiceDescriptor& desc) {
+                                   return desc.service == sid;
+                               });
+    if (it != UDS_SERVICE_DESCRIPTORS.end()) {
+        return &(*it);
     }
     return nullptr;
 }
