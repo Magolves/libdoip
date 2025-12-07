@@ -193,7 +193,7 @@ std::unique_ptr<DoIPConnection> DoIPServer::waitForTcpConnection() {
     //     model.onDiagnosticMessage = [](IConnectionContext& ctx, const DoIPMessage &msg) noexcept -> DoIPDiagnosticAck {
     //         (void)ctx;
     //         (void)msg;
-    //         DOIP_LOG_CRITICAL("Diagnostic message received on default-constructed Model");
+    //         LOG_DOIP_CRITICAL("Diagnostic message received on default-constructed Model");
     //         // Default: always ACK
     //         return std::nullopt;
     //     };
@@ -207,14 +207,14 @@ std::unique_ptr<DoIPConnection> DoIPServer::waitForTcpConnection() {
  */
 template <typename Model>
 void DoIPServer::tcpListenerThread() {
-    DOIP_LOG_INFO("TCP listener thread started");
+    LOG_DOIP_INFO("TCP listener thread started");
 
     while (m_running.load()) {
         auto connection = waitForTcpConnection<Model>();
 
         if (!connection) {
             if (m_running.load()) {
-                TCP_LOG_DEBUG("Failed to accept connection, retrying...");
+                LOG_TCP_DEBUG("Failed to accept connection, retrying...");
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
             continue;
@@ -225,7 +225,7 @@ void DoIPServer::tcpListenerThread() {
         std::thread(&DoIPServer::connectionHandlerThread, this, std::move(connection)).detach();
     }
 
-    DOIP_LOG_INFO("TCP listener thread stopped");
+    LOG_DOIP_INFO("TCP listener thread stopped");
 }
 
 /*
@@ -234,12 +234,12 @@ void DoIPServer::tcpListenerThread() {
 template <typename Model>
 bool DoIPServer::start(ConnectionAcceptedHandler onConnectionAccepted, bool sendAnnouncements) {
     if (m_running.load()) {
-        DOIP_LOG_WARN("Server is already running");
+        LOG_DOIP_WARN("Server is already running");
         return false;
     }
 
     if (!onConnectionAccepted) {
-        DOIP_LOG_ERROR("Connection handler callback is required");
+        LOG_DOIP_ERROR("Connection handler callback is required");
         return false;
     }
 
@@ -247,13 +247,13 @@ bool DoIPServer::start(ConnectionAcceptedHandler onConnectionAccepted, bool send
 
     // Setup sockets
     if (!setupUdpSocket()) {
-        DOIP_LOG_ERROR("Failed to setup UDP socket");
+        LOG_DOIP_ERROR("Failed to setup UDP socket");
         return false;
     }
 
 
     if (setupTcpSocket()) {
-        DOIP_LOG_ERROR("Failed to setup TCP socket");
+        LOG_DOIP_ERROR("Failed to setup TCP socket");
         closeUdpSocket();
         return false;
     }
@@ -265,7 +265,7 @@ bool DoIPServer::start(ConnectionAcceptedHandler onConnectionAccepted, bool send
         m_workerThreads.emplace_back(&DoIPServer::udpListenerThread, this);
         m_workerThreads.emplace_back(&DoIPServer::tcpListenerThread<Model>, this);
 
-        DOIP_LOG_INFO("DoIP Server started successfully");
+        LOG_DOIP_INFO("DoIP Server started successfully");
 
         // Send vehicle announcements if requested
         if (sendAnnouncements) {
@@ -274,7 +274,7 @@ bool DoIPServer::start(ConnectionAcceptedHandler onConnectionAccepted, bool send
 
         return true;
     } catch (const std::exception &e) {
-        DOIP_LOG_ERROR("Failed to start worker threads: {}", e.what());
+        LOG_DOIP_ERROR("Failed to start worker threads: {}", e.what());
         m_running.store(false);
         closeUdpSocket();
         closeTcpSocket();

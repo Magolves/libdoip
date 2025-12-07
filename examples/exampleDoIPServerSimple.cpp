@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
 
     // Configure logging
     doip::Logger::setLevel(spdlog::level::info);
-    DOIP_LOG_INFO("Starting Simple DoIP Server Example");
+    LOG_DOIP_INFO("Starting Simple DoIP Server Example");
 
     DoIPServer server;
     configureServer(server);
@@ -122,11 +122,11 @@ int main(int argc, char *argv[]) {
 
     // Start the server with automatic connection handling
     if (!server.start<ExampleDoIPServerModel>(onConnectionAccepted, true)) {
-        DOIP_LOG_ERROR("Failed to start server");
+        LOG_DOIP_ERROR("Failed to start server");
         return 1;
     }
 
-    DOIP_LOG_INFO("Server is running. Press Ctrl+C to stop.");
+    LOG_DOIP_INFO("Server is running. Press Ctrl+C to stop.");
 
     // Main thread just waits for shutdown signal
     while (!g_shutdownRequested.load()) {
@@ -135,7 +135,7 @@ int main(int argc, char *argv[]) {
 
     // Graceful shutdown
     server.stop();
-    DOIP_LOG_INFO("Server terminated cleanly");
+    LOG_DOIP_INFO("Server terminated cleanly");
 
     return 0;
 }

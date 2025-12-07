@@ -123,7 +123,7 @@ struct DefaultDoIPServerModel : public DoIPServerModel {
         onDiagnosticMessage = [](IConnectionContext &ctx, const DoIPMessage &msg) noexcept -> DoIPDiagnosticAck {
             (void)ctx;
             (void)msg;
-            DOIP_LOG_DEBUG("Diagnostic message received on DefaultDoIPServerModel");
+            LOG_DOIP_DEBUG("Diagnostic message received on DefaultDoIPServerModel");
             // Default: always ACK
             return std::nullopt;
         };
@@ -131,7 +131,7 @@ struct DefaultDoIPServerModel : public DoIPServerModel {
         onDiagnosticNotification = [](IConnectionContext &ctx, DoIPDiagnosticAck ack) noexcept {
             (void)ctx;
             (void)ack;
-            DOIP_LOG_DEBUG("Diagnostic notification on DefaultDoIPServerModel");
+            LOG_DOIP_DEBUG("Diagnostic notification on DefaultDoIPServerModel");
             // Default no-op
         };
 

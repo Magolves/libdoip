@@ -29,7 +29,7 @@ DoIPServer::~DoIPServer() {
  * High-level API: Stop the server and cleanup
  */
 void DoIPServer::stop() {
-    DOIP_LOG_INFO("Stopping DoIP Server...");
+    LOG_DOIP_INFO("Stopping DoIP Server...");
     m_running.store(false);
 
     // Close sockets to unblock any pending accept/recv calls
@@ -44,14 +44,14 @@ void DoIPServer::stop() {
     }
     m_workerThreads.clear();
 
-    DOIP_LOG_INFO("DoIP Server stopped");
+    LOG_DOIP_INFO("DoIP Server stopped");
 }
 
 /*
  * Background thread: UDP message listener
  */
 void DoIPServer::udpListenerThread() {
-    DOIP_LOG_INFO("UDP listener thread started");
+    LOG_DOIP_INFO("UDP listener thread started");
 
     while (m_running.load()) {
         ssize_t result = receiveUdpMessage();
@@ -60,11 +60,11 @@ void DoIPServer::udpListenerThread() {
         // The socket already has a timeout configured
         if (result < 0 && m_running.load()) {
             // Only log errors if we're still supposed to be running
-            UDP_LOG_DEBUG("UDP receive error, continuing...");
+            LOG_UDP_DEBUG("UDP receive error, continuing...");
         }
     }
 
-    DOIP_LOG_INFO("UDP listener thread stopped");
+    LOG_DOIP_INFO("UDP listener thread stopped");
 }
 
 
@@ -73,37 +73,37 @@ void DoIPServer::udpListenerThread() {
  * Background thread: Handle individual TCP connection
  */
 void DoIPServer::connectionHandlerThread(std::unique_ptr<DoIPConnection> connection) {
-    TCP_LOG_INFO("Connection handler thread started");
+    LOG_TCP_INFO("Connection handler thread started");
 
     while (m_running.load() && connection->isSocketActive()) {
         int result = connection->receiveTcpMessage();
 
         if (result < 0) {
-            TCP_LOG_INFO("Connection closed or error occurred");
+            LOG_TCP_INFO("Connection closed or error occurred");
             break;
         }
     }
 
     // Connection is automatically closed when unique_ptr goes out of scope
-    TCP_LOG_INFO("Connection handler thread stopped");
+    LOG_TCP_INFO("Connection handler thread stopped");
 }
 
 /*
  * Set up a tcp socket, so the socket is ready to accept a connection
  */
 bool DoIPServer::setupTcpSocket() {
-    DOIP_LOG_DEBUG("Setting up TCP socket on port {}", DOIP_SERVER_PORT);
+    LOG_DOIP_DEBUG("Setting up TCP socket on port {}", DOIP_SERVER_PORT);
 
     m_tcp_sock = socket(AF_INET, SOCK_STREAM, 0);
     if (m_tcp_sock < 0) {
-        TCP_LOG_ERROR("Failed to create TCP socket: {}", strerror(errno));
+        LOG_TCP_ERROR("Failed to create TCP socket: {}", strerror(errno));
         return false;
     }
 
     // Allow socket reuse
     int reuse = 1;
     if (setsockopt(m_tcp_sock, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0) {
-        TCP_LOG_WARN("Failed to set SO_REUSEADDR: {}", strerror(errno));
+        LOG_TCP_WARN("Failed to set SO_REUSEADDR: {}", strerror(errno));
     }
 
     m_serverAddress.sin_family = AF_INET;
@@ -112,16 +112,16 @@ bool DoIPServer::setupTcpSocket() {
 
     // binds the socket to the address and port number
     if (bind(m_tcp_sock, reinterpret_cast<const struct sockaddr *>(&m_serverAddress), sizeof(m_serverAddress)) < 0) {
-        TCP_LOG_ERROR("Failed to bind TCP socket: {}", strerror(errno));
+        LOG_TCP_ERROR("Failed to bind TCP socket: {}", strerror(errno));
         return false;
     }
 
-    TCP_LOG_INFO("TCP socket successfully bound to port {}", DOIP_SERVER_PORT);
+    LOG_TCP_INFO("TCP socket successfully bound to port {}", DOIP_SERVER_PORT);
     return true;
 }
 
 bool DoIPServer::setupUdpSocket() {
-    UDP_LOG_DEBUG("Setting up UDP socket on port {}", DOIP_UDP_DISCOVERY_PORT);
+    LOG_UDP_DEBUG("Setting up UDP socket on port {}", DOIP_UDP_DISCOVERY_PORT);
 
     m_udp_sock = socket(AF_INET, SOCK_DGRAM, 0);
 
@@ -130,19 +130,19 @@ bool DoIPServer::setupUdpSocket() {
     m_serverAddress.sin_port = htons(DOIP_UDP_DISCOVERY_PORT);
 
     if (m_udp_sock < 0) {
-        UDP_LOG_ERROR("Failed to create UDP socket: {}", strerror(errno));
+        LOG_UDP_ERROR("Failed to create UDP socket: {}", strerror(errno));
         return false;
     }
 
     // binds the socket to any IP DoIPAddress and the Port Number 13400
     if (bind(m_udp_sock, reinterpret_cast<const struct sockaddr *>(&m_serverAddress), sizeof(m_serverAddress)) < 0) {
-        UDP_LOG_ERROR("Failed to bind UDP socket: {}", strerror(errno));
+        LOG_UDP_ERROR("Failed to bind UDP socket: {}", strerror(errno));
         return false;
     }
 
     // setting the IP DoIPAddress for Multicast
     setMulticastGroup("224.0.0.2");
-    UDP_LOG_INFO("UDP socket successfully bound to port {} with multicast group", DOIP_UDP_DISCOVERY_PORT);
+    LOG_UDP_INFO("UDP socket successfully bound to port {} with multicast group", DOIP_UDP_DISCOVERY_PORT);
     return true;
 }
 
@@ -178,18 +178,18 @@ ssize_t DoIPServer::receiveUdpMessage() {
             // Timeout - this is normal, just continue
             return 0;
         } else {
-            UDP_LOG_ERROR("Error receiving UDP message: {}", strerror(errno));
+            LOG_UDP_ERROR("Error receiving UDP message: {}", strerror(errno));
             return -1;
         }
     }
 
     // Don't log if no data received (can happen with some socket configurations)
     if (readBytes > 0) {
-        UDP_LOG_INFO("RX {} bytes from {}:{}", readBytes,
+        LOG_UDP_INFO("RX {} bytes from {}:{}", readBytes,
                      inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
     } else {
         // For debugging: log zero-byte messages at debug level
-        UDP_LOG_DEBUG("RX 0 bytes from {}:{}",
+        LOG_UDP_DEBUG("RX 0 bytes from {}:{}",
                       inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
         return 0; // Return early for zero-byte messages
     }
@@ -219,18 +219,18 @@ ssize_t DoIPServer::reactToReceivedUdpMessage(size_t bytesRead) {
 
     auto plType = optHeader->first;
     // auto payloadLength = optHeader->second;
-    UDP_LOG_INFO("RX: {}", fmt::streamed(plType));
+    LOG_UDP_INFO("RX: {}", fmt::streamed(plType));
     switch (plType) {
     case DoIPPayloadType::VehicleIdentificationRequest: {
         DoIPMessage msg = message::makeVehicleIdentificationResponse(m_VIN, m_gatewayAddress, m_EID, m_GID);
-        DOIP_LOG_PROTOCOL("TX {}", fmt::streamed(msg));
+        LOG_DOIP_PROTOCOL("TX {}", fmt::streamed(msg));
         ssize_t sendedBytes = sendUdpMessage(msg.data(), DOIP_HEADER_SIZE + msg.size());
 
         return static_cast<int>(sendedBytes);
     }
 
     default: {
-        DOIP_LOG_ERROR("Invalid payload type 0x{:04X} received (receiveUdpMessage())", static_cast<uint16_t>(plType));
+        LOG_DOIP_ERROR("Invalid payload type 0x{:04X} received (receiveUdpMessage())", static_cast<uint16_t>(plType));
         return sendNegativeUdpAck(DoIPNegativeAck::UnknownPayloadType);
     }
     }
@@ -249,7 +249,7 @@ ssize_t DoIPServer::sendUdpMessage(const uint8_t *message, size_t messageLength)
 bool DoIPServer::setEIDdefault() {
     MacAddress mac = {0};
     if (!getFirstMacAddress(mac)) {
-        DOIP_LOG_ERROR("Failed to get MAC address, using default EID");
+        LOG_DOIP_ERROR("Failed to get MAC address, using default EID");
         m_EID = DoIPEID::Zero;
         return false;
     }
@@ -290,9 +290,9 @@ void DoIPServer::setAnnounceInterval(unsigned int Interval) {
 void DoIPServer::setAnnouncementMode(bool useLoopback) {
     m_useLoopbackAnnouncements = useLoopback;
     if (useLoopback) {
-        DOIP_LOG_INFO("Vehicle announcements will use loopback (127.0.0.1)");
+        LOG_DOIP_INFO("Vehicle announcements will use loopback (127.0.0.1)");
     } else {
-        DOIP_LOG_INFO("Vehicle announcements will use broadcast (255.255.255.255)");
+        LOG_DOIP_INFO("Vehicle announcements will use broadcast (255.255.255.255)");
     }
 }
 
@@ -303,7 +303,7 @@ void DoIPServer::setMulticastGroup(const char *address) {
     int setPort = setsockopt(m_udp_sock, SOL_SOCKET, SO_REUSEADDR, &loop, sizeof(loop));
 
     if (setPort < 0) {
-        UDP_LOG_ERROR("Setting Port Error");
+        LOG_UDP_ERROR("Setting Port Error");
     }
 
     struct ip_mreq mreq;
@@ -315,7 +315,7 @@ void DoIPServer::setMulticastGroup(const char *address) {
     int setGroup = setsockopt(m_udp_sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, reinterpret_cast<char *>(&mreq), sizeof(mreq));
 
     if (setGroup < 0) {
-        UDP_LOG_ERROR("Setting address failed: {}", strerror(errno));
+        LOG_UDP_ERROR("Setting address failed: {}", strerror(errno));
     }
 }
 
@@ -330,7 +330,7 @@ ssize_t DoIPServer::sendVehicleAnnouncement() {
     int setAddressError = inet_aton(address, &(m_clientAddress.sin_addr));
 
     if (setAddressError != 0) {
-        DOIP_LOG_INFO("{} address set successfully: {}",
+        LOG_DOIP_INFO("{} address set successfully: {}",
                       m_useLoopbackAnnouncements ? "Loopback" : "Broadcast", address);
     }
 
@@ -338,7 +338,7 @@ ssize_t DoIPServer::sendVehicleAnnouncement() {
         // Only set broadcast option for broadcast mode
         int socketError = setsockopt(m_udp_sock, SOL_SOCKET, SO_BROADCAST, &m_broadcast, sizeof(m_broadcast));
         if (socketError == 0) {
-            DOIP_LOG_INFO("Broadcast Option set successfully");
+            LOG_DOIP_INFO("Broadcast Option set successfully");
         }
     }
 
@@ -351,10 +351,10 @@ ssize_t DoIPServer::sendVehicleAnnouncement() {
         sentBytes = sendto(m_udp_sock, msg.data(), msg.size(), 0, reinterpret_cast<struct sockaddr *>(&m_clientAddress), sizeof(m_clientAddress));
 
         if (sentBytes > 0) {
-            UDP_LOG_INFO("Sent Vehicle Announcement");
+            LOG_UDP_INFO("Sent Vehicle Announcement");
         } else {
-            UDP_LOG_ERROR("Failed sending Vehicle Announcement: {}", strerror(errno));
-            UDP_LOG_ERROR("Message: {}", fmt::streamed(msg));
+            LOG_UDP_ERROR("Failed sending Vehicle Announcement: {}", strerror(errno));
+            LOG_UDP_ERROR("Message: {}", fmt::streamed(msg));
         }
         usleep(m_announceInterval * 1000);
     }

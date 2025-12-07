@@ -26,17 +26,17 @@ void DoIPConnection::closeSocket() {
  *              or -1 if error occurred
  */
 int DoIPConnection::receiveTcpMessage() {
-    DOIP_LOG_INFO("Waiting for DoIP Header...");
+    LOG_DOIP_INFO("Waiting for DoIP Header...");
     uint8_t genericHeader[DOIP_HEADER_SIZE];
     unsigned int readBytes = receiveFixedNumberOfBytesFromTCP(genericHeader, DOIP_HEADER_SIZE);
     if (readBytes == DOIP_HEADER_SIZE /*&& !m_aliveCheckTimer.hasTimeout()*/) {
-        DOIP_LOG_INFO("Received DoIP Header.");
+        LOG_DOIP_INFO("Received DoIP Header.");
 
         auto optHeader = DoIPMessage::tryParseHeader(genericHeader, DOIP_HEADER_SIZE);
         if (!optHeader.has_value()) {
             // m_stateMachine.processEvent(DoIPServerEvent::InvalidMessage);
             //  TODO: Notify application of invalid message?
-            DOIP_LOG_ERROR("DoIP message header parsing failed");
+            LOG_DOIP_ERROR("DoIP message header parsing failed");
             closeSocket();
             return -2;
         }
@@ -44,13 +44,13 @@ int DoIPConnection::receiveTcpMessage() {
         auto plType = optHeader->first;
         auto payloadLength = optHeader->second;
 
-        DOIP_LOG_INFO("Payload Type: {}, length: {} ", fmt::streamed(plType), payloadLength);
+        LOG_DOIP_INFO("Payload Type: {}, length: {} ", fmt::streamed(plType), payloadLength);
 
         if (payloadLength > 0) {
-            DOIP_LOG_DEBUG("Waiting for {} bytes of payload...", payloadLength);
+            LOG_DOIP_DEBUG("Waiting for {} bytes of payload...", payloadLength);
             unsigned int receivedPayloadBytes = receiveFixedNumberOfBytesFromTCP(m_receiveBuf.data(), payloadLength);
             if (receivedPayloadBytes < payloadLength) {
-                DOIP_LOG_ERROR("DoIP message incomplete");
+                LOG_DOIP_ERROR("DoIP message incomplete");
                 // m_stateMachine.processEvent(DoIPServerEvent::InvalidMessage);
                 //  todo: Notify application of invalid message?
                 closeSocket();
@@ -58,7 +58,7 @@ int DoIPConnection::receiveTcpMessage() {
             }
 
             DoIPMessage msg = DoIPMessage(plType, m_receiveBuf.data(), receivedPayloadBytes);
-            DOIP_LOG_INFO("RX: {}", fmt::streamed(msg));
+            LOG_DOIP_INFO("RX: {}", fmt::streamed(msg));
         }
 
         DoIPMessage message(plType, m_receiveBuf.data(), payloadLength);
@@ -99,7 +99,7 @@ size_t DoIPConnection::receiveFixedNumberOfBytesFromTCP(uint8_t *receivedData, s
 }
 
 void DoIPConnection::triggerDisconnection() {
-    DOIP_LOG_INFO("Application requested to disconnect Client from Server");
+    LOG_DOIP_INFO("Application requested to disconnect Client from Server");
     closeSocket();
 }
 
@@ -119,9 +119,9 @@ ssize_t DoIPConnection::sendMessage(const uint8_t *message, size_t messageLength
 ssize_t DoIPConnection::sendProtocolMessage(const DoIPMessage &msg) {
     ssize_t sentBytes = sendMessage(msg.data(), msg.size());
     if (sentBytes < 0) {
-        DOIP_LOG_ERROR("Error sending message to client: {}", fmt::streamed(msg));
+        LOG_DOIP_ERROR("Error sending message to client: {}", fmt::streamed(msg));
     } else {
-        DOIP_LOG_INFO("Sent {} bytes to client: {}", sentBytes, fmt::streamed(msg));
+        LOG_DOIP_INFO("Sent {} bytes to client: {}", sentBytes, fmt::streamed(msg));
     }
     return sentBytes;
 }
@@ -129,12 +129,12 @@ ssize_t DoIPConnection::sendProtocolMessage(const DoIPMessage &msg) {
 void DoIPConnection::closeConnection(DoIPCloseReason reason) {
     // Guard against recursive calls
     if (m_isClosing) {
-        DOIP_LOG_DEBUG("Connection already closing - ignoring recursive call");
+        LOG_DOIP_DEBUG("Connection already closing - ignoring recursive call");
         return;
     }
 
     m_isClosing = true;
-    DOIP_LOG_INFO("Closing connection, reason: {}", fmt::streamed(reason));
+    LOG_DOIP_INFO("Closing connection, reason: {}", fmt::streamed(reason));
 
     // Call base class to handle state machine and notification
     DoIPDefaultConnection::closeConnection(reason);

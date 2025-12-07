@@ -27,10 +27,10 @@ int main(int argc, char *argv[]) {
         string arg = argv[i];
         if (arg == "--loopback") {
             serverAddress = "127.0.0.1";
-            DOIP_LOG_INFO("Loopback mode enabled - using 127.0.0.1");
+            LOG_DOIP_INFO("Loopback mode enabled - using 127.0.0.1");
         } else if (arg == "--server" && i + 1 < argc) {
             serverAddress = argv[++i];
-            DOIP_LOG_INFO("Using custom server address: {}", serverAddress);
+            LOG_DOIP_INFO("Using custom server address: {}", serverAddress);
         } else if (arg == "--help") {
             printUsage(argv[0]);
             return 0;
@@ -41,24 +41,24 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    DOIP_LOG_INFO("Starting DoIP Client");
+    LOG_DOIP_INFO("Starting DoIP Client");
 
     // Start UDP connections (don't start TCP yet)
     client.startUdpConnection();
     client.startAnnouncementListener(); // Listen for Vehicle Announcements on port 13401
 
     // Listen for Vehicle Announcements first
-    DOIP_LOG_INFO("Listening for Vehicle Announcements...");
+    LOG_DOIP_INFO("Listening for Vehicle Announcements...");
     client.receiveVehicleAnnouncement();
 
     // Send Vehicle Identification Request to configured address
     if (client.sendVehicleIdentificationRequest(serverAddress.c_str()) > 0) {
-        DOIP_LOG_INFO("Vehicle Identification Request sent successfully");
+        LOG_DOIP_INFO("Vehicle Identification Request sent successfully");
         client.receiveUdpMessage();
     }
 
     // Now start TCP connection for diagnostic communication
-    DOIP_LOG_INFO("Starting TCP connection for diagnostic messages");
+    LOG_DOIP_INFO("Starting TCP connection for diagnostic messages");
     client.startTcpConnection();
 
     if (client.sendRoutingActivationRequest() < 0) {

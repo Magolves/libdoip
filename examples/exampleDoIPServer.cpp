@@ -28,7 +28,7 @@ void listenTcp();
  * Check permantly if udp message was received
  */
 void listenUdp() {
-    UDP_LOG_INFO("UDP listener thread started");
+    LOG_UDP_INFO("UDP listener thread started");
     while (serverActive) {
         ssize_t result = server.receiveUdpMessage();
         // If timeout (result == 0), sleep briefly to prevent CPU spinning
@@ -42,7 +42,7 @@ void listenUdp() {
  * Check permantly if tcp message was received
  */
 void listenTcp() {
-    UDP_LOG_INFO("TCP listener thread started");
+    LOG_UDP_INFO("TCP listener thread started");
 
     while (true) {
         tcpConnection = server.waitForTcpConnection<ExampleDoIPServerModel>();
@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
         string arg = argv[i];
         if (arg == "--loopback") {
             useLoopback = true;
-            DOIP_LOG_INFO("Loopback mode enabled");
+            LOG_DOIP_INFO("Loopback mode enabled");
         } else if (arg == "--help") {
             printUsage(argv[0]);
             return 0;
@@ -98,7 +98,7 @@ int main(int argc, char *argv[]) {
 
     // Configure logging
     doip::Logger::setLevel(spdlog::level::debug);
-    DOIP_LOG_INFO("Starting DoIP Server Example");
+    LOG_DOIP_INFO("Starting DoIP Server Example");
 
     ConfigureDoipServer();
 
@@ -108,25 +108,25 @@ int main(int argc, char *argv[]) {
     }
 
     if (!server.setupUdpSocket()) {
-        DOIP_LOG_CRITICAL("Failed to set up UDP socket");
+        LOG_DOIP_CRITICAL("Failed to set up UDP socket");
         return 1;
     }
 
     if (!server.setupTcpSocket()) {
-        DOIP_LOG_CRITICAL("Failed to set up TCP socket");
+        LOG_DOIP_CRITICAL("Failed to set up TCP socket");
         return 1;
     }
 
     serverActive = true;
-    DOIP_LOG_INFO("Starting UDP and TCP listener threads");
+    LOG_DOIP_INFO("Starting UDP and TCP listener threads");
     doipReceiver.push_back(thread(&listenUdp));
     doipReceiver.push_back(thread(&listenTcp));
 
     server.sendVehicleAnnouncement();
-    DOIP_LOG_INFO("Vehicle announcement sent");
+    LOG_DOIP_INFO("Vehicle announcement sent");
 
     doipReceiver.at(0).join();
     doipReceiver.at(1).join();
-    DOIP_LOG_INFO("DoIP Server Example terminated");
+    LOG_DOIP_INFO("DoIP Server Example terminated");
     return 0;
 }

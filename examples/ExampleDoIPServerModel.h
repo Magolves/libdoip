@@ -23,7 +23,7 @@ class ExampleDoIPServerModel : public DoIPServerModel {
         onCloseConnection = [this](IConnectionContext &ctx, DoIPCloseReason reason) noexcept {
             (void)ctx;
             stopWorker();
-            DOIP_LOG_WARN("Connection closed ({})", fmt::streamed(reason));
+            LOG_DOIP_WARN("Connection closed ({})", fmt::streamed(reason));
         };
 
         onDiagnosticMessage = [this](IConnectionContext &ctx, const DoIPMessage &msg) noexcept -> DoIPDiagnosticAck {
