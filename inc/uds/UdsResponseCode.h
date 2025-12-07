@@ -3,6 +3,10 @@
 
 #include <stdint.h>
 
+#include "AnsiColors.h"
+#include <iostream>
+#include <iomanip>
+
 namespace doip::uds {
     enum class UdsResponseCode : uint8_t {
         OK = 0, // positive response
@@ -79,6 +83,159 @@ namespace doip::uds {
         VoltageTooLow = 0x93,
         ResourceTemporarilyNotAvailable = 0x94,
     };
+
+
+    inline std::ostream &operator<<(std::ostream &os, const UdsResponseCode &code) {
+        os << "UdsResponseCode(0x" << std::hex << std::uppercase << std::setw(2) << std::setfill('0')
+           << static_cast<unsigned int>(code) << std::dec << ")";
+
+        if (code == UdsResponseCode::OK) {
+            os << " " << ansi::green << "OK" << ansi::reset;
+        } else {
+           os << " " << ansi::red << "NRC" << ansi::reset;
+           switch(code) {
+               case UdsResponseCode::GeneralReject:
+                   os << " General Reject";
+                   break;
+               case UdsResponseCode::ServiceNotSupported:
+                   os << " Service Not Supported";
+                   break;
+               case UdsResponseCode::SubFunctionNotSupported:
+                   os << " SubFunction Not Supported";
+                   break;
+               case UdsResponseCode::IncorrectMessageLengthOrInvalidFormat:
+                   os << " Incorrect Message Length Or Invalid Format";
+                   break;
+               case UdsResponseCode::ResponseTooLong:
+                   os << " Response Too Long";
+                   break;
+               case UdsResponseCode::BusyRepeatRequest:
+                   os << " Busy Repeat Request";
+                   break;
+               case UdsResponseCode::ConditionsNotCorrect:
+                   os << " Conditions Not Correct";
+                   break;
+               case UdsResponseCode::RequestSequenceError:
+                   os << " Request Sequence Error";
+                   break;
+                case UdsResponseCode::NoResponseFromSubnetComponent:
+                   os << " No Response From Subnet Component";
+                   break;
+               case UdsResponseCode::FailurePreventsExecutionOfRequestedAction:
+                   os << " Failure Prevents Execution Of Requested Action";
+                   break;
+               case UdsResponseCode::RequestOutOfRange:
+                   os << " Request Out Of Range";
+                   break;
+               case UdsResponseCode::SecurityAccessDenied:
+                   os << " Security Access Denied";
+                   break;
+               case UdsResponseCode::AuthenticationRequired:
+                   os << " AuthenticationRequired";
+                   break;
+               case UdsResponseCode::InvalidKey:
+                   os << " InvalidKey";
+                   break;
+               case UdsResponseCode::ExceedNumberOfAttempts:
+                   os << " ExceedNumberOfAttempts";
+                   break;
+               case UdsResponseCode::RequiredTimeDelayNotExpired:
+                   os << " RequiredTimeDelayNotExpired";
+                   break;
+               case UdsResponseCode::SecureDataTransmissionRequired:
+                   os << " SecureDataTransmissionRequired";
+                   break;
+               case UdsResponseCode::SecureDataTransmissionNotAllowed:
+                   os << " SecureDataTransmissionNotAllowed";
+                   break;
+               case UdsResponseCode::SecureDataVerificationFailed:
+                   os << " SecureDataVerificationFailed";
+                   break;
+               case UdsResponseCode::UploadDownloadNotAccepted:
+                   os << " UploadDownloadNotAccepted";
+                   break;
+               case UdsResponseCode::TransferDataSuspended:
+                   os << " TransferDataSuspended";
+                   break;
+               case UdsResponseCode::GeneralProgrammingFailure:
+                   os << " GeneralProgrammingFailure";
+                   break;
+               case UdsResponseCode::WrongBlockSequenceCounter:
+                   os << " WrongBlockSequenceCounter";
+                   break;
+               case UdsResponseCode::RequestCorrectlyReceived_ResponsePending:
+                   os << " RequestCorrectlyReceived_ResponsePending";
+                   break;
+               case UdsResponseCode::SubFunctionNotSupportedInActiveSession:
+                   os << " SubFunctionNotSupportedInActiveSession";
+                   break;
+               case UdsResponseCode::ServiceNotSupportedInActiveSession:
+                   os << " ServiceNotSupportedInActiveSession";
+                   break;
+               case UdsResponseCode::RpmTooHigh:
+                   os << " RpmTooHigh";
+                   break;
+               case UdsResponseCode::RpmTooLow:
+                   os << " RpmTooLow";
+                   break;
+                case UdsResponseCode::EngineIsRunning:
+                   os << " EngineIsRunning";
+                   break;
+               case UdsResponseCode::EngineIsNotRunning:
+                   os << " EngineIsNotRunning";
+                   break;
+               case UdsResponseCode::EngineRunTimeTooLow:
+                   os << " EngineRunTimeTooLow";
+                   break;
+               case UdsResponseCode::TemperatureTooHigh:
+                   os << " TemperatureTooHigh";
+                   break;
+               case UdsResponseCode::TemperatureTooLow:
+                   os << " TemperatureTooLow";
+                   break;
+               case UdsResponseCode::VehicleSpeedTooHigh:
+                   os << " VehicleSpeedTooHigh";
+                   break;
+               case UdsResponseCode::VehicleSpeedTooLow:
+                   os << " VehicleSpeedTooLow";
+                   break;
+               case UdsResponseCode::ThrottlePedalTooHigh:
+                   os << " ThrottlePedalTooHigh";
+                   break;
+               case UdsResponseCode::ThrottlePedalTooLow:
+                   os << " ThrottlePedalTooLow";
+                   break;
+               case UdsResponseCode::TransmissionRangeNotInNeutral:
+                   os << " TransmissionRangeNotInNeutral";
+                   break;
+               case UdsResponseCode::TransmissionRangeNotInGear:
+                   os << " TransmissionRangeNotInGear";
+                   break;
+               case UdsResponseCode::BrakeSwitchNotClosed:
+                   os << " BrakeSwitchNotClosed";
+                   break;
+               case UdsResponseCode::ShifterLeverNotInPark:
+                   os << " ShifterLeverNotInPark";
+                   break;
+               case UdsResponseCode::TorqueConverterClutchLocked:
+                   os << " TorqueConverterClutchLocked";
+                   break;
+               case UdsResponseCode::VoltageTooHigh:
+                   os << " VoltageTooHigh";
+                   break;
+               case UdsResponseCode::VoltageTooLow:
+                   os << " VoltageTooLow";
+                   break;
+               case UdsResponseCode::ResourceTemporarilyNotAvailable:
+                   os << " ResourceTemporarilyNotAvailable";
+                   break;
+               default:
+                   os << " UnknownNRC";
+                   break;
+           }
+        }
+        return os;
+    }
 } // namespace doip::uds
 
 #endif /* UDSRESPONSE_H */

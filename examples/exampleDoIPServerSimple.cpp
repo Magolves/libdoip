@@ -11,7 +11,7 @@
 using namespace doip;
 using namespace std;
 
-static const DoIPAddress LOGICAL_ADDRESS(static_cast<uint8_t>(0x00), static_cast<uint8_t>(0x28));
+static const DoIPAddress LOGICAL_ADDRESS(0x0028);
 static std::atomic<bool> g_shutdownRequested{false};
 
 // Forward declarations

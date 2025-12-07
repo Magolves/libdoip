@@ -175,18 +175,7 @@ class IConnectionContext {
      *
      * @param response The diagnostic response from downstream
      */
-    virtual void receiveDownstreamResponse(const DoIPMessage &response) = 0;
-
-    /**
-     * @brief Notify application that downstream response was received
-     *
-     * Optional callback invoked after a downstream response is received
-     * and before it is sent to the client. Allows for logging or inspection.
-     *
-     * @param request The original request that was sent downstream
-     * @param response The response received from downstream
-     */
-    virtual void notifyDownstreamResponseReceived(const DoIPMessage &request, const DoIPMessage &response) = 0;
+    virtual void receiveDownstreamResponse(const ByteArray &response, DoIPDownstreamResult result) = 0;
 };
 
 } // namespace doip

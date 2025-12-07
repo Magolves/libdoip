@@ -83,6 +83,7 @@ set(SOURCES
     src/Logger.cpp
     src/MacAddress.cpp
     src/DoIPDefaultConnection.cpp
+    src/uds/UdsMock.cpp
 )
 
 
