@@ -1,0 +1,44 @@
+@startuml
+title DoIP ServerModel Overview
+
+actor Client
+participant "DoIPServer" as Server
+participant "DoIPConnection" as Connection
+participant "DoIPServerModel" as Model
+participant "UDS Backend / CAN" as Backend
+
+' Notes:
+' - Client sends Diagnostic Request (payload type 0x8001)
+' - Server sends immediate Diagnostic Ack (payload type 0x8002) after receiving the message
+' - If downstream forwarding occurs, the downstream response is sent as a Diagnostic Message (0x8001) back to the client
+
+Client -> Server: TCP connect
+Server -> Connection: createConnection(ctx)
+Connection -> Model: onOpenConnection(ctx)
+
+Client -> Server : Routing Activation Request (0x0004)
+Server -> Connection: Routing Activation Request (0x0004)
+Connection -> Model: onRoutingActivationRequest(ctx, msg, callback)
+Model -> Connection: invoke callback with Routing Activation Response
+Connection -> Client: Routing Activation Response (0x0005)
+
+' -- Incoming diagnostic message (payload type 0x8001)
+Client -> Connection: Diagnostic Message (0x8001)
+
+' -- Server sends immediate Diagnostic Ack (0x8002)
+Connection -> Client: Diagnostic Ack (0x8002)
+
+' -- If server forwards to downstream (only for 0x8001):
+alt downstream forwarding
+	Connection -> Model: onDownstreamRequest(ctx, msg, callback)
+	Model -> Backend: forward diagnostic payload (CAN)
+	Backend -> Model: downstream response (CAN)
+    Model -> Connection: invoke callback with downstream response
+	' The downstream response is sent back to the client as a Diagnostic Message (0x8001)
+	Connection -> Client: Diagnostic Message (0x8001) [downstream response]
+end
+
+' -- Final notification callback to application
+Connection -> Model: onDiagnosticNotification(ctx, ack)
+
+@enduml

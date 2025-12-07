@@ -187,11 +187,17 @@ jobs:
     - name: Install Doxygen
       run: |
         sudo apt-get update
-        sudo apt-get install -y doxygen graphviz
+        sudo apt-get install -y doxygen graphviz plantuml default-jre
 
     - name: Generate documentation
       run: |
         doxygen --version
+        # Render PlantUML diagrams to SVG before running Doxygen (so Doxygen can include pre-rendered images)
+        for p in doc/diagrams/*.puml; do
+          if [ -f "$p" ]; then
+            plantuml -tsvg -o doc/diagrams "${p}"
+          fi
+        done
         doxygen Doxyfile
       working-directory: ${{ github.workspace }}
     - name: List generated docs
