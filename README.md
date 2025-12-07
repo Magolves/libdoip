@@ -11,9 +11,6 @@ C/C++ library for Diagnostics over IP (DoIP) (fork from https://github.com/AVL-D
 
 **CAUTION** The current API is under construction any may change at any time.
 
-
-
-
 ## Dependencies
 
 `libdoip` uses `spdlog`. The lib is downloaded automatically. Or you may install it locally via
@@ -25,18 +22,20 @@ sudo apt install libspdlog-dev
 
 See [Logging](./doc/LOGGING.md) for details.
 
-### Building Documentation Locally
+### Getting started
 
-To generate the documentation locally:
+Quick start — read the generated tutorial for the example server:
+
+- Online (published): https://magolves.github.io/libdoip/index.html
+- Local example page: see `doc/ExampleDoIPServer.md` (included in the Doxygen HTML under "Example DoIP Server Tutorial").
+- Example tutorial (direct): https://magolves.github.io/libdoip/ExampleDoIPServer.html
+
+If you want to generate the docs locally, install Doxygen and Graphviz and
+run:
 
 ```bash
-# Install Doxygen and Graphviz
 sudo apt install doxygen graphviz
-
-# Generate documentation
 doxygen Doxyfile
-
-# Open the documentation
 xdg-open docs/html/index.html
 ```
 
@@ -76,7 +75,22 @@ sudo apt install doctest
 sudo tcpdump -i any udp port 13400 -X
 ```
 
+## Examples
+
+The project includes a small example DoIP server demonstrating how to
+use the `DoIPServer` and `DoIPServerModel` APIs and how to register UDS
+handlers.
+
+- Example source files: `examples/exampleDoIPServer.cpp`,
+  `examples/ExampleDoIPServerModel.h`
+- Example tutorial (published): https://magolves.github.io/libdoip/ExampleDoIPServer.html
+
+See the "Examples" section in the generated Doxygen main page for
+additional annotated links to these files.
+
+
 ## References
+
 - [ISO 13400-2:2019(en) Road vehicles — Diagnostic communication over Internet Protocol (DoIP) — Part 2: Transport protocol and network layer services](<https://www.iso.org/obp/ui/#iso:std:iso:13400:-2:ed-2:v1:en>)
 - [Specification of Diagnostic over IP](<https://www.autosar.org/fileadmin/standards/R20-11/CP/AUTOSAR_SWS_DiagnosticOverIP.pdf>)
 - [Diagnostics over Internet Protocol (DoIP)](<https://cdn.vector.com/cms/content/know-how/_application-notes/AN-IND-1-026_DoIP_in_CANoe.pdf>)

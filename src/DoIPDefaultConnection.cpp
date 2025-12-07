@@ -29,7 +29,7 @@ DoIPDefaultConnection::DoIPDefaultConnection(UniqueServerModelPtr model)
               DoIPServerState::Finalize,
               [this](std::optional<DoIPMessage> msg) { this->handleWaitAliveCheckResponse(DoIPServerEvent{}, msg); },
               ConnectionTimers::AliveCheck,
-              [this]() { ++m_aliveCheckRetry; DOIP_LOG_WARN("Alive check #{}/{}", m_aliveCheckRetry, m_aliveCheckRetryCount); }),
+              [this]() { ++m_aliveCheckRetry; LOG_DOIP_WARN("Alive check #{}/{}", m_aliveCheckRetry, m_aliveCheckRetryCount); }),
           StateDescriptor(
               DoIPServerState::WaitDownstreamResponse,
               DoIPServerState::Finalize,
@@ -50,33 +50,33 @@ DoIPDefaultConnection::DoIPDefaultConnection(UniqueServerModelPtr model)
     m_serverModel->onOpenConnection(*this);
     m_state = &STATE_DESCRIPTORS[0];
 
-    DOIP_LOG_INFO("Default connection created, transitioning to SocketInitialized state...");
+    LOG_DOIP_INFO("Default connection created, transitioning to SocketInitialized state...");
     transitionTo(DoIPServerState::WaitRoutingActivation);
 }
 
 ssize_t DoIPDefaultConnection::sendProtocolMessage(const DoIPMessage &msg) {
-    DOIP_LOG_INFO("Default connection: Sending protocol message: {}", fmt::streamed(msg));
+    LOG_DOIP_INFO("Default connection: Sending protocol message: {}", fmt::streamed(msg));
     return static_cast<ssize_t>(msg.size()); // Simulate sending by returning the message size
 }
 
 void DoIPDefaultConnection::closeConnection(DoIPCloseReason reason) {
     try {
-        DOIP_LOG_INFO("Default connection: Closing connection, reason: {}", fmt::streamed(reason));
+        LOG_DOIP_INFO("Default connection: Closing connection, reason: {}", fmt::streamed(reason));
         transitionTo(DoIPServerState::Closed);
         m_closeReason = reason;
         m_timerManager.stopAll();
         notifyConnectionClosed(reason);
     } catch (const std::exception &e) {
-        DOIP_LOG_ERROR("Error notifying connection closed: {}", e.what());
+        LOG_DOIP_ERROR("Error notifying connection closed: {}", e.what());
 
         void *callstack[128];
         int frames = backtrace(callstack, 128);
         char **strs = backtrace_symbols(callstack, frames);
 
-        DOIP_LOG_ERROR("Exception during closeConnection: {}", e.what());
-        DOIP_LOG_ERROR("Stack trace:");
+        LOG_DOIP_ERROR("Exception during closeConnection: {}", e.what());
+        LOG_DOIP_ERROR("Stack trace:");
         for (int i = 0; i < frames; ++i) {
-            DOIP_LOG_ERROR("{}", strs[i]);
+            LOG_DOIP_ERROR("{}", strs[i]);
         }
         free(strs);
     }
@@ -111,15 +111,15 @@ void DoIPDefaultConnection::transitionTo(DoIPServerState newState) {
             return desc.state == newState;
         });
     if (it != STATE_DESCRIPTORS.end()) {
-        DOIP_LOG_INFO("-> Transitioning from state {} to state {}", fmt::streamed(m_state->state), fmt::streamed(newState));
+        LOG_DOIP_INFO("-> Transitioning from state {} to state {}", fmt::streamed(m_state->state), fmt::streamed(newState));
         m_state = &(*it);
         startStateTimer(m_state);
         if (m_state->enterStateHandler) {
-            DOIP_LOG_INFO("Calling enterState handler");
+            LOG_DOIP_INFO("Calling enterState handler");
             m_state->enterStateHandler();
         }
     } else {
-        DOIP_LOG_ERROR("Invalid state transition to {}", fmt::streamed(newState));
+        LOG_DOIP_ERROR("Invalid state transition to {}", fmt::streamed(newState));
     }
 }
 
@@ -152,12 +152,12 @@ void DoIPDefaultConnection::startStateTimer(StateDescriptor const *stateDesc) {
     std::chrono::milliseconds duration = getTimerDuration(m_state);
 
     if (duration.count() == 0) {
-        DOIP_LOG_DEBUG("User-defined timer duration is zero, transitioning immediately to state {}", fmt::streamed(stateDesc->stateAfterTimeout));
+        LOG_DOIP_DEBUG("User-defined timer duration is zero, transitioning immediately to state {}", fmt::streamed(stateDesc->stateAfterTimeout));
         transitionTo(stateDesc->stateAfterTimeout);
         return;
     }
 
-    DOIP_LOG_DEBUG("Starting timer for state {}: Timer ID {}, duration {}ms", fmt::streamed(stateDesc->state), fmt::streamed(stateDesc->timer), duration.count());
+    LOG_DOIP_DEBUG("Starting timer for state {}: Timer ID {}, duration {}ms", fmt::streamed(stateDesc->state), fmt::streamed(stateDesc->timer), duration.count());
 
     std::function<void(ConnectionTimers)> timeoutHandler = [this](ConnectionTimers timerId) { handleTimeout(timerId); };
     if (stateDesc->timeoutHandler != nullptr) {
@@ -168,16 +168,16 @@ void DoIPDefaultConnection::startStateTimer(StateDescriptor const *stateDesc) {
         m_state->timer, duration, timeoutHandler, false);
 
     if (id.has_value()) {
-        DOIP_LOG_DEBUG("Started timer {} for {}ms", fmt::streamed(m_state->timer), duration.count());
+        LOG_DOIP_DEBUG("Started timer {} for {}ms", fmt::streamed(m_state->timer), duration.count());
     } else {
-        DOIP_LOG_ERROR("Failed to start timer {}", fmt::streamed(m_state->timer));
+        LOG_DOIP_ERROR("Failed to start timer {}", fmt::streamed(m_state->timer));
     }
 }
 
 void DoIPDefaultConnection::restartStateTimer() {
     assert(m_state != nullptr);
     if (!m_timerManager.restartTimer(m_state->timer)) {
-        DOIP_LOG_ERROR("Failed to restart timer {}", fmt::streamed(m_state->timer));
+        LOG_DOIP_ERROR("Failed to restart timer {}", fmt::streamed(m_state->timer));
     }
 }
 
@@ -203,7 +203,7 @@ void DoIPDefaultConnection::handleWaitRoutingActivation(DoIPServerEvent event, O
     bool rightPayloadType = (msg->getPayloadType() == DoIPPayloadType::RoutingActivationRequest);
 
     if (!hasAddress || !rightPayloadType) {
-        DOIP_LOG_WARN("Invalid Routing Activation Request message");
+        LOG_DOIP_WARN("Invalid Routing Activation Request message");
         closeConnection(DoIPCloseReason::InvalidMessage);
         return;
     }
@@ -233,7 +233,7 @@ void DoIPDefaultConnection::handleRoutingActivated(DoIPServerEvent event, OptDoI
         restartStateTimer();
         return;
     default:
-        DOIP_LOG_WARN("Received unsupported message type {} in Routing Activated state", fmt::streamed(message.getPayloadType()));
+        LOG_DOIP_WARN("Received unsupported message type {} in Routing Activated state", fmt::streamed(message.getPayloadType()));
         sendDiagnosticMessageResponse(DoIPAddress::ZeroAddress, DoIPNegativeDiagnosticAck::TransportProtocolError);
         // closeConnection(DoIPCloseReason::InvalidMessage);
         return;
@@ -244,7 +244,7 @@ void DoIPDefaultConnection::handleRoutingActivated(DoIPServerEvent event, OptDoI
         return;
     }
     if (sourceAddress.value() != getClientAddress()) {
-        DOIP_LOG_WARN("Received diagnostic message from unexpected source address {}", fmt::streamed(sourceAddress.value()));
+        LOG_DOIP_WARN("Received diagnostic message from unexpected source address {}", fmt::streamed(sourceAddress.value()));
         sendDiagnosticMessageResponse(sourceAddress.value(), DoIPNegativeDiagnosticAck::InvalidSourceAddress);
         // closeConnection(DoIPCloseReason::InvalidMessage);
         return;
@@ -264,7 +264,7 @@ void DoIPDefaultConnection::handleRoutingActivated(DoIPServerEvent event, OptDoI
 
     if (hasDownstreamHandler()) {
         auto result = notifyDownstreamRequest(message);
-        DOIP_LOG_DEBUG("Downstream req -> {}", fmt::streamed(result));
+        LOG_DOIP_DEBUG("Downstream req -> {}", fmt::streamed(result));
         if (result == DoIPDownstreamResult::Pending) {
             // wait for downstream response
             transitionTo(DoIPServerState::WaitDownstreamResponse);
@@ -299,7 +299,7 @@ void DoIPDefaultConnection::handleWaitAliveCheckResponse(DoIPServerEvent event, 
         transitionTo(DoIPServerState::RoutingActivated);
         return;
     default:
-        DOIP_LOG_WARN("Received unsupported message type {} in Wait Alive Check Response state", fmt::streamed(message.getPayloadType()));
+        LOG_DOIP_WARN("Received unsupported message type {} in Wait Alive Check Response state", fmt::streamed(message.getPayloadType()));
         sendDiagnosticMessageResponse(DoIPAddress::ZeroAddress, DoIPNegativeDiagnosticAck::TransportProtocolError);
         return;
     }
@@ -310,7 +310,7 @@ void DoIPDefaultConnection::handleWaitDownstreamResponse(DoIPServerEvent event, 
     (void)msg;   // Unused parameter
 
     // Implementation of handling wait downstream response would go here
-    DOIP_LOG_CRITICAL("handleWaitDownstreamResponse NOT IMPL");
+    LOG_DOIP_CRITICAL("handleWaitDownstreamResponse NOT IMPL");
 
 }
 
@@ -323,7 +323,7 @@ void DoIPDefaultConnection::handleFinalize(DoIPServerEvent event, OptDoIPMessage
 }
 
 void DoIPDefaultConnection::handleTimeout(ConnectionTimers timer_id) {
-    DOIP_LOG_WARN("Timeout '{}'", fmt::streamed(timer_id));
+    LOG_DOIP_WARN("Timeout '{}'", fmt::streamed(timer_id));
 
     switch (timer_id) {
     case ConnectionTimers::InitialInactivity:
@@ -341,14 +341,14 @@ void DoIPDefaultConnection::handleTimeout(ConnectionTimers timer_id) {
         }
         break;
     case ConnectionTimers::DownstreamResponse:
-        DOIP_LOG_WARN("Downstream response timeout occurred");
+        LOG_DOIP_WARN("Downstream response timeout occurred");
         transitionTo(DoIPServerState::RoutingActivated);
         break;
     case ConnectionTimers::UserDefined:
-        DOIP_LOG_WARN("User-defined timer -> must be handled separately");
+        LOG_DOIP_WARN("User-defined timer -> must be handled separately");
         break;
     default:
-        DOIP_LOG_ERROR("Unhandled timeout for timer id {}", fmt::streamed(timer_id));
+        LOG_DOIP_ERROR("Unhandled timeout for timer id {}", fmt::streamed(timer_id));
         break;
     }
 }
@@ -443,7 +443,7 @@ DoIPDownstreamResult DoIPDefaultConnection::notifyDownstreamRequest(const DoIPMe
 void DoIPDefaultConnection::receiveDownstreamResponse(const ByteArray &response, DoIPDownstreamResult result) {
     DoIPAddress sa = getServerAddress();
     DoIPAddress ta = getClientAddress();
-    DOIP_LOG_INFO("Downstream rsp: {} ({})", fmt::streamed(response), fmt::streamed(result));
+    LOG_DOIP_INFO("Downstream rsp: {} ({})", fmt::streamed(response), fmt::streamed(result));
     if (result == DoIPDownstreamResult::Handled) {
         sendProtocolMessage(message::makeDiagnosticMessage(sa, ta, response));
     } else {

@@ -121,58 +121,58 @@ class Logger {
 } // namespace doip
 
 // Logging macros
-#define DOIP_LOG_TRACE(...) doip::Logger::get()->trace(__VA_ARGS__)
-#define DOIP_LOG_DEBUG(...) doip::Logger::get()->debug(__VA_ARGS__)
-#define DOIP_LOG_INFO(...) doip::Logger::get()->info(__VA_ARGS__)
-#define DOIP_LOG_WARN(...) doip::Logger::get()->warn(__VA_ARGS__)
-#define DOIP_LOG_ERROR(...) doip::Logger::get()->error(__VA_ARGS__)
-#define DOIP_LOG_CRITICAL(...) doip::Logger::get()->critical(__VA_ARGS__)
+#define LOG_DOIP_TRACE(...) doip::Logger::get()->trace(__VA_ARGS__)
+#define LOG_DOIP_DEBUG(...) doip::Logger::get()->debug(__VA_ARGS__)
+#define LOG_DOIP_INFO(...) doip::Logger::get()->info(__VA_ARGS__)
+#define LOG_DOIP_WARN(...) doip::Logger::get()->warn(__VA_ARGS__)
+#define LOG_DOIP_ERROR(...) doip::Logger::get()->error(__VA_ARGS__)
+#define LOG_DOIP_CRITICAL(...) doip::Logger::get()->critical(__VA_ARGS__)
 
 // Logging macros for UDP socket
-#define UDP_LOG_TRACE(...) doip::Logger::getUdp()->trace(__VA_ARGS__)
-#define UDP_LOG_DEBUG(...) doip::Logger::getUdp()->debug(__VA_ARGS__)
-#define UDP_LOG_INFO(...) doip::Logger::getUdp()->info(__VA_ARGS__)
-#define UDP_LOG_WARN(...) doip::Logger::getUdp()->warn(__VA_ARGS__)
-#define UDP_LOG_ERROR(...) doip::Logger::getUdp()->error(__VA_ARGS__)
-#define UDP_LOG_CRITICAL(...) doip::Logger::getUdp()->critical(__VA_ARGS__)
+#define LOG_UDP_TRACE(...) doip::Logger::getUdp()->trace(__VA_ARGS__)
+#define LOG_UDP_DEBUG(...) doip::Logger::getUdp()->debug(__VA_ARGS__)
+#define LOG_UDP_INFO(...) doip::Logger::getUdp()->info(__VA_ARGS__)
+#define LOG_UDP_WARN(...) doip::Logger::getUdp()->warn(__VA_ARGS__)
+#define LOG_UDP_ERROR(...) doip::Logger::getUdp()->error(__VA_ARGS__)
+#define LOG_UDP_CRITICAL(...) doip::Logger::getUdp()->critical(__VA_ARGS__)
 
 // Logging macros for TCP socket
-#define TCP_LOG_TRACE(...) doip::Logger::getTcp()->trace(__VA_ARGS__)
-#define TCP_LOG_DEBUG(...) doip::Logger::getTcp()->debug(__VA_ARGS__)
-#define TCP_LOG_INFO(...) doip::Logger::getTcp()->info(__VA_ARGS__)
-#define TCP_LOG_WARN(...) doip::Logger::getTcp()->warn(__VA_ARGS__)
-#define TCP_LOG_ERROR(...) doip::Logger::getTcp()->error(__VA_ARGS__)
-#define TCP_LOG_CRITICAL(...) doip::Logger::getTcp()->critical(__VA_ARGS__)
+#define LOG_TCP_TRACE(...) doip::Logger::getTcp()->trace(__VA_ARGS__)
+#define LOG_TCP_DEBUG(...) doip::Logger::getTcp()->debug(__VA_ARGS__)
+#define LOG_TCP_INFO(...) doip::Logger::getTcp()->info(__VA_ARGS__)
+#define LOG_TCP_WARN(...) doip::Logger::getTcp()->warn(__VA_ARGS__)
+#define LOG_TCP_ERROR(...) doip::Logger::getTcp()->error(__VA_ARGS__)
+#define LOG_TCP_CRITICAL(...) doip::Logger::getTcp()->critical(__VA_ARGS__)
 
 // Colored logging macros
-#define DOIP_LOG_SUCCESS(...) \
+#define LOG_DOIP_SUCCESS(...) \
     doip::Logger::get()->info(std::string(doip::ansi::bold_green) + fmt::format(__VA_ARGS__) + doip::ansi::reset)
 
-#define DOIP_LOG_ERROR_COLORED(...) \
+#define LOG_DOIP_ERROR_COLORED(...) \
     doip::Logger::get()->error(std::string(doip::ansi::bold_red) + fmt::format(__VA_ARGS__) + doip::ansi::reset)
 
-#define DOIP_LOG_PROTOCOL(...) \
+#define LOG_DOIP_PROTOCOL(...) \
     doip::Logger::get()->info(std::string(doip::ansi::bold_blue) + fmt::format(__VA_ARGS__) + doip::ansi::reset)
 
-#define DOIP_LOG_CONNECTION(...) \
+#define LOG_DOIP_CONNECTION(...) \
     doip::Logger::get()->info(std::string(doip::ansi::bold_magenta) + fmt::format(__VA_ARGS__) + doip::ansi::reset)
 
-#define DOIP_LOG_HIGHLIGHT(...) \
+#define LOG_DOIP_HIGHLIGHT(...) \
     doip::Logger::get()->info(std::string(doip::ansi::bold_cyan) + fmt::format(__VA_ARGS__) + doip::ansi::reset)
 
 // Convenience macros for types with stream operators (using fmt::streamed)
 // These automatically wrap arguments with fmt::streamed() for seamless logging of DoIP types
-#define DOIP_LOG_STREAM_INFO(obj, ...) DOIP_LOG_INFO(fmt::format("{} " __VA_ARGS__, fmt::streamed(obj)))
-#define DOIP_LOG_STREAM_DEBUG(obj, ...) DOIP_LOG_DEBUG(fmt::format("{} " __VA_ARGS__, fmt::streamed(obj)))
-#define DOIP_LOG_STREAM_WARN(obj, ...) DOIP_LOG_WARN(fmt::format("{} " __VA_ARGS__, fmt::streamed(obj)))
-#define DOIP_LOG_STREAM_ERROR(obj, ...) DOIP_LOG_ERROR(fmt::format("{} " __VA_ARGS__, fmt::streamed(obj)))
+#define LOG_DOIP_STREAM_INFO(obj, ...) LOG_DOIP_INFO(fmt::format("{} " __VA_ARGS__, fmt::streamed(obj)))
+#define LOG_DOIP_STREAM_DEBUG(obj, ...) LOG_DOIP_DEBUG(fmt::format("{} " __VA_ARGS__, fmt::streamed(obj)))
+#define LOG_DOIP_STREAM_WARN(obj, ...) LOG_DOIP_WARN(fmt::format("{} " __VA_ARGS__, fmt::streamed(obj)))
+#define LOG_DOIP_STREAM_ERROR(obj, ...) LOG_DOIP_ERROR(fmt::format("{} " __VA_ARGS__, fmt::streamed(obj)))
 
 // Colored stream logging macros for DoIP types
-#define DOIP_LOG_STREAM_SUCCESS(obj, ...) \
+#define LOG_DOIP_STREAM_SUCCESS(obj, ...) \
     doip::Logger::get()->info(std::string(doip::ansi::bold_green) + fmt::format("{} " __VA_ARGS__, fmt::streamed(obj)) + doip::ansi::reset)
 
-#define DOIP_LOG_STREAM_PROTOCOL(obj, ...) \
+#define LOG_DOIP_STREAM_PROTOCOL(obj, ...) \
     doip::Logger::get()->info(std::string(doip::ansi::bold_blue) + fmt::format("{} " __VA_ARGS__, fmt::streamed(obj)) + doip::ansi::reset)
 
-#define DOIP_LOG_STREAM_CONNECTION(obj, ...) \
+#define LOG_DOIP_STREAM_CONNECTION(obj, ...) \
     doip::Logger::get()->info(std::string(doip::ansi::bold_magenta) + fmt::format("{} " __VA_ARGS__, fmt::streamed(obj)) + doip::ansi::reset)
