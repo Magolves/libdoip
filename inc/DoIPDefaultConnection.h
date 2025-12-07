@@ -248,15 +248,9 @@ class DoIPDefaultConnection : public IConnectionContext {
     /**
      * @brief Receives a downstream response
      * @param response The downstream response message
+     * @param result the downstream result
      */
-    void receiveDownstreamResponse(const DoIPMessage &response) override;
-
-    /**
-     * @brief Notifies application that a downstream response was received
-     * @param request The original request
-     * @param response The response message
-     */
-    void notifyDownstreamResponseReceived(const DoIPMessage &request, const DoIPMessage &response) override;
+    void receiveDownstreamResponse(const ByteArray &response, DoIPDownstreamResult result) override;
 
     /**
      * @brief Gets the current state of the connection
@@ -327,6 +321,7 @@ class DoIPDefaultConnection : public IConnectionContext {
     ssize_t sendRoutingActivationResponse(const DoIPAddress &source_address, DoIPRoutingActivationResult response_code);
     ssize_t sendAliveCheckRequest();
     ssize_t sendDiagnosticMessageResponse(const DoIPAddress &sourceAddress, DoIPDiagnosticAck ack);
+    ssize_t sendDownstreamResponse(const DoIPAddress &sourceAddress, const ByteArray& payload);
 };
 
 } // namespace doip

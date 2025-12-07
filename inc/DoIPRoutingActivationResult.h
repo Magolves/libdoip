@@ -45,6 +45,35 @@ inline bool closeSocketOnRoutingActivationResult(DoIPRoutingActivationResult res
     }
 }
 
+inline std::ostream& operator<<(std::ostream& os, DoIPRoutingActivationResult result) {
+    switch (result) {
+        case DoIPRoutingActivationResult::UnknownSourceAddress:
+            return os << "UnknownSourceAddress";
+        case DoIPRoutingActivationResult::NoMoreRoutingSlotsAvailable:
+            return os << "NoMoreRoutingSlotsAvailable";
+        case DoIPRoutingActivationResult::InvalidAddressOrRoutingType:
+            return os << "InvalidAddressOrRoutingType";
+        case DoIPRoutingActivationResult::SourceAddressAlreadyRegistered:
+            return os << "SourceAddressAlreadyRegistered";
+        case DoIPRoutingActivationResult::Unauthorized:
+            return os << "Unauthorized";
+        case DoIPRoutingActivationResult::MissingConfirmation:
+            return os << "MissingConfirmation";
+        case DoIPRoutingActivationResult::InvalidRoutingType:
+            return os << "InvalidRoutingType";
+        case DoIPRoutingActivationResult::SecuredConnectionRequired:
+            return os << "SecuredConnectionRequired";
+        case DoIPRoutingActivationResult::VehicleNotReadyForRouting:
+            return os << "VehicleNotReadyForRouting";
+        case DoIPRoutingActivationResult::RouteActivated:
+            return os << "RouteActivated";
+        case DoIPRoutingActivationResult::RouteActivatedConfirmationRequired:
+            return os << "RouteActivatedConfirmationRequired";
+        default:
+            return os << "Unknown(" << static_cast<int>(result) << ")";
+    }
+}
+
 } // namespace doip
 
 #endif /* DOIPROUTINGACTIVATIONRESULT_H */

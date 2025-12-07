@@ -59,7 +59,7 @@ class DoIPClient {
     int _sockFd{-1}, _sockFd_udp{-1}, _sockFd_announcement{-1}, _connected{-1};
     int m_broadcast = 1;
     struct sockaddr_in _serverAddr, _clientAddr, _announcementAddr;
-    DoIPAddress m_sourceAddress = DoIPAddress(0xE0, 0x00); // HACK
+    DoIPAddress m_sourceAddress = DoIPAddress(0xE000);
 
     uint8_t VINResult[17] = {0};
     DoIPAddress m_logicalAddress = DoIPAddress::ZeroAddress;

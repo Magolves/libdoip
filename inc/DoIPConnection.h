@@ -99,39 +99,6 @@ class DoIPConnection : public DoIPDefaultConnection {
      */
     bool hasDownstreamHandler() const override;
 
-    /**
-     * @brief Forward a diagnostic message to downstream
-     *
-     * Delegates to DoIPServerModel::onDownstreamRequest callback.
-     * The callback is responsible for sending the message via
-     * the appropriate transport (CAN, LIN, etc.).
-     *
-     * @param msg The diagnostic message to forward
-     * @return Result indicating if the request was initiated successfully
-     */
-    DoIPDownstreamResult notifyDownstreamRequest(const DoIPMessage &msg) override;
-
-    /**
-     * @brief Receive a response from downstream device
-     *
-     * Called by the application when a response arrives from downstream.
-     * This injects the response into the state machine via
-     * processEvent(DiagnosticMessageReceivedDownstream, response).
-     *
-     * @param response The diagnostic response from downstream
-     */
-    void receiveDownstreamResponse(const DoIPMessage &response) override;
-
-    /**
-     * @brief Notify application that downstream response was received
-     *
-     * Delegates to DoIPServerModel::onDownstreamResponse callback if set.
-     *
-     * @param request The original request that was sent downstream
-     * @param response The response received from downstream
-     */
-    void notifyDownstreamResponseReceived(const DoIPMessage &request, const DoIPMessage &response) override;
-
   private:
     DoIPAddress m_gatewayAddress;
 

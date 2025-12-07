@@ -23,7 +23,7 @@ TEST_SUITE("DoIPDefaultConnection") {
     struct DoIPDefaultConnectionTestFixture {
         std::unique_ptr<DoIPDefaultConnection> connection;
 
-        DoIPAddress sa = DoIPAddress(0x0E, 0x00);
+        DoIPAddress sa = DoIPAddress(0x0E00);
 
         DoIPDefaultConnectionTestFixture()
             : connection(std::make_unique<DoIPDefaultConnection>(std::make_unique<DefaultDoIPServerModel>())) {}
@@ -31,12 +31,13 @@ TEST_SUITE("DoIPDefaultConnection") {
 
     TEST_CASE_FIXTURE(DoIPDefaultConnectionTestFixture, "DoIPDefaultConnection: Get Server Address") {
         DoIPAddress serverAddress = connection->getServerAddress();
+        INFO("Server Address: " << serverAddress);
         CHECK(serverAddress.hsb() == 0x0E);
         CHECK(serverAddress.lsb() == 0x00);
     }
 
     TEST_CASE_FIXTURE(DoIPDefaultConnectionTestFixture, "DoIPDefaultConnection: Send Protocol Message") {
-        DoIPMessage message = message::makeDiagnosticMessage(DoIPAddress(0xCA, 0xFE), DoIPAddress(0xBA, 0xBE), {0xDE, 0xAD, 0xBE, 0xEF});
+        DoIPMessage message = message::makeDiagnosticMessage(DoIPAddress(0xCAFE), DoIPAddress(0xBABE), {0xDE, 0xAD, 0xBE, 0xEF});
         CHECK(connection->sendProtocolMessage(message) == 16);
     }
 
@@ -99,7 +100,7 @@ TEST_SUITE("DoIPDefaultConnection") {
         CHECK(connection->getState() == DoIPServerState::WaitRoutingActivation);
         CHECK(connection->getCloseReason() == DoIPCloseReason::None);
 
-        connection->handleMessage2(message::makeRoutingActivationRequest(DoIPAddress(0x0E, 0x00)));
+        connection->handleMessage2(message::makeRoutingActivationRequest(DoIPAddress(0xE000)));
         CHECK(connection->getState() == DoIPServerState::RoutingActivated);
 
         WAIT_FOR_STATE(connection, DoIPServerState::WaitAliveCheckResponse, 100000);

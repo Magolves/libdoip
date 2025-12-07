@@ -107,7 +107,7 @@ struct ByteArray : std::vector<uint8_t> {
      *
      * @param value The 16-bit value to append
      */
-    void writeU16(uint16_t value) {
+    void writeU16BE(uint16_t value) {
         emplace_back(static_cast<uint8_t>((value >> 8) & 0xFF));
         emplace_back(static_cast<uint8_t>(value & 0xFF));
     }
@@ -140,7 +140,7 @@ struct ByteArray : std::vector<uint8_t> {
      *
      * @param value The 32-bit value to append
      */
-    void writeU32(uint32_t value) {
+    void writeU32BE(uint32_t value) {
         emplace_back(static_cast<uint8_t>((value >> 24) & 0xFF));
         emplace_back(static_cast<uint8_t>((value >> 16) & 0xFF));
         emplace_back(static_cast<uint8_t>((value >> 8) & 0xFF));
@@ -171,9 +171,9 @@ struct ByteArray : std::vector<uint8_t> {
         if constexpr (sizeof(UnderlyingType) == 1) {
             emplace_back(static_cast<uint8_t>(integral_value));
         } else if constexpr (sizeof(UnderlyingType) == 2) {
-            writeU16(static_cast<uint16_t>(integral_value));
+            writeU16BE(static_cast<uint16_t>(integral_value));
         } else if constexpr (sizeof(UnderlyingType) == 4) {
-            writeU32(static_cast<uint32_t>(integral_value));
+            writeU32BE(static_cast<uint32_t>(integral_value));
         } else {
             static_assert(sizeof(UnderlyingType) <= 4, "Enum underlying type too large (max 32-bit supported)");
         }

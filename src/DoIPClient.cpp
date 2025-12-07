@@ -107,17 +107,20 @@ void DoIPClient::reconnectServer() {
 
 ssize_t DoIPClient::sendRoutingActivationRequest() {
     DoIPMessage routingActReq = message::makeRoutingActivationRequest(m_sourceAddress);
+    DOIP_LOG_INFO("TX: {}", fmt::streamed(routingActReq));
     return write(_sockFd, routingActReq.data(), routingActReq.size());
 }
 
 ssize_t DoIPClient::sendDiagnosticMessage(const ByteArray &payload) {
     DoIPMessage msg = message::makeDiagnosticMessage(m_sourceAddress, m_logicalAddress, payload);
+    DOIP_LOG_INFO("TX: {}", fmt::streamed(msg));
 
     return write(_sockFd, msg.data(), msg.size());
 }
 
 ssize_t DoIPClient::sendAliveCheckResponse() {
     DoIPMessage msg = message::makeAliveCheckResponse(m_sourceAddress);
+    DOIP_LOG_INFO("TX: {}", fmt::streamed(msg));
     return write(_sockFd, msg.data(), msg.size());
 }
 
