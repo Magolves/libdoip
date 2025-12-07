@@ -21,8 +21,6 @@ static void printUsage(const char *progName) {
 
 int main(int argc, char *argv[]) {
     std::cerr << "The client code does not work currently - use at your own risk!\n";
-    // remove this line for enabling the client anyway
-    return EXIT_FAILURE;
 
     string serverAddress = "224.0.0.2"; // Default multicast address
 
