@@ -59,32 +59,7 @@ int main(int argc, char *argv[]) {
         client.receiveUdpMessage();
     }
 
-    client.closeUdpConnection();
-
     // Now start TCP connection for diagnostic communication
-    LOG_DOIP_INFO("Starting TCP connection for diagnostic messages");
-    client.startTcpConnection();
-
-    if (client.sendRoutingActivationRequest() < 0) {
-        std::cerr << "sendRoutingActivationRequest Failed";
-
-        exit(EXIT_FAILURE);
-    }
-
-    // NEEDS REWORK! State handling required!
-    client.receiveMessage();
-
-    client.sendDiagnosticMessage({0x22, 0xF1, 0x90}); // Example: Read Data by Identifier (0xF190 = VIN)
-    client.receiveMessage(); // ack
-    std::this_thread::sleep_for(2s);
-    client.sendDiagnosticMessage({0x22, 0xF2, 0x90}); // Example: Read Data by Identifier (0xF190 = VIN)
-    client.receiveMessage();
-    std::this_thread::sleep_for(2s);
-    client.sendDiagnosticMessage({0x22, 0xF1, 0x90}); // Example: Read Data by Identifier (0xF190 = VIN)
-    client.receiveMessage(); // ack
-
-    std::this_thread::sleep_for(2s);
-
-    client.closeTcpConnection();
-    //client.closeUdpConnection();
+    LOG_DOIP_INFO("Discovery complete, closing UDP connections");
+    client.closeUdpConnection();
 }

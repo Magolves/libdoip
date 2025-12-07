@@ -18,15 +18,100 @@ const char *DEFAULT_IFACE = "en0";
 #pragma error "Unsupported platform"
 #endif
 
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 DoIPServer::~DoIPServer() {
     if (m_running.load()) {
         stop();
     }
 }
 
+DoIPServer::DoIPServer()
+    : DoIPServer(ServerConfig()) {}
+
+DoIPServer::DoIPServer(const ServerConfig &config)
+    : m_config(config) {
+    m_receiveBuf.reserve(MAX_ISOTP_MTU);
+
+    // Apply VIN/EID/GID from config (types enforce size/padding)
+    m_VIN = m_config.vin;
+    m_EID = m_config.eid;
+    m_GID = m_config.gid;
+
+    // Set logical gateway address from config
+    m_gatewayAddress.update(m_config.logicalAddress);
+
+    // Apply EID/GID if provided (interpreted as numeric where possible)
+    // (old parsing logic removed - ServerConfig uses typed identifiers)
+    if (!m_config.loopback) {
+        setAnnouncementMode(false);
+    } else {
+        setAnnouncementMode(true);
+    }
+
+    if (m_config.daemonize) {
+        daemonize();
+    }
+}
+
+void DoIPServer::daemonize() {
+    LOG_DOIP_INFO("Daemonizing DoIP Server...");
+    pid_t pid = fork();
+    if (pid < 0) {
+        LOG_DOIP_ERROR("First fork failed: {}", strerror(errno));
+        return;
+    }
+
+    if (pid > 0) {
+        // Parent exits; child continues
+        _exit(0);
+    }
+
+    // Child: create new session and become session leader
+    if (setsid() < 0) {
+        LOG_DOIP_ERROR("setsid failed: {}", strerror(errno));
+        return;
+    }
+
+    // Second fork to ensure the daemon can't reacquire a tty
+    pid = fork();
+    if (pid < 0) {
+        LOG_DOIP_ERROR("Second fork failed: {}", strerror(errno));
+        return;
+    }
+    if (pid > 0) {
+        _exit(0);
+    }
+
+    // Set file mode creation mask to a safe default
+    umask(0);
+
+    // Change working directory to root to avoid blocking mounts
+    if (chdir("/") != 0) {
+        LOG_DOIP_WARN("chdir to / failed: {}", strerror(errno));
+    }
+
+    // Close and redirect standard file descriptors to /dev/null
+    int fd = open("/dev/null", O_RDWR);
+    if (fd >= 0) {
+        dup2(fd, STDIN_FILENO);
+        dup2(fd, STDOUT_FILENO);
+        dup2(fd, STDERR_FILENO);
+        if (fd > STDERR_FILENO) {
+            close(fd);
+        }
+    } else {
+        LOG_DOIP_WARN("Failed to open /dev/null: {}", strerror(errno));
+    }
+
+    LOG_DOIP_INFO("DoIP Server daemonized and running");
+}
 
 /*
- * High-level API: Stop the server and cleanup
+ * Stop the server and cleanup
  */
 void DoIPServer::stop() {
     LOG_DOIP_INFO("Stopping DoIP Server...");
@@ -66,8 +151,6 @@ void DoIPServer::udpListenerThread() {
 
     LOG_DOIP_INFO("UDP listener thread stopped");
 }
-
-
 
 /*
  * Background thread: Handle individual TCP connection
@@ -261,6 +344,10 @@ bool DoIPServer::setEIDdefault() {
 void DoIPServer::setVIN(const std::string &VINString) {
 
     m_VIN = DoIPVIN(VINString);
+}
+
+void DoIPServer::setVIN(const DoIPVIN &vin) {
+    m_VIN = vin;
 }
 
 void DoIPServer::setLogicalGatewayAddress(const unsigned short inputLogAdd) {

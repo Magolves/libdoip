@@ -9,6 +9,7 @@
 #include <net/if.h>
 #include <netinet/in.h>
 #include <optional>
+#include <string>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
@@ -26,6 +27,28 @@
 #include "MacAddress.h"
 
 namespace doip {
+
+/**
+ * @brief Server configuration structure used to initialize a DoIP server.
+ */
+struct ServerConfig {
+    // EID and GID as fixed identifiers (6 bytes). Default: zeros.
+    DoIPEID eid = DoIPEID::Zero;
+    DoIPGID gid = DoIPGID::Zero;
+
+    // VIN as fixed identifier (17 bytes). Default: zeros.
+    DoIPVIN vin = DoIPVIN::Zero;
+
+    // Logical/server address (default 0x0E00)
+    uint16_t logicalAddress = 0x0E00;
+
+    // Use loopback announcements instead of broadcast
+    bool loopback = false;
+
+    // Run the server as a daemon by default
+    bool daemonize = true;
+};
+
 
 constexpr int DOIP_SERVER_PORT = 13400;
 
@@ -47,9 +70,8 @@ using ConnectionAcceptedHandler = std::function<std::optional<DoIPServerModel>(D
 class DoIPServer {
 
   public:
-    DoIPServer() {
-        m_receiveBuf.reserve(MAX_ISOTP_MTU);
-    };
+    explicit DoIPServer();
+    explicit DoIPServer(const ServerConfig &config);
 
     ~DoIPServer();
 
@@ -67,32 +89,8 @@ class DoIPServer {
 
     [[nodiscard]]
     bool setupUdpSocket();
+    [[nodiscard]]
     ssize_t receiveUdpMessage();
-
-    // === High-level API (automatic mode) ===
-    /**
-     * @brief Start the DoIP server with automatic connection handling
-     *
-     * This method sets up TCP and UDP sockets, spawns background threads to handle
-     * UDP messages and TCP connections, and returns immediately. The server continues
-     * running until stop() is called.
-     *
-     * @param onConnectionAccepted Callback invoked when a new client connects.
-     *                             Return a DoIPServerModel to accept the connection,
-     *                             or std::nullopt to reject it.
-     * @param sendAnnouncements If true, send vehicle announcements on startup
-     * @return true if server started successfully, false otherwise
-     */
-    template <typename Model>
-    bool start(ConnectionAcceptedHandler onConnectionAccepted, bool sendAnnouncements = true);
-
-    /**
-     * @brief Stop the DoIP server and wait for all threads to terminate
-     *
-     * This gracefully shuts down all active connections and background threads.
-     * Blocks until all cleanup is complete.
-     */
-    void stop();
 
     /**
      * @brief Check if the server is currently running
@@ -119,6 +117,7 @@ class DoIPServer {
     bool setEIDdefault();
 
     void setVIN(const std::string &VINString);
+    void setVIN(const DoIPVIN &vin);
     const DoIPVIN &getVIN() const { return m_VIN; }
 
     void setEID(const uint64_t inputEID);
@@ -154,6 +153,12 @@ class DoIPServer {
     std::vector<std::thread> m_workerThreads;
     ConnectionAcceptedHandler m_connectionHandler;
 
+    // Server configuration
+    ServerConfig m_config;
+
+    void stop();
+    void daemonize();
+
     ssize_t reactToReceivedUdpMessage(size_t bytesRead);
     ssize_t sendUdpMessage(const uint8_t *message, size_t messageLength);
 
@@ -186,19 +191,6 @@ std::unique_ptr<DoIPConnection> DoIPServer::waitForTcpConnection() {
         return nullptr;
     }
 
-    // Create a default server model with the gateway address
-    // Model model;
-    // model.serverAddress = m_gatewayAddress;
-    // if (model.onDiagnosticMessage == nullptr) {
-    //     model.onDiagnosticMessage = [](IConnectionContext& ctx, const DoIPMessage &msg) noexcept -> DoIPDiagnosticAck {
-    //         (void)ctx;
-    //         (void)msg;
-    //         LOG_DOIP_CRITICAL("Diagnostic message received on default-constructed Model");
-    //         // Default: always ACK
-    //         return std::nullopt;
-    //     };
-    // }
-
     return std::unique_ptr<DoIPConnection>(new DoIPConnection(tcpSocket, std::make_unique<Model>()));
 }
 
@@ -228,59 +220,6 @@ void DoIPServer::tcpListenerThread() {
     LOG_DOIP_INFO("TCP listener thread stopped");
 }
 
-/*
- * High-level API: Start the server with automatic connection handling
- */
-template <typename Model>
-bool DoIPServer::start(ConnectionAcceptedHandler onConnectionAccepted, bool sendAnnouncements) {
-    if (m_running.load()) {
-        LOG_DOIP_WARN("Server is already running");
-        return false;
-    }
-
-    if (!onConnectionAccepted) {
-        LOG_DOIP_ERROR("Connection handler callback is required");
-        return false;
-    }
-
-    m_connectionHandler = onConnectionAccepted;
-
-    // Setup sockets
-    if (!setupUdpSocket()) {
-        LOG_DOIP_ERROR("Failed to setup UDP socket");
-        return false;
-    }
-
-
-    if (setupTcpSocket()) {
-        LOG_DOIP_ERROR("Failed to setup TCP socket");
-        closeUdpSocket();
-        return false;
-    }
-
-    // Start background threads
-    m_running.store(true);
-
-    try {
-        m_workerThreads.emplace_back(&DoIPServer::udpListenerThread, this);
-        m_workerThreads.emplace_back(&DoIPServer::tcpListenerThread<Model>, this);
-
-        LOG_DOIP_INFO("DoIP Server started successfully");
-
-        // Send vehicle announcements if requested
-        if (sendAnnouncements) {
-            sendVehicleAnnouncement();
-        }
-
-        return true;
-    } catch (const std::exception &e) {
-        LOG_DOIP_ERROR("Failed to start worker threads: {}", e.what());
-        m_running.store(false);
-        closeUdpSocket();
-        closeTcpSocket();
-        return false;
-    }
-}
 
 } // namespace doip
 
