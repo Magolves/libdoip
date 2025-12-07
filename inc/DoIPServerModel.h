@@ -28,8 +28,6 @@ using ServerModelDiagnosticNotificationHandler = std::function<void(IConnectionC
  *
  * @param response the downstream response (maybe empty)
  * @param result the downstream result
- *
- * @param ctx The connection context
  */
 using ServerModelDownstreamResponseHandler = std::function<void(const ByteArray &response, DoIPDownstreamResult result)>;
 
