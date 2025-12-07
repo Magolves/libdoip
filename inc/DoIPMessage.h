@@ -645,6 +645,10 @@ inline std::ostream &operator<<(std::ostream &os, const DoIPMessage &msg) {
 
     if (msg.getPayloadType() == DoIPPayloadType::DiagnosticMessageNegativeAck) {
         auto payload = msg.getDiagnosticMessagePayload();
+        if (payload.first == nullptr || payload.second < 1) {
+            os << ansi::red << "|Diag NACK <invalid>";
+            return os;
+        }
         os << ansi::red << "|Diag NACK " << static_cast<DoIPNegativeDiagnosticAck>(payload.first[0]);
     } else if (msg.getPayloadType() == DoIPPayloadType::AliveCheckRequest) {
         os << ansi::yellow << "|Alive Check?";
