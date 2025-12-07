@@ -29,27 +29,12 @@ set_target_properties(exampleDoIPClient PROPERTIES
     CXX_EXTENSIONS OFF
 )
 
-# Simple DoIP Server Example (using high-level API)
-add_executable(exampleDoIPServerSimple exampleDoIPServerSimple.cpp)
-target_link_libraries(exampleDoIPServerSimple
-    PRIVATE
-    ${DOIP_NAME}
-    Threads::Threads
-)
-
-# Set properties for the simple server example
-set_target_properties(exampleDoIPServerSimple PROPERTIES
-    CXX_STANDARD 17
-    CXX_STANDARD_REQUIRED ON
-    CXX_EXTENSIONS OFF
-)
-
 # Disable switch-default warning for examples using spdlog
 target_compile_options(exampleDoIPServer PRIVATE -Wno-switch-default)
 target_compile_options(exampleDoIPClient PRIVATE -Wno-switch-default)
-target_compile_options(exampleDoIPServerSimple PRIVATE -Wno-switch-default)
+
 
 # Install examples (optional)
-install(TARGETS exampleDoIPServer exampleDoIPClient exampleDoIPServerSimple
+install(TARGETS exampleDoIPServer exampleDoIPClient
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/examples
 )
