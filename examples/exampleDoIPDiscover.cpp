@@ -65,4 +65,5 @@ int main(int argc, char *argv[]) {
     // Now start TCP connection for diagnostic communication
     LOG_DOIP_INFO("Discovery complete, closing UDP connections");
     client.closeUdpConnection();
+    return 0;
 }
