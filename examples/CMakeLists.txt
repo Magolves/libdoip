@@ -33,6 +33,7 @@ foreach(example_source ${EXAMPLE_SOURCES})
 endforeach()
 
 if (WITH_UNIT_TEST)
+    enable_testing()
     # Integration fixture: start exampleDoIPServer as a daemon
     add_test(NAME Integration_StartExampleServer
         COMMAND $<TARGET_FILE:exampleDoIPServer> --daemonize --loopback
@@ -41,13 +42,13 @@ if (WITH_UNIT_TEST)
 
     # Integration test: run discover against the running server
     add_test(NAME Integration_DiscoverRuns
-        COMMAND $<TARGET_FILE:exampleDoIPDiscover> --loopback
+       COMMAND $<TARGET_FILE:exampleDoIPDiscover> --loopback
     )
     set_tests_properties(Integration_DiscoverRuns PROPERTIES FIXTURES_REQUIRED example_server TIMEOUT 20)
 
     # Teardown fixture: stop exampleDoIPServer
     add_test(NAME Integration_StopExampleServer
-        COMMAND pkill -f exampleDoIPServer
+       COMMAND pkill -f exampleDoIPServer
     )
     set_tests_properties(Integration_StopExampleServer PROPERTIES FIXTURES_CLEANUP example_server TIMEOUT 10)
 endif()
