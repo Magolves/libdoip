@@ -21,22 +21,7 @@ std::vector<std::thread> doipReceiver;
 bool serverActive = false;
 std::unique_ptr<DoIPConnection> tcpConnection(nullptr);
 
-void listenUdp();
 void listenTcp();
-
-/*
- * Check permantly if udp message was received
- */
-void listenUdp() {
-    LOG_UDP_INFO("UDP listener thread started");
-    while (serverActive) {
-        ssize_t result = server->receiveUdpMessage();
-        // If timeout (result == 0), sleep briefly to prevent CPU spinning
-        if (result == 0) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
-    }
-}
 
 /*
  * Check permantly if tcp message was received
@@ -151,15 +136,15 @@ int main(int argc, char *argv[]) {
     }
 
     serverActive = true;
-    LOG_DOIP_INFO("Starting UDP and TCP listener threads");
-    doipReceiver.push_back(thread(&listenUdp));
-    doipReceiver.push_back(thread(&listenTcp));
 
-    server->sendVehicleAnnouncement();
-    LOG_DOIP_INFO("Vehicle announcement sent");
+    // TODO:: Add signal handler
+    while(server->isRunning()) {
+        sleep(1);
+    }
+    doipReceiver.push_back(thread(&listenTcp));
+    LOG_DOIP_INFO("Starting TCP listener threads");
 
     doipReceiver.at(0).join();
-    doipReceiver.at(1).join();
     LOG_DOIP_INFO("DoIP Server Example terminated");
     return 0;
 }

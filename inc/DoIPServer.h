@@ -90,8 +90,6 @@ class DoIPServer {
 
     [[nodiscard]]
     bool setupUdpSocket();
-    [[nodiscard]]
-    ssize_t receiveUdpMessage();
 
     /**
      * @brief Check if the server is currently running
@@ -106,8 +104,6 @@ class DoIPServer {
     void closeUdpSocket();
 
     void setLogicalGatewayAddress(const unsigned short inputLogAdd);
-
-    ssize_t sendVehicleAnnouncement();
 
     /**
      * @brief Sets the EID to a default value based on the MAC address.
@@ -135,6 +131,8 @@ class DoIPServer {
     struct sockaddr_in m_serverAddress {};
     struct sockaddr_in m_clientAddress {};
     ByteArray m_receiveBuf{};
+    std::string m_clientIp{};
+    int m_clientPort{};
 
     DoIPVIN m_VIN;
     DoIPAddress m_logicalAddress = DoIPAddress(0x0028);
@@ -151,6 +149,7 @@ class DoIPServer {
     // Automatic mode state
     std::atomic<bool> m_running{false};
     std::vector<std::thread> m_workerThreads;
+    std::mutex m_mutex;
     ConnectionAcceptedHandler m_connectionHandler;
 
     // Server configuration

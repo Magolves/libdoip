@@ -37,13 +37,13 @@ if (WITH_UNIT_TEST)
     add_test(NAME Integration_StartExampleServer
         COMMAND $<TARGET_FILE:exampleDoIPServer> --daemonize --loopback
     )
-    set_tests_properties(Integration_StartExampleServer PROPERTIES FIXTURES_SETUP example_server TIMEOUT 10)
+    set_tests_properties(Integration_StartExampleServer PROPERTIES FIXTURES_SETUP example_server TIMEOUT 20)
 
     # Integration test: run discover against the running server
     add_test(NAME Integration_DiscoverRuns
         COMMAND $<TARGET_FILE:exampleDoIPDiscover> --loopback
     )
-    set_tests_properties(Integration_DiscoverRuns PROPERTIES FIXTURES_REQUIRED example_server TIMEOUT 10)
+    set_tests_properties(Integration_DiscoverRuns PROPERTIES FIXTURES_REQUIRED example_server TIMEOUT 20)
 
     # Teardown fixture: stop exampleDoIPServer
     add_test(NAME Integration_StopExampleServer

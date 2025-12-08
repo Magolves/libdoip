@@ -213,7 +213,7 @@ bool DoIPServer::setupUdpSocket() {
     server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     server_addr.sin_port = htons(DOIP_UDP_DISCOVERY_PORT);
 
-    if (bind(m_udp_sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+    if (bind(m_udp_sock, reinterpret_cast<struct sockaddr *>(&server_addr), sizeof(server_addr)) < 0) {
         perror("Failed to bind socket");
         close(m_udp_sock);
         return 1;
@@ -232,11 +232,19 @@ bool DoIPServer::setupUdpSocket() {
         inet_ntoa(m_serverAddress.sin_addr),
         ntohs(m_serverAddress.sin_port));
 
+    m_running.store(true);
+    m_workerThreads.emplace_back([this]() { udpListenerThread(); });
+    m_workerThreads.emplace_back([this]() { udpAnnouncementThread(); });
+
     return true;
 }
 
 void DoIPServer::closeUdpSocket() {
     m_running.store(false);
+    for (auto &thread : m_workerThreads) {
+        if (thread.joinable())
+            thread.join();
+    }
     close(m_udp_sock);
 }
 
@@ -310,7 +318,7 @@ void DoIPServer::setMulticastGroup(const char *address) {
     mreq.imr_interface.s_addr = htonl(INADDR_ANY);
 
     // set Option to join Multicast Group
-    int setGroup = setsockopt(m_udp_sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, reinterpret_cast<char *>(&mreq), sizeof(mreq));
+    int setGroup = setsockopt(m_udp_sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, reinterpret_cast<const char *>(&mreq), sizeof(mreq));
 
     if (setGroup < 0) {
         LOG_UDP_ERROR("Setting address failed: {}", strerror(errno));
@@ -318,9 +326,10 @@ void DoIPServer::setMulticastGroup(const char *address) {
 }
 
 ssize_t DoIPServer::sendNegativeUdpAck(DoIPNegativeAck ackCode) {
-    //DoIPMessage message = message::makeNegativeAckMessage(ackCode);
+    // DoIPMessage message = message::makeNegativeAckMessage(ackCode);
 
     // return sendUdpMessage(message.data(), message.size());
+    (void)ackCode;
     LOG_UDP_CRITICAL("sendNegativeUdpAck NOT IMPL");
     return -1;
 }
@@ -335,35 +344,38 @@ void DoIPServer::udpListenerThread() {
 
     while (m_running) {
         ssize_t received = recvfrom(m_udp_sock, m_receiveBuf.data(), sizeof(m_receiveBuf), 0,
-                                    (struct sockaddr *)&client_addr, &client_len);
+                                    reinterpret_cast<struct sockaddr *>(&client_addr), &client_len);
 
         if (received < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            if (errno == EAGAIN /* || errno == EWOULDBLOCK*/) {
                 // Timeout, continue
                 continue;
             }
             if (m_running) {
-                perror("[SERVER] recvfrom error");
+                perror("recvfrom error");
             }
             break;
         }
 
         if (received > 0) {
+            std::scoped_lock lock(m_mutex);
             char client_ip[INET_ADDRSTRLEN];
             inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, sizeof(client_ip));
-            printf("[SERVER] Received %zd bytes from %s:%d\n",
-                   received, client_ip, ntohs(client_addr.sin_port));
+            m_clientIp = std::string(client_ip);
+            m_clientPort = ntohs(client_addr.sin_port);
+
+            LOG_UDP_INFO("Received {} bytes from {}:{}", received, m_clientIp, m_clientPort);
 
             auto optHeader = DoIPMessage::tryParseHeader(m_receiveBuf.data(), DOIP_HEADER_SIZE);
             if (!optHeader.has_value()) {
                 auto sentBytes = sendNegativeUdpAck(DoIPNegativeAck::IncorrectPatternFormat);
                 if (sentBytes < 0) {
-                    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                    if (errno == EAGAIN /*|| errno == EWOULDBLOCK*/) {
                         // Timeout, continue
                         continue;
                     }
                     if (m_running) {
-                        perror("[SERVER] recvfrom error");
+                        LOG_UDP_ERROR("Failed to receive: {}", strerror(errno));
                     }
                     break;
                 }
@@ -377,25 +389,25 @@ void DoIPServer::udpListenerThread() {
                 LOG_DOIP_INFO("TX {}", fmt::streamed(msg));
 
                 auto sentBytes = sendto(m_udp_sock, msg.data(), msg.size(), 0,
-                                        (struct sockaddr *)&client_addr, client_len);
+                                        reinterpret_cast<struct sockaddr *>(&client_addr), client_len);
 
                 if (sentBytes > 0) {
-                    LOG_DOIP_ERROR("[SERVER] Sent Vehicle Identification Response: %zd bytes to %s:%d\n",
+                    LOG_DOIP_INFO("Sent Vehicle Identification Response to {}:{}",
                                    sentBytes, client_ip, ntohs(client_addr.sin_port));
                 } else {
-                    perror("[SERVER] Failed to send response");
+                    perror("Failed to send response");
                 }
-            }
+            } break;
 
             default: {
                 LOG_DOIP_ERROR("Invalid payload type 0x{:04X} received (receiveUdpMessage())", static_cast<uint16_t>(plType));
-                auto sentBytes = sendNegativeUdpAck(DoIPNegativeAck::UnknownPayloadType);
+                /*auto sentBytes =*/sendNegativeUdpAck(DoIPNegativeAck::UnknownPayloadType);
             }
             }
         }
     }
 
-    printf("[SERVER] UDP listener thread stopped\n");
+    printf("UDP listener thread stopped\n");
 }
 
 void DoIPServer::udpAnnouncementThread() {
@@ -404,7 +416,7 @@ void DoIPServer::udpAnnouncementThread() {
     // Send 5 announcements with 2 second interval
     for (int i = 0; i < m_announceNum && m_running; i++) {
         sendVehicleAnnouncement2();
-        sleep(m_announceInterval);
+        usleep(m_announceInterval * 1000);
     }
 
     LOG_DOIP_INFO("Announcement thread stopped");
@@ -432,13 +444,14 @@ ssize_t DoIPServer::sendVehicleAnnouncement2() {
     }
 
     ssize_t sentBytes = sendto(m_udp_sock, msg.data(), msg.size(), 0,
-                               (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+                               reinterpret_cast<struct sockaddr *>(&dest_addr), sizeof(dest_addr));
 
     LOG_DOIP_INFO("TX {}", fmt::streamed(msg));
     if (sentBytes > 0) {
-        printf("[SERVER] Sent Vehicle Announcement: %zd bytes to %s:%d\n",
+        LOG_UDP_INFO("Sent Vehicle Announcement: {} bytes to {}:{}",
                sentBytes, dest_ip, DOIP_UDP_TEST_EQUIPMENT_REQUEST_PORT);
     } else {
-        perror("[SERVER] Failed to send announcement");
+        LOG_UDP_ERROR("Failed to send announcement: {}", strerror(errno));
     }
+    return sentBytes;
 }
