@@ -100,7 +100,7 @@ class DoIPConnection : public DoIPDefaultConnection {
     bool hasDownstreamHandler() const override;
 
   private:
-    DoIPAddress m_gatewayAddress;
+    DoIPAddress m_logicalAddress;
 
     // TCP socket-specific members
     int m_tcpSocket;

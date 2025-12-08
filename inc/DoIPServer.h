@@ -40,7 +40,7 @@ struct ServerConfig {
     DoIPVIN vin = DoIPVIN::Zero;
 
     // Logical/server address (default 0x0E00)
-    uint16_t logicalAddress = 0x0E00;
+    uint16_t logicalAddress = 0x0028;
 
     // Use loopback announcements instead of broadcast
     bool loopback = false;
@@ -131,22 +131,20 @@ class DoIPServer {
 
   private:
     int m_tcp_sock{-1};
-    int m_udp_receive_sock{-1};
-    int m_udp_send_sock{-1};
+    int m_udp_sock{-1};
     struct sockaddr_in m_serverAddress {};
     struct sockaddr_in m_clientAddress {};
     ByteArray m_receiveBuf{};
 
     DoIPVIN m_VIN;
-    DoIPAddress m_gatewayAddress = DoIPAddress::ZeroAddress;
+    DoIPAddress m_logicalAddress = DoIPAddress(0x0028);
     DoIPEID m_EID = DoIPEID::Zero;
     DoIPGID m_GID = DoIPGID::Zero;
     DoIPFurtherAction m_FurtherActionReq = DoIPFurtherAction::NoFurtherAction;
-    //TimerManager m_timerManager{};
 
     int m_announceNum = 3;                   // Default Value = 3
     unsigned int m_announceInterval = 500;   // Default Value = 500ms
-    bool m_useLoopbackAnnouncements = false; // Default: use broadcast
+    bool m_loopbackMode = false; // Default: use broadcast
 
     int m_broadcast = 1;
 
@@ -161,20 +159,18 @@ class DoIPServer {
     void stop();
     void daemonize();
 
-    ssize_t reactToReceivedUdpMessage(size_t bytesRead);
-    ssize_t sendUdpMessage(const uint8_t *message, size_t messageLength);
-
     void setMulticastGroup(const char *address);
 
     ssize_t sendNegativeUdpAck(DoIPNegativeAck ackCode);
-
-    // Worker thread functions
-    void udpListenerThread();
 
     template <typename Model>
     void tcpListenerThread();
 
     void connectionHandlerThread(std::unique_ptr<DoIPConnection> connection);
+
+    void udpListenerThread();
+    void udpAnnouncementThread();
+    ssize_t sendVehicleAnnouncement2();
 };
 
 // Template implementation must be in header for external linkage
