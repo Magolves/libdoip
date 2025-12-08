@@ -131,7 +131,8 @@ class DoIPServer {
 
   private:
     int m_tcp_sock{-1};
-    int m_udp_sock{-1};
+    int m_udp_receive_sock{-1};
+    int m_udp_send_sock{-1};
     struct sockaddr_in m_serverAddress {};
     struct sockaddr_in m_clientAddress {};
     ByteArray m_receiveBuf{};

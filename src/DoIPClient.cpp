@@ -41,7 +41,7 @@ void DoIPClient::startUdpConnection() {
         LOG_UDP_INFO("Client-UDP-Socket created successfully");
 
         _serverAddr.sin_family = AF_INET;
-        _serverAddr.sin_port = htons(DOIP_UDP_DISCOVERY_PORT);
+        _serverAddr.sin_port = htons(DOIP_UDP_DISCOVERY_PORT); // 13400
         _serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
 
         _clientAddr.sin_family = AF_INET;
