@@ -1,12 +1,17 @@
+#include <algorithm> // for std::remove_if
+#include <cerrno>    // for errno
+#include <cstring>   // for strerror
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+
 #include "DoIPServer.h"
 #include "DoIPConnection.h"
 #include "DoIPMessage.h"
 #include "DoIPServerModel.h"
 #include "Logger.h"
 #include "MacAddress.h"
-#include <algorithm> // for std::remove_if
-#include <cerrno>    // for errno
-#include <cstring>   // for strerror
 
 using namespace doip;
 
@@ -18,10 +23,6 @@ const char *DEFAULT_IFACE = "en0";
 #pragma error "Unsupported platform"
 #endif
 
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
 
 DoIPServer::~DoIPServer() {
     if (m_running.load()) {
@@ -407,13 +408,13 @@ void DoIPServer::udpListenerThread() {
         }
     }
 
-    printf("UDP listener thread stopped\n");
+    LOG_UDP_INFO("UDP listener thread stopped");
 }
 
 void DoIPServer::udpAnnouncementThread() {
     LOG_DOIP_INFO("Announcement thread started");
 
-    // Send 5 announcements with 2 second interval
+    // Send announcements with configured interval and count
     for (int i = 0; i < m_announceNum && m_running; i++) {
         sendVehicleAnnouncement2();
         usleep(m_announceInterval * 1000);
