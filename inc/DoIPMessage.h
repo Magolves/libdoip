@@ -251,6 +251,22 @@ class DoIPMessage {
     }
 
     /**
+     * @brief Check if the message has a Source Address field.
+     *
+     * @return Returns @c true in the case of success, @c false otherwise.
+     */
+    bool hasSourceAddress() const {
+        auto payloadRef = getPayload();
+        auto plType = getPayloadType();
+        bool result = plType == DoIPPayloadType::DiagnosticMessage ||
+                      plType == DoIPPayloadType::RoutingActivationRequest ||
+                      plType == DoIPPayloadType::RoutingActivationResponse ||
+                      plType == DoIPPayloadType::AliveCheckResponse;
+
+        return result && payloadRef.second >= 2;
+    }
+
+    /**
      * @brief Get the Source Address of the message (if message is a Diagnostic Message).
      *
      * @return std::optional<DoIPAddress> The source address if present, std::nullopt otherwise
@@ -258,17 +274,21 @@ class DoIPMessage {
     std::optional<DoIPAddress> getSourceAddress() const {
         auto payloadRef = getPayload();
         // todo: Simplify
-        if (getPayloadType() == DoIPPayloadType::DiagnosticMessage && payloadRef.second >= 2) {
+        if (hasSourceAddress()) {
             return DoIPAddress(payloadRef.first, 0);
         }
-        if (getPayloadType() == DoIPPayloadType::RoutingActivationRequest && payloadRef.second >= 2) {
-            return DoIPAddress(payloadRef.first, 0);
-        }
-        if (getPayloadType() == DoIPPayloadType::RoutingActivationResponse && payloadRef.second >= 2) {
-            return DoIPAddress(payloadRef.first, 0);
-        }
-        if (getPayloadType() == DoIPPayloadType::AliveCheckResponse && payloadRef.second >= 2) {
-            return DoIPAddress(payloadRef.first, 0);
+        return std::nullopt;
+    }
+
+    /**
+     * @brief Get the Logical Address of the message (if message is a Vehicle Identification Response).
+     *
+     * @return std::optional<DoIPAddress> The logical address if present, std::nullopt otherwise
+     */
+    std::optional<DoIPAddress> getLogicalAddress() const {
+        auto payloadRef = getPayload();
+        if (getPayloadType() == DoIPPayloadType::VehicleIdentificationResponse && payloadRef.second >= 19) {
+            return DoIPAddress(payloadRef.first + 17);
         }
         return std::nullopt;
     }
@@ -282,6 +302,58 @@ class DoIPMessage {
         auto payloadRef = getPayload();
         if (getPayloadType() == DoIPPayloadType::DiagnosticMessage && payloadRef.second >= 4) {
             return DoIPAddress(payloadRef.first, 2);
+        }
+        return std::nullopt;
+    }
+
+    /**
+     * @brief Get the vehicle identification number (VIN) if message is a Vehicle Identification Response.
+     *
+     * @return std::optional<DoIPAddress> The VIN if present, std::nullopt otherwise
+     */
+    std::optional<DoIpVin> getVin() const {
+        auto payloadRef = getPayload();
+        if (getPayloadType() == DoIPPayloadType::VehicleIdentificationResponse && payloadRef.second >= 17) {
+            return DoIpVin(payloadRef.first, 17);
+        }
+        return std::nullopt;
+    }
+
+    /**
+     * @brief Get the entity id (EID) if message is a Vehicle Identification Response.
+     *
+     * @return std::optional<DoIPAddress> The VIN if present, std::nullopt otherwise
+     */
+    std::optional<DoIpEid> getEid() const {
+        auto payloadRef = getPayload();
+        if (getPayloadType() == DoIPPayloadType::VehicleIdentificationResponse && payloadRef.second >= 25) {
+            return DoIpEid(payloadRef.first + 19, 6);
+        }
+        return std::nullopt;
+    }
+
+    /**
+     * @brief Get the group id (GID) if message is a Vehicle Identification Response.
+     *
+     * @return std::optional<DoIPAddress> The VIN if present, std::nullopt otherwise
+     */
+    std::optional<DoIpGid> getGid() const {
+        auto payloadRef = getPayload();
+        if (getPayloadType() == DoIPPayloadType::VehicleIdentificationResponse && payloadRef.second >= 31) {
+            return DoIpGid(payloadRef.first + 25, 6);
+        }
+        return std::nullopt;
+    }
+
+    /**
+     * @brief Get the Further Action Request object if message is a Vehicle Identification Response.
+     *
+     * @return std::optional<DoIPFurtherAction> The Further Action Request if present, std::nullopt otherwise
+     */
+    std::optional<DoIPFurtherAction> getFurtherActionRequest() const {
+        auto payloadRef = getPayload();
+        if (getPayloadType() == DoIPPayloadType::VehicleIdentificationResponse && payloadRef.second >= 31) {
+            return DoIPFurtherAction(payloadRef.first[31]);
         }
         return std::nullopt;
     }
@@ -454,10 +526,10 @@ inline DoIPMessage makeVehicleIdentificationRequest() {
  * @return DoIPMessage the vehicle identification response message
  */
 inline DoIPMessage makeVehicleIdentificationResponse(
-    const DoIPVIN &vin,
+    const DoIpVin &vin,
     const DoIPAddress &logicalAddress,
-    const DoIPEID &entityType,
-    const DoIPGID &groupId,
+    const DoIpEid &entityType,
+    const DoIpGid &groupId,
     DoIPFurtherAction furtherAction = DoIPFurtherAction::NoFurtherAction,
     DoIPSyncStatus syncStatus = DoIPSyncStatus::GidVinSynchronized) {
 

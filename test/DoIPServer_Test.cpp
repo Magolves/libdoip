@@ -28,8 +28,8 @@ TEST_SUITE("DoIPServer Tests") {
      */
     TEST_CASE_FIXTURE(DoIPServerFixture, "Set VIN Test") {
         std::string testVIN = "TESTVIN1234567890";
-        server.setVIN(testVIN);
-        DoIPMessage msg = message::makeVehicleIdentificationResponse(server.getVIN(), DoIPAddress::ZeroAddress, server.getEID(), DoIPGID::Zero, DoIPFurtherAction::NoFurtherAction);
+        server.setVin(testVIN);
+        DoIPMessage msg = message::makeVehicleIdentificationResponse(server.getVin(), DoIPAddress::ZeroAddress, server.getEid(), DoIpGid::Zero, DoIPFurtherAction::NoFurtherAction);
         ByteArrayRef payload = msg.getPayload();
 
         // Check that the VIN in the payload matches the set VIN
@@ -40,8 +40,8 @@ TEST_SUITE("DoIPServer Tests") {
 
     TEST_CASE_FIXTURE(DoIPServerFixture, "Set EID Test") {
         uint64_t testEID = 0x123456789ABC;
-        server.setEID(testEID);
-        DoIPMessage msg = message::makeVehicleIdentificationResponse(server.getVIN(), DoIPAddress::ZeroAddress, server.getEID(), DoIPGID::Zero, DoIPFurtherAction::NoFurtherAction);
+        server.setEid(testEID);
+        DoIPMessage msg = message::makeVehicleIdentificationResponse(server.getVin(), DoIPAddress::ZeroAddress, server.getEid(), DoIpGid::Zero, DoIPFurtherAction::NoFurtherAction);
         ByteArrayRef payload = msg.getPayload();
 
         // Check that the EID in the payload matches the set EID
@@ -51,13 +51,13 @@ TEST_SUITE("DoIPServer Tests") {
     }
 
     TEST_CASE_FIXTURE(DoIPServerFixture, "Set EID default") {
-        bool result = server.setEIDdefault();
+        bool result = server.setDefaultEid();
         CHECK(result == true);
 
-        DoIPMessage msg = message::makeVehicleIdentificationResponse(server.getVIN(), DoIPAddress::ZeroAddress, server.getEID(), DoIPGID::Zero, DoIPFurtherAction::NoFurtherAction);
+        DoIPMessage msg = message::makeVehicleIdentificationResponse(server.getVin(), DoIPAddress::ZeroAddress, server.getEid(), DoIpGid::Zero, DoIPFurtherAction::NoFurtherAction);
         ByteArrayRef payload = msg.getPayload();
 
-        std::cerr << "EID set to: " << server.getEID().toHexString() << '\n';
+        std::cerr << "EID set to: " << server.getEid().toHexString() << '\n';
         auto zeros = std::count_if(payload.first + 17 + 2, payload.first + 17 + 2 + 6, [](uint8_t byte) { return byte == 0; });
         CHECK(zeros < 6); // At least one byte should not be zero
     }

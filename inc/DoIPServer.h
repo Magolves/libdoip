@@ -10,6 +10,7 @@
 #include <netinet/in.h>
 #include <optional>
 #include <string.h>
+#include <string>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <thread>
@@ -17,8 +18,8 @@
 #include <vector>
 
 #include "ByteArray.h"
-#include "DoIPConnection.h"
 #include "DoIPConfig.h"
+#include "DoIPConnection.h"
 #include "DoIPFurtherAction.h"
 #include "DoIPIdentifiers.h"
 #include "DoIPNegativeAck.h"
@@ -27,7 +28,33 @@
 
 namespace doip {
 
-constexpr int DOIP_SERVER_PORT = 13400;
+/**
+ * @brief Server configuration structure used to initialize a DoIP server.
+ */
+struct ServerConfig {
+    // EID and GID as fixed identifiers (6 bytes). Default: zeros.
+    DoIpEid eid = DoIpEid::Zero;
+    DoIpGid gid = DoIpGid::Zero;
+
+    // VIN as fixed identifier (17 bytes). Default: zeros.
+    DoIpVin vin = DoIpVin::Zero;
+
+    // Logical/server address (default 0x0E00)
+    DoIPAddress logicalAddress = DoIPAddress(0x0028);
+
+    // Use loopback announcements instead of broadcast
+    bool loopback = false;
+
+    // Run the server as a daemon by default
+    bool daemonize = false;
+
+    int announceCount = 3;               // Default Value = 3
+    unsigned int announceInterval = 500; // Default Value = 500ms
+};
+
+const ServerConfig DefaultServerConfig{};
+
+constexpr int DOIP_SERVER_TCP_PORT = 13400;
 
 /**
  * @brief Callback invoked when a new TCP connection is established
@@ -38,19 +65,20 @@ using ConnectionAcceptedHandler = std::function<std::optional<DoIPServerModel>(D
 /**
  * @brief DoIP Server class to handle incoming DoIP connections and UDP messages.
  *
- * This class manages the low-level TCP/UDP socket handling and provides a clean
- * callback-based interface for application logic. The server can operate in two modes:
- *
- * 1. Manual mode: User calls waitForTcpConnection() and manages the receive loop
- * 2. Automatic mode: User calls start() with a callback, server manages everything
+ * This class manages the low-level TCP/UDP socket handling.
  */
 class DoIPServer {
 
   public:
-    DoIPServer() {
-        m_receiveBuf.reserve(MAX_ISOTP_MTU);
-    };
+    /**
+     * @brief Construct a DoIP server with the given configuration.
+     * @param config Server configuration (EID/GID/VIN, announce params, etc.).
+     */
+    explicit DoIPServer(const ServerConfig &config = DefaultServerConfig);
 
+    /**
+     * @brief Destructor. Ensures sockets/threads are closed/stopped.
+     */
     ~DoIPServer();
 
     DoIPServer(const DoIPServer &) = delete;
@@ -58,57 +86,64 @@ class DoIPServer {
     DoIPServer(DoIPServer &&) = delete;
     DoIPServer &operator=(DoIPServer &&) = delete;
 
-    // === Low-level API (manual mode) ===
     [[nodiscard]]
+    /**
+     * @brief Initialize and bind the TCP socket for DoIP.
+     * @return true on success, false otherwise.
+     */
     bool setupTcpSocket();
 
     template <typename Model = DefaultDoIPServerModel>
+    /**
+     * @brief Block until a TCP client connects and create a DoIP connection.
+     * @tparam Model Server model type used by the connection (default `DefaultDoIPServerModel`).
+     * @return Unique pointer to established `DoIPConnection`, or nullptr on failure.
+     */
     std::unique_ptr<DoIPConnection> waitForTcpConnection();
 
     [[nodiscard]]
+    /**
+     * @brief Initialize and bind the UDP socket for announcements and UDP messages.
+     * @return true on success, false otherwise.
+     */
     bool setupUdpSocket();
-    ssize_t receiveUdpMessage();
-
-    // === High-level API (automatic mode) ===
-    /**
-     * @brief Start the DoIP server with automatic connection handling
-     *
-     * This method sets up TCP and UDP sockets, spawns background threads to handle
-     * UDP messages and TCP connections, and returns immediately. The server continues
-     * running until stop() is called.
-     *
-     * @param onConnectionAccepted Callback invoked when a new client connects.
-     *                             Return a DoIPServerModel to accept the connection,
-     *                             or std::nullopt to reject it.
-     * @param sendAnnouncements If true, send vehicle announcements on startup
-     * @return true if server started successfully, false otherwise
-     */
-    template <typename Model>
-    bool start(ConnectionAcceptedHandler onConnectionAccepted, bool sendAnnouncements = true);
-
-    /**
-     * @brief Stop the DoIP server and wait for all threads to terminate
-     *
-     * This gracefully shuts down all active connections and background threads.
-     * Blocks until all cleanup is complete.
-     */
-    void stop();
 
     /**
      * @brief Check if the server is currently running
      */
+    [[nodiscard]]
     bool isRunning() const { return m_running.load(); }
 
+    /**
+     * @brief Set the number of vehicle announcements to send.
+     * @param Num Count of announcements.
+     */
     void setAnnounceNum(int Num);
+    /**
+     * @brief Set the interval between announcements in milliseconds.
+     * @param Interval Interval in ms.
+     */
     void setAnnounceInterval(unsigned int Interval);
-    void setAnnouncementMode(bool useLoopback);
+    /**
+     * @brief Enable/disable loopback mode for announcements (no broadcast).
+     * @param useLoopback True to use loopback, false for broadcast.
+     */
+    void setLoopbackMode(bool useLoopback);
 
+    /**
+     * @brief Close the TCP socket if open.
+     */
     void closeTcpSocket();
+    /**
+     * @brief Close the UDP socket if open.
+     */
     void closeUdpSocket();
 
-    void setLogicalGatewayAddress(const unsigned short inputLogAdd);
-
-    ssize_t sendVehicleAnnouncement();
+    /**
+     * @brief Set the logical DoIP gateway address.
+     * @param logicalAddress Logical address value.
+     */
+    void setLogicalGatewayAddress(unsigned short logicalAddress);
 
     /**
      * @brief Sets the EID to a default value based on the MAC address.
@@ -116,58 +151,103 @@ class DoIPServer {
      * @return true if the EID was successfully set to the default value.
      * @return false if the default EID could not be set.
      */
-    bool setEIDdefault();
+    bool setDefaultEid();
 
-    void setVIN(const std::string &VINString);
-    const DoIPVIN &getVIN() const { return m_VIN; }
+    /**
+     * @brief Set VIN from a 17-character string.
+     * @param VINString VIN string (17 bytes expected).
+     */
+    void setVin(const std::string &VINString);
+    /**
+     * @brief Set VIN from a `DoIpVin` instance.
+     * @param vin VIN value.
+     */
+    void setVin(const DoIpVin &vin);
+    /**
+     * @brief Get current VIN.
+     * @return Reference to configured VIN.
+     */
+    const DoIpVin &getVin() const { return m_config.vin; }
 
-    void setEID(const uint64_t inputEID);
-    const DoIPEID &getEID() const { return m_EID; }
+    /**
+     * @brief Set EID value.
+     * @param nputEID EID as 64-bit value (lower 48 bits used).
+     */
+    void setEid(uint64_t nputEID);
+    /**
+     * @brief Get current EID.
+     * @return Reference to configured EID.
+     */
+    const DoIpEid &getEid() const { return m_config.eid; }
 
-    void setGID(const uint64_t inputGID);
-    const DoIPGID &getGID() const { return m_GID; }
+    /**
+     * @brief Set GID value.
+     * @param inputGID GID as 64-bit value (lower 48 bits used).
+     */
+    void setGid(uint64_t inputGID);
+    /**
+     * @brief Get current GID.
+     * @return Reference to configured GID.
+     */
+    const DoIpGid &getGid() const { return m_config.gid; }
 
-    void setFAR(DoIPFurtherAction inputFAR);
+    /**
+     * @brief Get current further action requirement status.
+     * @return Current `DoIPFurtherAction` value.
+     */
+    DoIPFurtherAction getFurtherActionRequired() const { return m_FurtherActionReq; }
+    /**
+     * @brief Set further action requirement status.
+     * @param furtherActionRequired Value to set.
+     */
+    void setFurtherActionRequired(DoIPFurtherAction furtherActionRequired);
+
+    /**
+     * @brief Get last accepted client IP (string form).
+     * @return IP address string.
+     */
+    std::string getClientIp() const { return m_clientIp; }
+    /**
+     * @brief Get last accepted client TCP port.
+     * @return Client port number.
+     */
+    int getClientPort() const { return m_clientPort; }
 
   private:
     int m_tcp_sock{-1};
     int m_udp_sock{-1};
-    struct sockaddr_in m_serverAddress {};
-    struct sockaddr_in m_clientAddress {};
+    struct sockaddr_in m_serverAddress{};
+    struct sockaddr_in m_clientAddress{};
     ByteArray m_receiveBuf{};
-
-    DoIPVIN m_VIN;
-    DoIPAddress m_gatewayAddress = DoIPAddress::ZeroAddress;
-    DoIPEID m_EID = DoIPEID::Zero;
-    DoIPGID m_GID = DoIPGID::Zero;
+    std::string m_clientIp{};
+    int m_clientPort{};
     DoIPFurtherAction m_FurtherActionReq = DoIPFurtherAction::NoFurtherAction;
-    //TimerManager m_timerManager{};
-
-    int m_announceNum = 3;                   // Default Value = 3
-    unsigned int m_announceInterval = 500;   // Default Value = 500ms
-    bool m_useLoopbackAnnouncements = false; // Default: use broadcast
-
-    int m_broadcast = 1;
 
     // Automatic mode state
     std::atomic<bool> m_running{false};
     std::vector<std::thread> m_workerThreads;
-    ConnectionAcceptedHandler m_connectionHandler;
+    std::mutex m_mutex;
 
-    ssize_t reactToReceivedUdpMessage(size_t bytesRead);
-    ssize_t sendUdpMessage(const uint8_t *message, size_t messageLength);
+    // Server configuration
+    ServerConfig m_config;
 
-    void setMulticastGroup(const char *address);
+    void stop();
+    void daemonize();
+
+    void setMulticastGroup(const char *address) const;
 
     ssize_t sendNegativeUdpAck(DoIPNegativeAck ackCode);
-
-    // Worker thread functions
-    void udpListenerThread();
 
     template <typename Model>
     void tcpListenerThread();
 
     void connectionHandlerThread(std::unique_ptr<DoIPConnection> connection);
+
+    void udpListenerThread();
+    void udpAnnouncementThread();
+    ssize_t sendVehicleAnnouncement();
+
+    ssize_t sendUdpResponse(DoIPMessage msg);
 };
 
 // Template implementation must be in header for external linkage
@@ -185,19 +265,6 @@ std::unique_ptr<DoIPConnection> DoIPServer::waitForTcpConnection() {
     if (tcpSocket < 0) {
         return nullptr;
     }
-
-    // Create a default server model with the gateway address
-    // Model model;
-    // model.serverAddress = m_gatewayAddress;
-    // if (model.onDiagnosticMessage == nullptr) {
-    //     model.onDiagnosticMessage = [](IConnectionContext& ctx, const DoIPMessage &msg) noexcept -> DoIPDiagnosticAck {
-    //         (void)ctx;
-    //         (void)msg;
-    //         LOG_DOIP_CRITICAL("Diagnostic message received on default-constructed Model");
-    //         // Default: always ACK
-    //         return std::nullopt;
-    //     };
-    // }
 
     return std::unique_ptr<DoIPConnection>(new DoIPConnection(tcpSocket, std::make_unique<Model>()));
 }
@@ -226,60 +293,6 @@ void DoIPServer::tcpListenerThread() {
     }
 
     LOG_DOIP_INFO("TCP listener thread stopped");
-}
-
-/*
- * High-level API: Start the server with automatic connection handling
- */
-template <typename Model>
-bool DoIPServer::start(ConnectionAcceptedHandler onConnectionAccepted, bool sendAnnouncements) {
-    if (m_running.load()) {
-        LOG_DOIP_WARN("Server is already running");
-        return false;
-    }
-
-    if (!onConnectionAccepted) {
-        LOG_DOIP_ERROR("Connection handler callback is required");
-        return false;
-    }
-
-    m_connectionHandler = onConnectionAccepted;
-
-    // Setup sockets
-    if (!setupUdpSocket()) {
-        LOG_DOIP_ERROR("Failed to setup UDP socket");
-        return false;
-    }
-
-
-    if (setupTcpSocket()) {
-        LOG_DOIP_ERROR("Failed to setup TCP socket");
-        closeUdpSocket();
-        return false;
-    }
-
-    // Start background threads
-    m_running.store(true);
-
-    try {
-        m_workerThreads.emplace_back(&DoIPServer::udpListenerThread, this);
-        m_workerThreads.emplace_back(&DoIPServer::tcpListenerThread<Model>, this);
-
-        LOG_DOIP_INFO("DoIP Server started successfully");
-
-        // Send vehicle announcements if requested
-        if (sendAnnouncements) {
-            sendVehicleAnnouncement();
-        }
-
-        return true;
-    } catch (const std::exception &e) {
-        LOG_DOIP_ERROR("Failed to start worker threads: {}", e.what());
-        m_running.store(false);
-        closeUdpSocket();
-        closeTcpSocket();
-        return false;
-    }
 }
 
 } // namespace doip

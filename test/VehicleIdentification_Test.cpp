@@ -10,12 +10,12 @@ using namespace std;
 
 TEST_SUITE("VehicleIdentificationHandler") {
     struct VehicleIdentificationHandlerFixture {
-        DoIPVIN matchingVIN = DoIPVIN("MatchingVin_12345");
-        DoIPVIN shortVIN = DoIPVIN("shortVin");
-        DoIPVIN shortVINPadded = DoIPVIN("shortVin000000000");
-        DoIPEID EID = DoIPEID::Zero;
-        DoIPGID GID = DoIPGID::Zero;
-        DoIPFurtherAction far = DoIPFurtherAction::NoFurtherAction;
+        DoIpVin matchingVIN = DoIpVin("MatchingVin_12345");
+        DoIpVin shortVIN = DoIpVin("shortVin");
+        DoIpVin shortVINPadded = DoIpVin("shortVin000000000");
+        DoIpEid EID = DoIpEid::Zero;
+        DoIpGid GID = DoIpGid::Zero;
+        DoIPFurtherAction furtherActionRequired = DoIPFurtherAction::NoFurtherAction;
         DoIPFurtherAction far_cs = DoIPFurtherAction::RoutingActivationForCentralSecurity;
 
         VehicleIdentificationHandlerFixture() {
@@ -31,7 +31,7 @@ TEST_SUITE("VehicleIdentificationHandler") {
      * Checks if a VIN with 17 bytes matches correctly the input data
      */
     TEST_CASE_FIXTURE(VehicleIdentificationHandlerFixture, "VIN 17 Bytes") {
-        DoIPMessage msg = message::makeVehicleIdentificationResponse(matchingVIN, DoIPAddress::ZeroAddress, EID, GID, far);
+        DoIPMessage msg = message::makeVehicleIdentificationResponse(matchingVIN, DoIPAddress::ZeroAddress, EID, GID, furtherActionRequired);
         ByteArrayRef payload = msg.getPayload();
         ByteArray expected{
             // VIN (17 bytes)
