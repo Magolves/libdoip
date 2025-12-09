@@ -1,0 +1,6 @@
+<map id="doip::ServerConfig" name="doip::ServerConfig">
+<area shape="rect" id="node1" title="Server configuration structure used to initialize a DoIP server." alt="" coords="101,243,243,269"/>
+<area shape="rect" id="node2" href="$classdoip_1_1GenericFixedId.html" title=" " alt="" coords="5,124,160,165"/>
+<area shape="rect" id="node3" href="$classdoip_1_1GenericFixedId.html" title="Generic fixed&#45;length identifier class template." alt="" coords="80,5,264,61"/>
+<area shape="rect" id="node4" href="$classdoip_1_1GenericFixedId.html" title=" " alt="" coords="184,124,339,165"/>
+</map>

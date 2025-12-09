@@ -1,0 +1,4 @@
+<map id="doip::DefaultDoIPServerModel" name="doip::DefaultDoIPServerModel">
+<area shape="rect" id="node1" title="Default DoIP Server Model with no&#45;op callbacks." alt="" coords="5,80,224,107"/>
+<area shape="rect" id="node2" href="$structdoip_1_1DoIPServerModel.html" title="DoIP Server Model &#45; Configuration and callbacks for a DoIP server connection." alt="" coords="29,5,200,32"/>
+</map>
