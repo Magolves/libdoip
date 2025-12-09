@@ -10,6 +10,7 @@ namespace doip {
 
 DoIPConnection::DoIPConnection(int tcpSocket, UniqueServerModelPtr model)
     : DoIPDefaultConnection(std::move(model)),
+      m_logicalAddress(ZERO_ADDRESS),
       m_tcpSocket(tcpSocket) {
 }
 
