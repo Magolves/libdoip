@@ -10,6 +10,7 @@ namespace doip {
 
 DoIPConnection::DoIPConnection(int tcpSocket, UniqueServerModelPtr model)
     : DoIPDefaultConnection(std::move(model)),
+      m_logicalAddress(ZERO_ADDRESS),
       m_tcpSocket(tcpSocket) {
 }
 
@@ -148,11 +149,11 @@ DoIPAddress DoIPConnection::getServerAddress() const {
 }
 
 DoIPAddress DoIPConnection::getClientAddress() const {
-    return m_gatewayAddress;
+    return m_logicalAddress;
 }
 
 void DoIPConnection::setClientAddress(const DoIPAddress &address) {
-    m_gatewayAddress = address;
+    m_logicalAddress = address;
 }
 
 DoIPDiagnosticAck DoIPConnection::notifyDiagnosticMessage(const DoIPMessage &msg) {

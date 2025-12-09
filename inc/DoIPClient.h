@@ -22,6 +22,8 @@ using DoIPRequest = std::pair<size_t, const uint8_t *>;
 class DoIPClient {
 
   public:
+    DoIPClient() {m_receiveBuf.reserve(DOIP_MAXIMUM_MTU);}
+
     void startTcpConnection();
     void startUdpConnection();
     void startAnnouncementListener();
@@ -29,7 +31,8 @@ class DoIPClient {
     ssize_t sendVehicleIdentificationRequest(const char *inet_address);
     void receiveRoutingActivationResponse();
     void receiveUdpMessage();
-    void receiveVehicleAnnouncement();
+    [[nodiscard]]
+    bool receiveVehicleAnnouncement();
     /*
      * Send the builded request over the tcp-connection to server
      */
@@ -46,7 +49,7 @@ class DoIPClient {
      */
     ssize_t sendAliveCheckResponse();
     void setSourceAddress(const DoIPAddress &address);
-    void displayVIResponseInformation();
+    void printVehicleInformationResponse();
     void closeTcpConnection();
     void closeUdpConnection();
     void reconnectServer();
@@ -55,19 +58,19 @@ class DoIPClient {
     int getConnected();
 
   private:
-    uint8_t _receivedData[_maxDataSize] = {0};
-    int _sockFd{-1}, _sockFd_udp{-1}, _sockFd_announcement{-1}, _connected{-1};
+    ByteArray m_receiveBuf;
+    int m_tcpSocket{-1}, m_udpSocket{-1}, m_udpAnnouncementSocket{-1}, m_connected{-1};
     int m_broadcast = 1;
-    struct sockaddr_in _serverAddr, _clientAddr, _announcementAddr;
+    struct sockaddr_in m_serverAddress, m_clientAddress, m_announcementAddress;
     DoIPAddress m_sourceAddress = DoIPAddress(0xE000);
 
-    uint8_t VINResult[17] = {0};
-    DoIPAddress m_logicalAddress = DoIPAddress::ZeroAddress;
-    uint8_t EIDResult[6] = {0};
-    uint8_t GIDResult[6] = {0};
-    uint8_t FurtherActionReqResult = 0x00;
+    DoIpVin m_vin{0};
+    DoIPAddress m_logicalAddress = ZERO_ADDRESS;
+    DoIpEid m_eid{0};
+    DoIpGid m_gid{0};
+    DoIPFurtherAction m_furtherActionReqResult = DoIPFurtherAction::NoFurtherAction;
 
-    void parseVIResponseInformation(const uint8_t *data);
+    void parseVehicleIdentificationResponse(const DoIPMessage& msg);
 
     int emptyMessageCounter = 0;
 };

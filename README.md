@@ -7,7 +7,7 @@
 [![CMake](https://img.shields.io/badge/CMake-3.15+-blue.svg)](https://cmake.org/)
 [![doctest](https://img.shields.io/badge/Tests-doctest-green.svg)](https://github.com/doctest/doctest)
 
-C/C++ library for Diagnostics over IP (DoIP) (fork from https://github.com/AVL-DiTEST-DiagDev/libdoip)
+C/C++ library for Diagnostics over IP (DoIP) (fork from [https://github.com/AVL-DiTEST-DiagDev/libdoip](https://github.com/AVL-DiTEST-DiagDev/libdoip))
 
 **CAUTION** The current API is under construction any may change at any time.
 
@@ -26,9 +26,9 @@ See [Logging](./doc/LOGGING.md) for details.
 
 Quick start — read the generated tutorial for the example server:
 
-- Online (published): https://magolves.github.io/libdoip/index.html
+- Online (published): [https://magolves.github.io/libdoip/index.html](https://magolves.github.io/libdoip/index.html)
 - Local example page: see `doc/ExampleDoIPServer.md` (included in the Doxygen HTML under "Example DoIP Server Tutorial").
-- Example tutorial (direct): https://magolves.github.io/libdoip/ExampleDoIPServer.html
+- Example tutorial (direct): [https://magolves.github.io/libdoip/md_doc_ExampleDoIPServer.html](https://magolves.github.io/libdoip/md_doc_ExampleDoIPServer.html)
 
 If you want to generate the docs locally, install Doxygen and Graphviz and
 run:
@@ -47,7 +47,7 @@ xdg-open docs/html/index.html
 git clone https://github.com/Magolves/libdoip.git
 ```
 
-2. Enter the directory 'libdoip' and build the library with:
+1. Enter the directory 'libdoip' and build the library with:
 
 ```bash
 cmake . -Bbuild
@@ -83,11 +83,10 @@ handlers.
 
 - Example source files: `examples/exampleDoIPServer.cpp`,
   `examples/ExampleDoIPServerModel.h`
-- Example tutorial (published): https://magolves.github.io/libdoip/ExampleDoIPServer.html
+- Example tutorial: [https://magolves.github.io/libdoip/ExampleDoIPServer.html](https://magolves.github.io/libdoip/ExampleDoIPServer.html)
 
 See the "Examples" section in the generated Doxygen main page for
 additional annotated links to these files.
-
 
 ## References
 

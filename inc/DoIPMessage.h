@@ -251,6 +251,22 @@ class DoIPMessage {
     }
 
     /**
+     * @brief Check if the message has a Source Address field.
+     *
+     * @return Returns @c true in the case of success, @c false otherwise.
+     */
+    bool hasSourceAddress() const {
+        auto payloadRef = getPayload();
+        auto plType = getPayloadType();
+        bool result = plType == DoIPPayloadType::DiagnosticMessage ||
+                      plType == DoIPPayloadType::RoutingActivationRequest ||
+                      plType == DoIPPayloadType::RoutingActivationResponse ||
+                      plType == DoIPPayloadType::AliveCheckResponse;
+
+        return result && payloadRef.second >= 2;
+    }
+
+    /**
      * @brief Get the Source Address of the message (if message is a Diagnostic Message).
      *
      * @return std::optional<DoIPAddress> The source address if present, std::nullopt otherwise
@@ -258,17 +274,21 @@ class DoIPMessage {
     std::optional<DoIPAddress> getSourceAddress() const {
         auto payloadRef = getPayload();
         // todo: Simplify
-        if (getPayloadType() == DoIPPayloadType::DiagnosticMessage && payloadRef.second >= 2) {
-            return DoIPAddress(payloadRef.first, 0);
+        if (hasSourceAddress()) {
+            return readAddressFrom(payloadRef.first, 0);
         }
-        if (getPayloadType() == DoIPPayloadType::RoutingActivationRequest && payloadRef.second >= 2) {
-            return DoIPAddress(payloadRef.first, 0);
-        }
-        if (getPayloadType() == DoIPPayloadType::RoutingActivationResponse && payloadRef.second >= 2) {
-            return DoIPAddress(payloadRef.first, 0);
-        }
-        if (getPayloadType() == DoIPPayloadType::AliveCheckResponse && payloadRef.second >= 2) {
-            return DoIPAddress(payloadRef.first, 0);
+        return std::nullopt;
+    }
+
+    /**
+     * @brief Get the Logical Address of the message (if message is a Vehicle Identification Response).
+     *
+     * @return std::optional<DoIPAddress> The logical address if present, std::nullopt otherwise
+     */
+    std::optional<DoIPAddress> getLogicalAddress() const {
+        auto payloadRef = getPayload();
+        if (getPayloadType() == DoIPPayloadType::VehicleIdentificationResponse && payloadRef.second >= 19) {
+            return readAddressFrom(payloadRef.first + 17);
         }
         return std::nullopt;
     }
@@ -281,7 +301,59 @@ class DoIPMessage {
     std::optional<DoIPAddress> getTargetAddress() const {
         auto payloadRef = getPayload();
         if (getPayloadType() == DoIPPayloadType::DiagnosticMessage && payloadRef.second >= 4) {
-            return DoIPAddress(payloadRef.first, 2);
+            return readAddressFrom(payloadRef.first, 2);
+        }
+        return std::nullopt;
+    }
+
+    /**
+     * @brief Get the vehicle identification number (VIN) if message is a Vehicle Identification Response.
+     *
+     * @return std::optional<DoIPAddress> The VIN if present, std::nullopt otherwise
+     */
+    std::optional<DoIpVin> getVin() const {
+        auto payloadRef = getPayload();
+        if (getPayloadType() == DoIPPayloadType::VehicleIdentificationResponse && payloadRef.second >= 17) {
+            return DoIpVin(payloadRef.first, 17);
+        }
+        return std::nullopt;
+    }
+
+    /**
+     * @brief Get the entity id (EID) if message is a Vehicle Identification Response.
+     *
+     * @return std::optional<DoIPAddress> The VIN if present, std::nullopt otherwise
+     */
+    std::optional<DoIpEid> getEid() const {
+        auto payloadRef = getPayload();
+        if (getPayloadType() == DoIPPayloadType::VehicleIdentificationResponse && payloadRef.second >= 25) {
+            return DoIpEid(payloadRef.first + 19, 6);
+        }
+        return std::nullopt;
+    }
+
+    /**
+     * @brief Get the group id (GID) if message is a Vehicle Identification Response.
+     *
+     * @return std::optional<DoIPAddress> The VIN if present, std::nullopt otherwise
+     */
+    std::optional<DoIpGid> getGid() const {
+        auto payloadRef = getPayload();
+        if (getPayloadType() == DoIPPayloadType::VehicleIdentificationResponse && payloadRef.second >= 31) {
+            return DoIpGid(payloadRef.first + 25, 6);
+        }
+        return std::nullopt;
+    }
+
+    /**
+     * @brief Get the Further Action Request object if message is a Vehicle Identification Response.
+     *
+     * @return std::optional<DoIPFurtherAction> The Further Action Request if present, std::nullopt otherwise
+     */
+    std::optional<DoIPFurtherAction> getFurtherActionRequest() const {
+        auto payloadRef = getPayload();
+        if (getPayloadType() == DoIPPayloadType::VehicleIdentificationResponse && payloadRef.second >= 31) {
+            return DoIPFurtherAction(payloadRef.first[31]);
         }
         return std::nullopt;
     }
@@ -454,18 +526,18 @@ inline DoIPMessage makeVehicleIdentificationRequest() {
  * @return DoIPMessage the vehicle identification response message
  */
 inline DoIPMessage makeVehicleIdentificationResponse(
-    const DoIPVIN &vin,
+    const DoIpVin &vin,
     const DoIPAddress &logicalAddress,
-    const DoIPEID &entityType,
-    const DoIPGID &groupId,
+    const DoIpEid &entityType,
+    const DoIpGid &groupId,
     DoIPFurtherAction furtherAction = DoIPFurtherAction::NoFurtherAction,
     DoIPSyncStatus syncStatus = DoIPSyncStatus::GidVinSynchronized) {
 
     ByteArray payload;
-    payload.reserve(vin.size() + logicalAddress.size() + entityType.size() + groupId.size() + 2);
+    payload.reserve(vin.size() + sizeof(logicalAddress) + entityType.size() + groupId.size() + 2);
 
     payload.insert(payload.end(), vin.begin(), vin.end());
-    payload.writeU16BE(logicalAddress.toUint16());
+    payload.writeU16BE(logicalAddress);
     payload.insert(payload.end(), entityType.begin(), entityType.end());
     payload.insert(payload.end(), groupId.begin(), groupId.end());
     payload.writeEnum(furtherAction);
@@ -498,10 +570,10 @@ inline DoIPMessage makeDiagnosticMessage(
     const ByteArray &msg_payload) {
 
     ByteArray payload;
-    payload.reserve(sa.size() + ta.size() + msg_payload.size());
+    payload.reserve(sizeof(sa) + sizeof(ta) + msg_payload.size());
 
-    sa.appendTo(payload);
-    ta.appendTo(payload);
+    payload.writeU16BE(sa);
+    payload.writeU16BE(ta);
     payload.insert(payload.end(), msg_payload.begin(), msg_payload.end());
 
     return DoIPMessage(DoIPPayloadType::DiagnosticMessage, std::move(payload));
@@ -521,10 +593,10 @@ inline DoIPMessage makeDiagnosticPositiveResponse(
     const ByteArray &msg_payload) {
 
     ByteArray payload;
-    payload.reserve(sa.size() + ta.size() + msg_payload.size() + 1);
+    payload.reserve(sizeof(sa) + sizeof(ta) + msg_payload.size() + 1);
 
-    sa.appendTo(payload);
-    ta.appendTo(payload);
+    payload.writeU16BE(sa);
+    payload.writeU16BE(ta);
     payload.emplace_back(DIAGNOSTIC_MESSAGE_ACK);
     payload.insert(payload.end(), msg_payload.begin(), msg_payload.end());
 
@@ -547,10 +619,10 @@ inline DoIPMessage makeDiagnosticNegativeResponse(
     const ByteArray &msg_payload) {
 
     ByteArray payload;
-    payload.reserve(sa.size() + ta.size() + msg_payload.size() + 1);
+    payload.reserve(sizeof(sa) + sizeof(ta) + msg_payload.size() + 1);
 
-    sa.appendTo(payload);
-    ta.appendTo(payload);
+    payload.writeU16BE(sa);
+    payload.writeU16BE(ta);
     payload.emplace_back(static_cast<uint8_t>(nack));
     payload.insert(payload.end(), msg_payload.begin(), msg_payload.end());
 
@@ -574,7 +646,7 @@ inline DoIPMessage makeAliveCheckRequest() {
  */
 inline DoIPMessage makeAliveCheckResponse(const DoIPAddress &sa) {
     ByteArray payload;
-    payload.writeU16BE(sa.toUint16());
+    payload.writeU16BE(sa);
     return DoIPMessage(DoIPPayloadType::AliveCheckResponse, std::move(payload));
 }
 
@@ -590,8 +662,8 @@ inline DoIPMessage makeRoutingActivationRequest(
     DoIPRoutingActivationType actType = DoIPRoutingActivationType::Default) {
 
     ByteArray payload;
-    payload.reserve(ea.size() + 1 + 4);
-    payload.writeU16BE(ea.toUint16());
+    payload.reserve(sizeof(ea) + 1 + 4);
+    payload.writeU16BE(ea);
     payload.writeEnum(actType);
     // Reserved 4 bytes for future use
     payload.insert(payload.end(), {0, 0, 0, 0});
@@ -613,14 +685,14 @@ inline DoIPMessage makeRoutingActivationResponse(
     DoIPRoutingActivationType actType = DoIPRoutingActivationType::Default) {
 
     ByteArray payload;
-    payload.reserve(ea.size() + 1 + 4);
+    payload.reserve(sizeof(ea) + 1 + 4);
 
-    auto sourceAddr = routingReq.getSourceAddress();
-    if (sourceAddr) {
-        sourceAddr.value().appendTo(payload);
+    auto optSourceAddress = routingReq.getSourceAddress();
+    if (optSourceAddress) {
+        payload.writeU16BE(optSourceAddress.value());
     }
 
-    ea.appendTo(payload);
+    payload.writeU16BE(ea);
     payload.emplace_back(static_cast<uint8_t>(actType));
     // Reserved 4 bytes for future use
     payload.insert(payload.end(), {0, 0, 0, 0});

@@ -58,9 +58,10 @@ endif()
 
 # Configuration options
 set(DOIP_ALIVE_CHECK_RETRIES "1" CACHE STRING "Number of retries for DoIP alive check messages")
+set(DOIP_MAXIMUM_MTU "4095" CACHE STRING "Maximum Transmission Unit (MTU) size for DoIP messages")
 
 # Validate numeric options
-foreach(VAR DOIP_ALIVE_CHECK_RETRIES)
+foreach(VAR DOIP_ALIVE_CHECK_RETRIES DOIP_MAXIMUM_MTU)
     if(NOT ${VAR} MATCHES "^[0-9]+$")
         message(FATAL_ERROR "${VAR} must be a positive integer")
     endif()

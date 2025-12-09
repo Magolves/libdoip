@@ -234,7 +234,7 @@ void DoIPDefaultConnection::handleRoutingActivated(DoIPServerEvent event, OptDoI
         return;
     default:
         LOG_DOIP_WARN("Received unsupported message type {} in Routing Activated state", fmt::streamed(message.getPayloadType()));
-        sendDiagnosticMessageResponse(DoIPAddress::ZeroAddress, DoIPNegativeDiagnosticAck::TransportProtocolError);
+        sendDiagnosticMessageResponse(ZERO_ADDRESS, DoIPNegativeDiagnosticAck::TransportProtocolError);
         // closeConnection(DoIPCloseReason::InvalidMessage);
         return;
     }
@@ -300,7 +300,7 @@ void DoIPDefaultConnection::handleWaitAliveCheckResponse(DoIPServerEvent event, 
         return;
     default:
         LOG_DOIP_WARN("Received unsupported message type {} in Wait Alive Check Response state", fmt::streamed(message.getPayloadType()));
-        sendDiagnosticMessageResponse(DoIPAddress::ZeroAddress, DoIPNegativeDiagnosticAck::TransportProtocolError);
+        sendDiagnosticMessageResponse(ZERO_ADDRESS, DoIPNegativeDiagnosticAck::TransportProtocolError);
         return;
     }
 }
@@ -359,8 +359,8 @@ ssize_t DoIPDefaultConnection::sendRoutingActivationResponse(const DoIPAddress &
 
     // Build response payload manually
     ByteArray payload;
-    source_address.appendTo(payload);
-    serverAddr.appendTo(payload);
+    payload.writeU16BE(source_address);
+    payload.writeU16BE(serverAddr);
     payload.push_back(static_cast<uint8_t>(response_code));
     // Reserved 4 bytes
     payload.insert(payload.end(), {0x00, 0x00, 0x00, 0x00});

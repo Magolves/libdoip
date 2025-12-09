@@ -174,11 +174,6 @@ m_model.onDownstreamRequest = [this](IConnectionContext &ctx, const DoIPMessage 
 Below is a PlantUML diagram illustrating `DoIPServer`, `DoIPConnection`,
 `DoIPServerModel` and a downstream UDS/CAN backend interaction.
 
-[\image html ]ServerModel.svg
-
-For GitHub or other markdown viewers that don't process the Doxygen
-directive, the SVG is also referenced directly:
-
 ![ServerModel](diagrams/ServerModel.svg)
 
 ## Logging and debugging tips
