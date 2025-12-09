@@ -346,17 +346,42 @@ inline const GenericFixedId<IdLength, zeroPadding, padChar> GenericFixedId<IdLen
  * @brief Vehicle Identification Number (VIN) - 17 bytes according to ISO 3779
  * Padded with ASCII '0' characters when shorter than 17 bytes
  */
-using DoIPVIN = GenericFixedId<17, true, '0'>;
+using DoIpVin = GenericFixedId<17, true, '0'>;
 
 /**
  * @brief Entity Identifier (EID) - 6 bytes for unique entity identification
  */
-using DoIPEID = GenericFixedId<6, false>;
+using DoIpEid = GenericFixedId<6, false>;
 
 /**
  * @brief Group Identifier (GID) - 6 bytes for group identification
  */
-using DoIPGID = GenericFixedId<6, false>;
+using DoIpGid = GenericFixedId<6, false>;
+
+/**
+ * @brief Stream output operator for DoIpVin, DoIpEid, and DoIpGid
+ *
+ * @param os the operation stream
+ * @param vin the DoIpVin to output
+ * @return std::ostream& the operation stream
+ */
+inline std::ostream &operator<<(std::ostream &os, const DoIpVin &vin) {
+    os << vin.toString();
+    return os;
+}
+
+/**
+ * @brief Stream output operator for DoIpEid/DoIpGid
+ *
+ * @param os the operation stream
+ * @param eid the DoIpEid/DoIpGid to output
+ * @return std::ostream&  @ref {type}  ["{type}"]   //  @return Returns @c true in the case of success, @c false otherwise.
+ */
+inline std::ostream &operator<<(std::ostream &os, const DoIpEid &eid) {
+    os << eid.toHexString();
+    return os;
+}
+
 
 } // namespace doip
 
