@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
             } else {
                 val = std::stoul(logical_addr_str, &pos, 0);
             }
-            cfg.logicalAddress = DoIPAddress(static_cast<uint16_t>(val & 0xFFFF));
+            cfg.logicalAddress = static_cast<uint16_t>(val & 0xFFFF);
         } catch (...) {
             LOG_DOIP_WARN("Failed to parse logical address '{}', using default 0x0E00", logical_addr_str);
         }

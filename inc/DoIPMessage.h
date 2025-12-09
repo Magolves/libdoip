@@ -275,7 +275,7 @@ class DoIPMessage {
         auto payloadRef = getPayload();
         // todo: Simplify
         if (hasSourceAddress()) {
-            return DoIPAddress(payloadRef.first, 0);
+            return readAddressFrom(payloadRef.first, 0);
         }
         return std::nullopt;
     }
@@ -288,7 +288,7 @@ class DoIPMessage {
     std::optional<DoIPAddress> getLogicalAddress() const {
         auto payloadRef = getPayload();
         if (getPayloadType() == DoIPPayloadType::VehicleIdentificationResponse && payloadRef.second >= 19) {
-            return DoIPAddress(payloadRef.first + 17);
+            return readAddressFrom(payloadRef.first + 17);
         }
         return std::nullopt;
     }
@@ -301,7 +301,7 @@ class DoIPMessage {
     std::optional<DoIPAddress> getTargetAddress() const {
         auto payloadRef = getPayload();
         if (getPayloadType() == DoIPPayloadType::DiagnosticMessage && payloadRef.second >= 4) {
-            return DoIPAddress(payloadRef.first, 2);
+            return readAddressFrom(payloadRef.first, 2);
         }
         return std::nullopt;
     }
@@ -534,10 +534,10 @@ inline DoIPMessage makeVehicleIdentificationResponse(
     DoIPSyncStatus syncStatus = DoIPSyncStatus::GidVinSynchronized) {
 
     ByteArray payload;
-    payload.reserve(vin.size() + logicalAddress.size() + entityType.size() + groupId.size() + 2);
+    payload.reserve(vin.size() + sizeof(logicalAddress) + entityType.size() + groupId.size() + 2);
 
     payload.insert(payload.end(), vin.begin(), vin.end());
-    payload.writeU16BE(logicalAddress.toUint16());
+    payload.writeU16BE(logicalAddress);
     payload.insert(payload.end(), entityType.begin(), entityType.end());
     payload.insert(payload.end(), groupId.begin(), groupId.end());
     payload.writeEnum(furtherAction);
@@ -570,10 +570,10 @@ inline DoIPMessage makeDiagnosticMessage(
     const ByteArray &msg_payload) {
 
     ByteArray payload;
-    payload.reserve(sa.size() + ta.size() + msg_payload.size());
+    payload.reserve(sizeof(sa) + sizeof(ta) + msg_payload.size());
 
-    sa.appendTo(payload);
-    ta.appendTo(payload);
+    payload.writeU16BE(sa);
+    payload.writeU16BE(ta);
     payload.insert(payload.end(), msg_payload.begin(), msg_payload.end());
 
     return DoIPMessage(DoIPPayloadType::DiagnosticMessage, std::move(payload));
@@ -593,10 +593,10 @@ inline DoIPMessage makeDiagnosticPositiveResponse(
     const ByteArray &msg_payload) {
 
     ByteArray payload;
-    payload.reserve(sa.size() + ta.size() + msg_payload.size() + 1);
+    payload.reserve(sizeof(sa) + sizeof(ta) + msg_payload.size() + 1);
 
-    sa.appendTo(payload);
-    ta.appendTo(payload);
+    payload.writeU16BE(sa);
+    payload.writeU16BE(ta);
     payload.emplace_back(DIAGNOSTIC_MESSAGE_ACK);
     payload.insert(payload.end(), msg_payload.begin(), msg_payload.end());
 
@@ -619,10 +619,10 @@ inline DoIPMessage makeDiagnosticNegativeResponse(
     const ByteArray &msg_payload) {
 
     ByteArray payload;
-    payload.reserve(sa.size() + ta.size() + msg_payload.size() + 1);
+    payload.reserve(sizeof(sa) + sizeof(ta) + msg_payload.size() + 1);
 
-    sa.appendTo(payload);
-    ta.appendTo(payload);
+    payload.writeU16BE(sa);
+    payload.writeU16BE(ta);
     payload.emplace_back(static_cast<uint8_t>(nack));
     payload.insert(payload.end(), msg_payload.begin(), msg_payload.end());
 
@@ -646,7 +646,7 @@ inline DoIPMessage makeAliveCheckRequest() {
  */
 inline DoIPMessage makeAliveCheckResponse(const DoIPAddress &sa) {
     ByteArray payload;
-    payload.writeU16BE(sa.toUint16());
+    payload.writeU16BE(sa);
     return DoIPMessage(DoIPPayloadType::AliveCheckResponse, std::move(payload));
 }
 
@@ -662,8 +662,8 @@ inline DoIPMessage makeRoutingActivationRequest(
     DoIPRoutingActivationType actType = DoIPRoutingActivationType::Default) {
 
     ByteArray payload;
-    payload.reserve(ea.size() + 1 + 4);
-    payload.writeU16BE(ea.toUint16());
+    payload.reserve(sizeof(ea) + 1 + 4);
+    payload.writeU16BE(ea);
     payload.writeEnum(actType);
     // Reserved 4 bytes for future use
     payload.insert(payload.end(), {0, 0, 0, 0});
@@ -685,14 +685,14 @@ inline DoIPMessage makeRoutingActivationResponse(
     DoIPRoutingActivationType actType = DoIPRoutingActivationType::Default) {
 
     ByteArray payload;
-    payload.reserve(ea.size() + 1 + 4);
+    payload.reserve(sizeof(ea) + 1 + 4);
 
-    auto sourceAddr = routingReq.getSourceAddress();
-    if (sourceAddr) {
-        sourceAddr.value().appendTo(payload);
+    auto optSourceAddress = routingReq.getSourceAddress();
+    if (optSourceAddress) {
+        payload.writeU16BE(optSourceAddress.value());
     }
 
-    ea.appendTo(payload);
+    payload.writeU16BE(ea);
     payload.emplace_back(static_cast<uint8_t>(actType));
     // Reserved 4 bytes for future use
     payload.insert(payload.end(), {0, 0, 0, 0});

@@ -31,7 +31,7 @@ TEST_SUITE("VehicleIdentificationHandler") {
      * Checks if a VIN with 17 bytes matches correctly the input data
      */
     TEST_CASE_FIXTURE(VehicleIdentificationHandlerFixture, "VIN 17 Bytes") {
-        DoIPMessage msg = message::makeVehicleIdentificationResponse(matchingVIN, DoIPAddress::ZeroAddress, EID, GID, furtherActionRequired);
+        DoIPMessage msg = message::makeVehicleIdentificationResponse(matchingVIN, ZERO_ADDRESS, EID, GID, furtherActionRequired);
         ByteArrayRef payload = msg.getPayload();
         ByteArray expected{
             // VIN (17 bytes)
@@ -58,7 +58,7 @@ TEST_SUITE("VehicleIdentificationHandler") {
     TEST_CASE_FIXTURE(VehicleIdentificationHandlerFixture,
                       "VIN Less Than 17 Bytes") {
 
-        DoIPMessage msg = message::makeVehicleIdentificationResponse(shortVIN, DoIPAddress::ZeroAddress, EID, GID, far_cs);
+        DoIPMessage msg = message::makeVehicleIdentificationResponse(shortVIN, ZERO_ADDRESS, EID, GID, far_cs);
         ByteArrayRef payload = msg.getPayload();
         ByteArray expected{
             // VIN (17 bytes)

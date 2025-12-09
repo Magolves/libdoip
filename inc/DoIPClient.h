@@ -65,7 +65,7 @@ class DoIPClient {
     DoIPAddress m_sourceAddress = DoIPAddress(0xE000);
 
     DoIpVin m_vin{0};
-    DoIPAddress m_logicalAddress = DoIPAddress::ZeroAddress;
+    DoIPAddress m_logicalAddress = ZERO_ADDRESS;
     DoIpEid m_eid{0};
     DoIpGid m_gid{0};
     DoIPFurtherAction m_furtherActionReqResult = DoIPFurtherAction::NoFurtherAction;

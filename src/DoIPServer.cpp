@@ -248,8 +248,8 @@ void DoIPServer::setVin(const DoIpVin &vin) {
     m_config.vin = vin;
 }
 
-void DoIPServer::setLogicalGatewayAddress(unsigned short logicalAddress) {
-    m_config.logicalAddress.update(logicalAddress);
+void DoIPServer::setLogicalGatewayAddress(DoIPAddress logicalAddress) {
+    m_config.logicalAddress = logicalAddress;
 }
 
 void DoIPServer::setEid(const uint64_t inputEID) {
@@ -362,17 +362,18 @@ void DoIPServer::udpListenerThread() {
                 sentBytes = sendUdpResponse(msg);
             } break;
 
-            default: {
+            default:
                 LOG_DOIP_ERROR("Invalid payload type 0x{:04X} received (receiveUdpMessage())", static_cast<uint16_t>(plType));
                 sentBytes = sendNegativeUdpAck(DoIPNegativeAck::UnknownPayloadType);
-            }
-                if (sentBytes < 0) {
-                    if (errno == EAGAIN /*|| errno == EWOULDBLOCK*/) {
-                        usleep(100);
-                        continue;
-                    }
-                    break;
+
+            } // switch
+
+            if (sentBytes < 0) {
+                if (errno == EAGAIN /*|| errno == EWOULDBLOCK*/) {
+                    usleep(100);
+                    continue;
                 }
+                break;
             }
         }
     }

@@ -32,8 +32,7 @@ TEST_SUITE("DoIPDefaultConnection") {
     TEST_CASE_FIXTURE(DoIPDefaultConnectionTestFixture, "DoIPDefaultConnection: Get Server Address") {
         DoIPAddress serverAddress = connection->getServerAddress();
         INFO("Server Address: " << serverAddress);
-        CHECK(serverAddress.hsb() == 0x0E);
-        CHECK(serverAddress.lsb() == 0x00);
+        CHECK(serverAddress == 0x0E00);
     }
 
     TEST_CASE_FIXTURE(DoIPDefaultConnectionTestFixture, "DoIPDefaultConnection: Send Protocol Message") {
