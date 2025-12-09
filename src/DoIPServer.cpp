@@ -6,15 +6,14 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "DoIPServer.h"
 #include "DoIPConnection.h"
 #include "DoIPMessage.h"
+#include "DoIPServer.h"
 #include "DoIPServerModel.h"
 #include "Logger.h"
 #include "MacAddress.h"
 
 using namespace doip;
-
 
 DoIPServer::~DoIPServer() {
     if (m_running.load()) {
@@ -249,7 +248,7 @@ void DoIPServer::setVin(const DoIPVIN &vin) {
     m_config.vin = vin;
 }
 
-void DoIPServer::setLogicalGatewayAddress(const unsigned short logicalAddress) {
+void DoIPServer::setLogicalGatewayAddress(unsigned short logicalAddress) {
     m_config.logicalAddress.update(logicalAddress);
 }
 
@@ -282,7 +281,7 @@ void DoIPServer::setLoopbackMode(bool useLoopback) {
     }
 }
 
-void DoIPServer::setMulticastGroup(const char *address) {
+void DoIPServer::setMulticastGroup(const char *address) const {
     int loop = 1;
 
     // set Option using the same Port for multiple Sockets
@@ -306,12 +305,9 @@ void DoIPServer::setMulticastGroup(const char *address) {
 }
 
 ssize_t DoIPServer::sendNegativeUdpAck(DoIPNegativeAck ackCode) {
-    // DoIPMessage message = message::makeNegativeAckMessage(ackCode);
+    DoIPMessage msg = message::makeNegativeAckMessage(ackCode);
 
-    // return sendUdpMessage(message.data(), message.size());
-    (void)ackCode;
-    LOG_UDP_CRITICAL("sendNegativeUdpAck NOT IMPL");
-    return -1;
+    return sendUdpResponse(msg);
 }
 
 // new version starts here
@@ -349,11 +345,8 @@ void DoIPServer::udpListenerThread() {
                 auto sentBytes = sendNegativeUdpAck(DoIPNegativeAck::IncorrectPatternFormat);
                 if (sentBytes < 0) {
                     if (errno == EAGAIN /*|| errno == EWOULDBLOCK*/) {
-                        // Timeout, continue
+                        usleep(100);
                         continue;
-                    }
-                    if (m_running) {
-                        LOG_UDP_ERROR("Failed to receive: {}", strerror(errno));
                     }
                     break;
                 }
@@ -361,26 +354,25 @@ void DoIPServer::udpListenerThread() {
             auto plType = optHeader->first;
             // auto payloadLength = optHeader->second;
             LOG_UDP_INFO("RX: {}", fmt::streamed(plType));
+
+            ssize_t sentBytes = 0;
             switch (plType) {
             case DoIPPayloadType::VehicleIdentificationRequest: {
                 DoIPMessage msg = message::makeVehicleIdentificationResponse(m_config.vin, m_config.logicalAddress, m_config.eid, m_config.gid);
-                LOG_DOIP_INFO("TX {}", fmt::streamed(msg));
-
-                auto sentBytes = sendto(m_udp_sock, msg.data(), msg.size(), 0,
-                                        reinterpret_cast<struct sockaddr *>(&m_clientAddress), client_len);
-
-                if (sentBytes > 0) {
-                    LOG_DOIP_INFO("Sent Vehicle Identification Response to {}:{}",
-                                   sentBytes, client_ip, ntohs(m_clientAddress.sin_port));
-                } else {
-                    perror("Failed to send response");
-                }
+                sentBytes = sendUdpResponse(msg);
             } break;
 
             default: {
                 LOG_DOIP_ERROR("Invalid payload type 0x{:04X} received (receiveUdpMessage())", static_cast<uint16_t>(plType));
-                /*auto sentBytes =*/sendNegativeUdpAck(DoIPNegativeAck::UnknownPayloadType);
+                sentBytes = sendNegativeUdpAck(DoIPNegativeAck::UnknownPayloadType);
             }
+                if (sentBytes < 0) {
+                    if (errno == EAGAIN /*|| errno == EWOULDBLOCK*/) {
+                        usleep(100);
+                        continue;
+                    }
+                    break;
+                }
             }
         }
     }
@@ -427,16 +419,23 @@ ssize_t DoIPServer::sendVehicleAnnouncement() {
     LOG_DOIP_INFO("TX {}", fmt::streamed(msg));
     if (sentBytes > 0) {
         LOG_UDP_INFO("Sent Vehicle Announcement: {} bytes to {}:{}",
-               sentBytes, dest_ip, DOIP_UDP_TEST_EQUIPMENT_REQUEST_PORT);
+                     sentBytes, dest_ip, DOIP_UDP_TEST_EQUIPMENT_REQUEST_PORT);
     } else {
         LOG_UDP_ERROR("Failed to send announcement: {}", strerror(errno));
     }
     return sentBytes;
 }
 
-ssize_t DoIPServer::sendUdpMessage(const uint8_t *message, size_t messageLength) {
-    (void)message;
-    (void)messageLength;
-    LOG_UDP_CRITICAL("sendUdpMessage NOT IMPL");
-    return -1;
+ssize_t DoIPServer::sendUdpResponse(DoIPMessage msg) {
+    auto sentBytes = sendto(m_udp_sock, msg.data(), msg.size(), 0,
+                            reinterpret_cast<struct sockaddr *>(&m_clientAddress), sizeof(m_clientAddress));
+
+    if (sentBytes > 0) {
+        LOG_DOIP_INFO("TX {}", fmt::streamed(msg));
+        LOG_UDP_INFO("Sent UDS response: {} bytes to {}:{}",
+                     sentBytes, m_clientIp, ntohs(m_clientAddress.sin_port));
+    } else {
+        LOG_DOIP_ERROR("Failed to send message: {}", strerror(errno));
+    }
+    return sentBytes;
 }

@@ -234,7 +234,7 @@ class DoIPServer {
     void stop();
     void daemonize();
 
-    void setMulticastGroup(const char *address);
+    void setMulticastGroup(const char *address) const;
 
     ssize_t sendNegativeUdpAck(DoIPNegativeAck ackCode);
 
@@ -247,7 +247,7 @@ class DoIPServer {
     void udpAnnouncementThread();
     ssize_t sendVehicleAnnouncement();
 
-    ssize_t sendUdpMessage(const uint8_t *message, size_t messageLength);
+    ssize_t sendUdpResponse(DoIPMessage msg);
 };
 
 // Template implementation must be in header for external linkage
