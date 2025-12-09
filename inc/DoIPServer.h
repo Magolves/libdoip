@@ -143,7 +143,7 @@ class DoIPServer {
      * @brief Set the logical DoIP gateway address.
      * @param logicalAddress Logical address value.
      */
-    void setLogicalGatewayAddress(unsigned short logicalAddress);
+    void setLogicalGatewayAddress(DoIPAddress logicalAddress);
 
     /**
      * @brief Sets the EID to a default value based on the MAC address.
