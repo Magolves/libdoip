@@ -22,6 +22,8 @@ using DoIPRequest = std::pair<size_t, const uint8_t *>;
 class DoIPClient {
 
   public:
+    DoIPClient() {m_receiveBuf.reserve(DOIP_MAXIMUM_MTU);}
+
     void startTcpConnection();
     void startUdpConnection();
     void startAnnouncementListener();
@@ -56,17 +58,17 @@ class DoIPClient {
     int getConnected();
 
   private:
-    uint8_t _receivedData[_maxDataSize] = {0};
-    int _sockFd{-1}, _sockFd_udp{-1}, _sockFd_announcement{-1}, _connected{-1};
+    ByteArray m_receiveBuf;
+    int m_tcpSocket{-1}, m_udpSocket{-1}, m_udpAnnouncementSocket{-1}, m_connected{-1};
     int m_broadcast = 1;
-    struct sockaddr_in _serverAddr, _clientAddr, _announcementAddr;
+    struct sockaddr_in m_serverAddress, m_clientAddress, m_announcementAddress;
     DoIPAddress m_sourceAddress = DoIPAddress(0xE000);
 
-    uint8_t VINResult[17] = {0};
+    uint8_t m_vin[17] = {0};
     DoIPAddress m_logicalAddress = DoIPAddress::ZeroAddress;
-    uint8_t EIDResult[6] = {0};
-    uint8_t GIDResult[6] = {0};
-    uint8_t FurtherActionReqResult = 0x00;
+    uint8_t m_eid[6] = {0};
+    uint8_t m_gid[6] = {0};
+    uint8_t m_furtherActionReqResult = 0x00;
 
     void parseVIResponseInformation(const uint8_t *data);
 
