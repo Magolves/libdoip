@@ -34,20 +34,12 @@ DoIPServer::DoIPServer(const ServerConfig &config)
     : m_config(config) {
     m_receiveBuf.reserve(MAX_ISOTP_MTU);
 
-    // Apply VIN/EID/GID from config (types enforce size/padding)
-    m_VIN = m_config.vin;
-    m_EID = m_config.eid;
-    m_GID = m_config.gid;
-
-    // Set logical gateway address from config
-    m_logicalAddress.update(m_config.logicalAddress);
-
     // Apply EID/GID if provided (interpreted as numeric where possible)
     // (old parsing logic removed - ServerConfig uses typed identifiers)
     if (!m_config.loopback) {
-        setAnnouncementMode(false);
+        setLoopbackMode(false);
     } else {
-        setAnnouncementMode(true);
+        setLoopbackMode(true);
     }
 
     if (m_config.daemonize) {
@@ -153,7 +145,7 @@ void DoIPServer::connectionHandlerThread(std::unique_ptr<DoIPConnection> connect
  * Set up a tcp socket, so the socket is ready to accept a connection
  */
 bool DoIPServer::setupTcpSocket() {
-    LOG_DOIP_DEBUG("Setting up TCP socket on port {}", DOIP_SERVER_PORT);
+    LOG_DOIP_DEBUG("Setting up TCP socket on port {}", DOIP_SERVER_TCP_PORT);
 
     m_tcp_sock = socket(AF_INET, SOCK_STREAM, 0);
     if (m_tcp_sock < 0) {
@@ -169,7 +161,7 @@ bool DoIPServer::setupTcpSocket() {
 
     m_serverAddress.sin_family = AF_INET;
     m_serverAddress.sin_addr.s_addr = htonl(INADDR_ANY);
-    m_serverAddress.sin_port = htons(DOIP_SERVER_PORT);
+    m_serverAddress.sin_port = htons(DOIP_SERVER_TCP_PORT);
 
     // binds the socket to the address and port number
     if (bind(m_tcp_sock, reinterpret_cast<const struct sockaddr *>(&m_serverAddress), sizeof(m_serverAddress)) < 0) {
@@ -177,7 +169,7 @@ bool DoIPServer::setupTcpSocket() {
         return false;
     }
 
-    LOG_TCP_INFO("TCP socket successfully bound to port {}", DOIP_SERVER_PORT);
+    LOG_TCP_INFO("TCP socket successfully bound to port {}", DOIP_SERVER_TCP_PORT);
     return true;
 }
 
@@ -220,7 +212,7 @@ bool DoIPServer::setupUdpSocket() {
         return 1;
     }
     // setting the IP DoIPAddress for Multicast/Broadcast
-    if (!m_loopbackMode) { //
+    if (!m_config.loopback) { //
         setMulticastGroup("224.0.0.2");
         LOG_UDP_INFO("UDP socket successfully bound to port {} with multicast group", DOIP_UDP_DISCOVERY_PORT);
     } else {
@@ -249,53 +241,53 @@ void DoIPServer::closeUdpSocket() {
     close(m_udp_sock);
 }
 
-bool DoIPServer::setEIDdefault() {
+bool DoIPServer::setDefaultEid() {
     MacAddress mac = {0};
     if (!getFirstMacAddress(mac)) {
         LOG_DOIP_ERROR("Failed to get MAC address, using default EID");
-        m_EID = DoIPEID::Zero;
+        m_config.eid = DoIPEID::Zero;
         return false;
     }
     // Set EID based on MAC address (last 6 bytes)
-    m_EID = DoIPEID(mac.data(), m_EID.ID_LENGTH);
+    m_config.eid = DoIPEID(mac.data(), m_config.eid.ID_LENGTH);
     return true;
 }
 
-void DoIPServer::setVIN(const std::string &VINString) {
+void DoIPServer::setVin(const std::string &VINString) {
 
-    m_VIN = DoIPVIN(VINString);
+    m_config.vin = DoIPVIN(VINString);
 }
 
-void DoIPServer::setVIN(const DoIPVIN &vin) {
-    m_VIN = vin;
+void DoIPServer::setVin(const DoIPVIN &vin) {
+    m_config.vin = vin;
 }
 
-void DoIPServer::setLogicalGatewayAddress(const unsigned short inputLogAdd) {
-    m_logicalAddress.update(inputLogAdd);
+void DoIPServer::setLogicalGatewayAddress(const unsigned short logicalAddress) {
+    m_config.logicalAddress.update(logicalAddress);
 }
 
-void DoIPServer::setEID(const uint64_t inputEID) {
-    m_EID = DoIPEID(inputEID);
+void DoIPServer::setEid(const uint64_t inputEID) {
+    m_config.eid = DoIPEID(inputEID);
 }
 
-void DoIPServer::setGID(const uint64_t inputGID) {
-    m_GID = DoIPGID(inputGID);
+void DoIPServer::setGid(const uint64_t inputGID) {
+    m_config.gid = DoIPGID(inputGID);
 }
 
-void DoIPServer::setFAR(DoIPFurtherAction inputFAR) {
-    m_FurtherActionReq = inputFAR;
+void DoIPServer::setFurtherActionRequired(DoIPFurtherAction furtherActionRequired) {
+    m_FurtherActionReq = furtherActionRequired;
 }
 
 void DoIPServer::setAnnounceNum(int Num) {
-    m_announceNum = Num;
+    m_config.announceCount = Num;
 }
 
 void DoIPServer::setAnnounceInterval(unsigned int Interval) {
-    m_announceInterval = Interval;
+    m_config.announceInterval = Interval;
 }
 
-void DoIPServer::setAnnouncementMode(bool useLoopback) {
-    m_loopbackMode = useLoopback;
+void DoIPServer::setLoopbackMode(bool useLoopback) {
+    m_config.loopback = useLoopback;
     if (useLoopback) {
         LOG_DOIP_INFO("Vehicle announcements will use loopback (127.0.0.1)");
     } else {
@@ -386,7 +378,7 @@ void DoIPServer::udpListenerThread() {
             LOG_UDP_INFO("RX: {}", fmt::streamed(plType));
             switch (plType) {
             case DoIPPayloadType::VehicleIdentificationRequest: {
-                DoIPMessage msg = message::makeVehicleIdentificationResponse(m_VIN, m_logicalAddress, m_EID, m_GID);
+                DoIPMessage msg = message::makeVehicleIdentificationResponse(m_config.vin, m_config.logicalAddress, m_config.eid, m_config.gid);
                 LOG_DOIP_INFO("TX {}", fmt::streamed(msg));
 
                 auto sentBytes = sendto(m_udp_sock, msg.data(), msg.size(), 0,
@@ -415,16 +407,16 @@ void DoIPServer::udpAnnouncementThread() {
     LOG_DOIP_INFO("Announcement thread started");
 
     // Send announcements with configured interval and count
-    for (int i = 0; i < m_announceNum && m_running; i++) {
+    for (int i = 0; i < m_config.announceCount && m_running; i++) {
         sendVehicleAnnouncement2();
-        usleep(m_announceInterval * 1000);
+        usleep(m_config.announceInterval * 1000);
     }
 
     LOG_DOIP_INFO("Announcement thread stopped");
 }
 
 ssize_t DoIPServer::sendVehicleAnnouncement2() {
-    DoIPMessage msg = message::makeVehicleIdentificationResponse(m_VIN, m_logicalAddress, m_EID, m_GID);
+    DoIPMessage msg = message::makeVehicleIdentificationResponse(m_config.vin, m_config.logicalAddress, m_config.eid, m_config.gid);
 
     struct sockaddr_in dest_addr;
     memset(&dest_addr, 0, sizeof(dest_addr));
@@ -432,7 +424,7 @@ ssize_t DoIPServer::sendVehicleAnnouncement2() {
     dest_addr.sin_port = htons(DOIP_UDP_TEST_EQUIPMENT_REQUEST_PORT);
 
     const char *dest_ip;
-    if (m_loopbackMode) {
+    if (m_config.loopback) {
         dest_ip = "127.0.0.1";
         inet_pton(AF_INET, dest_ip, &dest_addr.sin_addr);
     } else {

@@ -15,7 +15,7 @@ TEST_SUITE("VehicleIdentificationHandler") {
         DoIPVIN shortVINPadded = DoIPVIN("shortVin000000000");
         DoIPEID EID = DoIPEID::Zero;
         DoIPGID GID = DoIPGID::Zero;
-        DoIPFurtherAction far = DoIPFurtherAction::NoFurtherAction;
+        DoIPFurtherAction furtherActionRequired = DoIPFurtherAction::NoFurtherAction;
         DoIPFurtherAction far_cs = DoIPFurtherAction::RoutingActivationForCentralSecurity;
 
         VehicleIdentificationHandlerFixture() {
@@ -31,7 +31,7 @@ TEST_SUITE("VehicleIdentificationHandler") {
      * Checks if a VIN with 17 bytes matches correctly the input data
      */
     TEST_CASE_FIXTURE(VehicleIdentificationHandlerFixture, "VIN 17 Bytes") {
-        DoIPMessage msg = message::makeVehicleIdentificationResponse(matchingVIN, DoIPAddress::ZeroAddress, EID, GID, far);
+        DoIPMessage msg = message::makeVehicleIdentificationResponse(matchingVIN, DoIPAddress::ZeroAddress, EID, GID, furtherActionRequired);
         ByteArrayRef payload = msg.getPayload();
         ByteArray expected{
             // VIN (17 bytes)

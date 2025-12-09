@@ -98,6 +98,7 @@ int main(int argc, char *argv[]) {
     doip::ServerConfig cfg;
     cfg.loopback = useLoopback;
     cfg.daemonize = daemonize;
+    // TODO: Use CLI11 or similar for argument parsing
     if (!vin_str.empty()) cfg.vin = DoIPVIN(vin_str);
     if (!eid_str.empty()) cfg.eid = DoIPEID(eid_str);
     if (!gid_str.empty()) cfg.gid = DoIPGID(gid_str);
@@ -111,17 +112,17 @@ int main(int argc, char *argv[]) {
             } else {
                 val = std::stoul(logical_addr_str, &pos, 0);
             }
-            cfg.logicalAddress = static_cast<uint16_t>(val & 0xFFFF);
+            cfg.logicalAddress = DoIPAddress(static_cast<uint16_t>(val & 0xFFFF));
         } catch (...) {
             LOG_DOIP_WARN("Failed to parse logical address '{}', using default 0x0E00", logical_addr_str);
         }
     } else {
-        cfg.logicalAddress = LOGICAL_ADDRESS.toUint16();
+        cfg.logicalAddress = LOGICAL_ADDRESS;
     }
 
     server = std::make_unique<DoIPServer>(cfg);
     // Apply defaults used previously in example
-    server->setFAR(DoIPFurtherAction::NoFurtherAction);
+    server->setFurtherActionRequired(DoIPFurtherAction::NoFurtherAction);
     server->setAnnounceInterval(2000);
     server->setAnnounceNum(10);
 

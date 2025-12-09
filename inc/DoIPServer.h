@@ -40,19 +40,23 @@ struct ServerConfig {
     DoIPVIN vin = DoIPVIN::Zero;
 
     // Logical/server address (default 0x0E00)
-    uint16_t logicalAddress = 0x0028;
+    DoIPAddress logicalAddress = DoIPAddress(0x0028);
 
     // Use loopback announcements instead of broadcast
     bool loopback = false;
 
     // Run the server as a daemon by default
     bool daemonize = false;
+
+    int announceCount = 3;                   // Default Value = 3
+    unsigned int announceInterval = 500;   // Default Value = 500ms
+
 };
 
 const ServerConfig DefaultServerConfig{};
 
 
-constexpr int DOIP_SERVER_PORT = 13400;
+constexpr int DOIP_SERVER_TCP_PORT = 13400;
 
 /**
  * @brief Callback invoked when a new TCP connection is established
@@ -81,7 +85,6 @@ class DoIPServer {
     DoIPServer(DoIPServer &&) = delete;
     DoIPServer &operator=(DoIPServer &&) = delete;
 
-    // === Low-level API (manual mode) ===
     [[nodiscard]]
     bool setupTcpSocket();
 
@@ -94,16 +97,17 @@ class DoIPServer {
     /**
      * @brief Check if the server is currently running
      */
+    [[nodiscard]]
     bool isRunning() const { return m_running.load(); }
 
     void setAnnounceNum(int Num);
     void setAnnounceInterval(unsigned int Interval);
-    void setAnnouncementMode(bool useLoopback);
+    void setLoopbackMode(bool useLoopback);
 
     void closeTcpSocket();
     void closeUdpSocket();
 
-    void setLogicalGatewayAddress(const unsigned short inputLogAdd);
+    void setLogicalGatewayAddress(unsigned short logicalAddress);
 
     /**
      * @brief Sets the EID to a default value based on the MAC address.
@@ -111,19 +115,23 @@ class DoIPServer {
      * @return true if the EID was successfully set to the default value.
      * @return false if the default EID could not be set.
      */
-    bool setEIDdefault();
+    bool setDefaultEid();
 
-    void setVIN(const std::string &VINString);
-    void setVIN(const DoIPVIN &vin);
-    const DoIPVIN &getVIN() const { return m_VIN; }
+    void setVin(const std::string &VINString);
+    void setVin(const DoIPVIN &vin);
+    const DoIPVIN &getVin() const { return m_config.vin; }
 
-    void setEID(const uint64_t inputEID);
-    const DoIPEID &getEID() const { return m_EID; }
+    void setEid(uint64_t nputEID);
+    const DoIPEID &getEid() const { return m_config.eid; }
 
-    void setGID(const uint64_t inputGID);
-    const DoIPGID &getGID() const { return m_GID; }
+    void setGid(uint64_t inputGID);
+    const DoIPGID &getGid() const { return m_config.gid; }
 
-    void setFAR(DoIPFurtherAction inputFAR);
+    DoIPFurtherAction getFurtherActionRequired() const { return m_FurtherActionReq; }
+    void setFurtherActionRequired(DoIPFurtherAction furtherActionRequired);
+
+    std::string getClientIp() const { return m_clientIp; }
+    int getClientPort() const { return m_clientPort; }
 
   private:
     int m_tcp_sock{-1};
@@ -133,24 +141,12 @@ class DoIPServer {
     ByteArray m_receiveBuf{};
     std::string m_clientIp{};
     int m_clientPort{};
-
-    DoIPVIN m_VIN;
-    DoIPAddress m_logicalAddress = DoIPAddress(0x0028);
-    DoIPEID m_EID = DoIPEID::Zero;
-    DoIPGID m_GID = DoIPGID::Zero;
     DoIPFurtherAction m_FurtherActionReq = DoIPFurtherAction::NoFurtherAction;
-
-    int m_announceNum = 3;                   // Default Value = 3
-    unsigned int m_announceInterval = 500;   // Default Value = 500ms
-    bool m_loopbackMode = false; // Default: use broadcast
-
-    int m_broadcast = 1;
 
     // Automatic mode state
     std::atomic<bool> m_running{false};
     std::vector<std::thread> m_workerThreads;
     std::mutex m_mutex;
-    ConnectionAcceptedHandler m_connectionHandler;
 
     // Server configuration
     ServerConfig m_config;
