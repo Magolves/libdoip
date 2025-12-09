@@ -33,7 +33,10 @@ jobs:
         else
           echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
         fi
-
+    - name: Delete pre-existing tag (if any)
+      run: |
+        git tag -d ${{ env.RELEASE_TAG }} || true
+        git push origin :refs/tags/${{ env.RELEASE_TAG }} || true
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
