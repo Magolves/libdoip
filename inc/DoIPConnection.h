@@ -2,6 +2,7 @@
 #define DOIPCONNECTION_H
 
 
+#include "DoIPConfig.h"
 #include "DoIPMessage.h"
 #include "DoIPNegativeAck.h"
 #include "DoIPNegativeDiagnosticAck.h"
@@ -20,8 +21,6 @@
 
 namespace doip {
 
-/** Maximum size of the ISO-TP message - used as initial value for RX buffer to avoid reallocs */
-constexpr size_t MAX_ISOTP_MTU = 4095;
 
 class DoIPConnection : public DoIPDefaultConnection {
   public:
@@ -104,7 +103,7 @@ class DoIPConnection : public DoIPDefaultConnection {
 
     // TCP socket-specific members
     int m_tcpSocket;
-    std::array<uint8_t, MAX_ISOTP_MTU> m_receiveBuf{};
+    std::array<uint8_t, DOIP_MAXIMUM_MTU> m_receiveBuf{};
     bool m_isClosing{false};  // TODO: Guard against recursive closeConnection calls -> solve this
     std::optional<DoIPMessage> m_pendingDownstreamRequest;
 

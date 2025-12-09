@@ -23,7 +23,7 @@ DoIPServer::~DoIPServer() {
 
 DoIPServer::DoIPServer(const ServerConfig &config)
     : m_config(config) {
-    m_receiveBuf.reserve(MAX_ISOTP_MTU);
+    m_receiveBuf.reserve(DOIP_MAXIMUM_MTU);
 
     setLoopbackMode(m_config.loopback);
 
