@@ -245,7 +245,9 @@ class DoIPServer {
 
     void udpListenerThread();
     void udpAnnouncementThread();
-    ssize_t sendVehicleAnnouncement2();
+    ssize_t sendVehicleAnnouncement();
+
+    ssize_t sendUdpMessage(const uint8_t *message, size_t messageLength);
 };
 
 // Template implementation must be in header for external linkage

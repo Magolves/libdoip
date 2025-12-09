@@ -15,14 +15,6 @@
 
 using namespace doip;
 
-#if defined(__linux__)
-const char *DEFAULT_IFACE = "eth0";
-#elif defined(__APPLE__)
-const char *DEFAULT_IFACE = "en0";
-#else
-#pragma error "Unsupported platform"
-#endif
-
 
 DoIPServer::~DoIPServer() {
     if (m_running.load()) {
@@ -34,13 +26,7 @@ DoIPServer::DoIPServer(const ServerConfig &config)
     : m_config(config) {
     m_receiveBuf.reserve(MAX_ISOTP_MTU);
 
-    // Apply EID/GID if provided (interpreted as numeric where possible)
-    // (old parsing logic removed - ServerConfig uses typed identifiers)
-    if (!m_config.loopback) {
-        setLoopbackMode(false);
-    } else {
-        setLoopbackMode(true);
-    }
+    setLoopbackMode(m_config.loopback);
 
     if (m_config.daemonize) {
         daemonize();
@@ -235,8 +221,9 @@ bool DoIPServer::setupUdpSocket() {
 void DoIPServer::closeUdpSocket() {
     m_running.store(false);
     for (auto &thread : m_workerThreads) {
-        if (thread.joinable())
+        if (thread.joinable()) {
             thread.join();
+        }
     }
     close(m_udp_sock);
 }
@@ -288,7 +275,7 @@ void DoIPServer::setAnnounceInterval(unsigned int Interval) {
 
 void DoIPServer::setLoopbackMode(bool useLoopback) {
     m_config.loopback = useLoopback;
-    if (useLoopback) {
+    if (m_config.loopback) {
         LOG_DOIP_INFO("Vehicle announcements will use loopback (127.0.0.1)");
     } else {
         LOG_DOIP_INFO("Vehicle announcements will use broadcast (255.255.255.255)");
@@ -329,15 +316,13 @@ ssize_t DoIPServer::sendNegativeUdpAck(DoIPNegativeAck ackCode) {
 
 // new version starts here
 void DoIPServer::udpListenerThread() {
-
-    struct sockaddr_in client_addr;
-    socklen_t client_len = sizeof(client_addr);
+    socklen_t client_len = sizeof(m_clientAddress);
 
     LOG_UDP_INFO("UDP listener thread started");
 
     while (m_running) {
         ssize_t received = recvfrom(m_udp_sock, m_receiveBuf.data(), sizeof(m_receiveBuf), 0,
-                                    reinterpret_cast<struct sockaddr *>(&client_addr), &client_len);
+                                    reinterpret_cast<struct sockaddr *>(&m_clientAddress), &client_len);
 
         if (received < 0) {
             if (errno == EAGAIN /* || errno == EWOULDBLOCK*/) {
@@ -353,9 +338,9 @@ void DoIPServer::udpListenerThread() {
         if (received > 0) {
             std::scoped_lock lock(m_mutex);
             char client_ip[INET_ADDRSTRLEN];
-            inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, sizeof(client_ip));
+            inet_ntop(AF_INET, &m_clientAddress.sin_addr, client_ip, sizeof(client_ip));
             m_clientIp = std::string(client_ip);
-            m_clientPort = ntohs(client_addr.sin_port);
+            m_clientPort = ntohs(m_clientAddress.sin_port);
 
             LOG_UDP_INFO("Received {} bytes from {}:{}", received, m_clientIp, m_clientPort);
 
@@ -382,11 +367,11 @@ void DoIPServer::udpListenerThread() {
                 LOG_DOIP_INFO("TX {}", fmt::streamed(msg));
 
                 auto sentBytes = sendto(m_udp_sock, msg.data(), msg.size(), 0,
-                                        reinterpret_cast<struct sockaddr *>(&client_addr), client_len);
+                                        reinterpret_cast<struct sockaddr *>(&m_clientAddress), client_len);
 
                 if (sentBytes > 0) {
                     LOG_DOIP_INFO("Sent Vehicle Identification Response to {}:{}",
-                                   sentBytes, client_ip, ntohs(client_addr.sin_port));
+                                   sentBytes, client_ip, ntohs(m_clientAddress.sin_port));
                 } else {
                     perror("Failed to send response");
                 }
@@ -408,14 +393,14 @@ void DoIPServer::udpAnnouncementThread() {
 
     // Send announcements with configured interval and count
     for (int i = 0; i < m_config.announceCount && m_running; i++) {
-        sendVehicleAnnouncement2();
+        sendVehicleAnnouncement();
         usleep(m_config.announceInterval * 1000);
     }
 
     LOG_DOIP_INFO("Announcement thread stopped");
 }
 
-ssize_t DoIPServer::sendVehicleAnnouncement2() {
+ssize_t DoIPServer::sendVehicleAnnouncement() {
     DoIPMessage msg = message::makeVehicleIdentificationResponse(m_config.vin, m_config.logicalAddress, m_config.eid, m_config.gid);
 
     struct sockaddr_in dest_addr;
@@ -447,4 +432,11 @@ ssize_t DoIPServer::sendVehicleAnnouncement2() {
         LOG_UDP_ERROR("Failed to send announcement: {}", strerror(errno));
     }
     return sentBytes;
+}
+
+ssize_t DoIPServer::sendUdpMessage(const uint8_t *message, size_t messageLength) {
+    (void)message;
+    (void)messageLength;
+    LOG_UDP_CRITICAL("sendUdpMessage NOT IMPL");
+    return -1;
 }
