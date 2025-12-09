@@ -49,7 +49,7 @@ class DoIPClient {
      */
     ssize_t sendAliveCheckResponse();
     void setSourceAddress(const DoIPAddress &address);
-    void displayVIResponseInformation();
+    void printVehicleInformationResponse();
     void closeTcpConnection();
     void closeUdpConnection();
     void reconnectServer();
@@ -64,13 +64,13 @@ class DoIPClient {
     struct sockaddr_in m_serverAddress, m_clientAddress, m_announcementAddress;
     DoIPAddress m_sourceAddress = DoIPAddress(0xE000);
 
-    uint8_t m_vin[17] = {0};
+    DoIpVin m_vin{0};
     DoIPAddress m_logicalAddress = DoIPAddress::ZeroAddress;
-    uint8_t m_eid[6] = {0};
-    uint8_t m_gid[6] = {0};
-    uint8_t m_furtherActionReqResult = 0x00;
+    DoIpEid m_eid{0};
+    DoIpGid m_gid{0};
+    DoIPFurtherAction m_furtherActionReqResult = DoIPFurtherAction::NoFurtherAction;
 
-    void parseVIResponseInformation(const uint8_t *data);
+    void parseVehicleIdentificationResponse(const DoIPMessage& msg);
 
     int emptyMessageCounter = 0;
 };

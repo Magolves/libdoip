@@ -33,11 +33,11 @@ namespace doip {
  */
 struct ServerConfig {
     // EID and GID as fixed identifiers (6 bytes). Default: zeros.
-    DoIPEID eid = DoIPEID::Zero;
-    DoIPGID gid = DoIPGID::Zero;
+    DoIpEid eid = DoIpEid::Zero;
+    DoIpGid gid = DoIpGid::Zero;
 
     // VIN as fixed identifier (17 bytes). Default: zeros.
-    DoIPVIN vin = DoIPVIN::Zero;
+    DoIpVin vin = DoIpVin::Zero;
 
     // Logical/server address (default 0x0E00)
     DoIPAddress logicalAddress = DoIPAddress(0x0028);
@@ -159,15 +159,15 @@ class DoIPServer {
      */
     void setVin(const std::string &VINString);
     /**
-     * @brief Set VIN from a `DoIPVIN` instance.
+     * @brief Set VIN from a `DoIpVin` instance.
      * @param vin VIN value.
      */
-    void setVin(const DoIPVIN &vin);
+    void setVin(const DoIpVin &vin);
     /**
      * @brief Get current VIN.
      * @return Reference to configured VIN.
      */
-    const DoIPVIN &getVin() const { return m_config.vin; }
+    const DoIpVin &getVin() const { return m_config.vin; }
 
     /**
      * @brief Set EID value.
@@ -178,7 +178,7 @@ class DoIPServer {
      * @brief Get current EID.
      * @return Reference to configured EID.
      */
-    const DoIPEID &getEid() const { return m_config.eid; }
+    const DoIpEid &getEid() const { return m_config.eid; }
 
     /**
      * @brief Set GID value.
@@ -189,7 +189,7 @@ class DoIPServer {
      * @brief Get current GID.
      * @return Reference to configured GID.
      */
-    const DoIPGID &getGid() const { return m_config.gid; }
+    const DoIpGid &getGid() const { return m_config.gid; }
 
     /**
      * @brief Get current further action requirement status.

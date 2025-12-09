@@ -222,12 +222,10 @@ bool DoIPClient::receiveVehicleAnnouncement() {
     }
 
     DoIPMessage msg = optMsg.value();
-    LOG_UDP_INFO("Vehicle Announcement received: {}", fmt::streamed(msg));
-
     // Parse and display the announcement information
     if (msg.getPayloadType() == DoIPPayloadType::VehicleIdentificationResponse) {
-        parseVIResponseInformation(msg.data());
-        displayVIResponseInformation();
+        LOG_UDP_INFO("Vehicle Announcement received: {}", fmt::streamed(msg));
+        parseVehicleIdentificationResponse(msg);
         return true;
     }
     return false;
@@ -283,55 +281,41 @@ int DoIPClient::getConnected() {
     return m_connected;
 }
 
-void DoIPClient::parseVIResponseInformation(const uint8_t *data) {
+void DoIPClient::parseVehicleIdentificationResponse(const DoIPMessage &msg) {
+    auto optVin = msg.getVin();
+    auto optEid = msg.getEid();
+    auto optGid = msg.getGid();
+    auto optLogicalAddress = msg.getLogicalAddress();
+    auto optFurtherAction = msg.getFurtherActionRequest();
 
-    // VIN
-    int j = 0;
-    for (int i = 8; i <= 24; i++) {
-        m_vin[j] = data[i];
-        j++;
+    if (!optVin || !optEid || !optGid || !optLogicalAddress || !optFurtherAction) {
+        LOG_DOIP_WARN("Incomplete Vehicle Identification Response received: Missing VIN, EID, GID, Logical Address or Further Action Request");
     }
 
-    // Logical Adress
-    m_logicalAddress.update(data, 25);
-
-    // EID
-    j = 0;
-    for (int i = 27; i <= 32; i++) {
-        m_eid[j] = data[i];
-        j++;
-    }
-
-    // GID
-    j = 0;
-    for (int i = 33; i <= 38; i++) {
-        m_gid[j] = data[i];
-        j++;
-    }
-
-    // FurtherActionRequest
-    m_furtherActionReqResult = data[39];
+    m_vin = optVin.value();
+    m_eid = optEid.value();
+    m_gid = optGid.value();
+    m_logicalAddress = optLogicalAddress.value();
+    m_furtherActionReqResult = optFurtherAction.value();
 }
 
-void DoIPClient::displayVIResponseInformation() {
+void DoIPClient::printVehicleInformationResponse() {
     std::ostringstream ss;
     // output VIN
-    ss << "VIN: ";
+    ss << "VIN: "   ;
     if (Logger::colorsSupported()) {
         ss << ansi::bold_green;
     }
-    for (int i = 0; i < 17; i++) {
-        ss << m_vin[i];
-    }
-    if (Logger::colorsSupported()) {
-        ss << ansi::reset;
-    }
+    ss << m_vin << ansi::reset  ;
     LOG_DOIP_INFO(ss.str());
 
     // output LogicalAddress
     ss = std::ostringstream{};
-    ss << "LogicalAddress: ";
-    ss << m_logicalAddress;
+    ss << "LA : ";
+    if (Logger::colorsSupported()) {
+        ss << ansi::bold_green;
+    }
+    ss << m_logicalAddress << ansi::reset;
     LOG_DOIP_INFO(ss.str());
 
     // output EID
@@ -340,25 +324,24 @@ void DoIPClient::displayVIResponseInformation() {
     if (Logger::colorsSupported()) {
         ss << ansi::bold_green;
     }
-    for (int i = 0; i < 6; i++) {
-        ss << std::hex << std::setfill('0') << std::setw(2) << +m_eid[i] << std::dec;
-    }
-    if (Logger::colorsSupported()) {
-        ss << ansi::reset;
-    }
+    ss << m_eid << ansi::reset;
     LOG_DOIP_INFO(ss.str());
 
     // output GID
     ss = std::ostringstream{};
     ss << "GID: ";
-    for (int i = 0; i < 6; i++) {
-        ss << std::hex << std::setfill('0') << std::setw(2) << +m_gid[i] << std::dec;
+    if (Logger::colorsSupported()) {
+        ss << ansi::bold_green;
     }
+    ss << m_gid << ansi::reset;
     LOG_DOIP_INFO(ss.str());
 
     // output FurtherActionRequest
     ss = std::ostringstream{};
-    ss << "FurtherActionRequest: ";
-    ss << std::hex << std::setfill('0') << std::setw(2) << m_furtherActionReqResult << std::dec;
+    ss << "FAR: ";
+    if (Logger::colorsSupported()) {
+        ss << ansi::bold_green;
+    }
+    ss << m_furtherActionReqResult << ansi::reset;
     LOG_DOIP_INFO(ss.str());
 }

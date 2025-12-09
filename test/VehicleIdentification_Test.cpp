@@ -10,11 +10,11 @@ using namespace std;
 
 TEST_SUITE("VehicleIdentificationHandler") {
     struct VehicleIdentificationHandlerFixture {
-        DoIPVIN matchingVIN = DoIPVIN("MatchingVin_12345");
-        DoIPVIN shortVIN = DoIPVIN("shortVin");
-        DoIPVIN shortVINPadded = DoIPVIN("shortVin000000000");
-        DoIPEID EID = DoIPEID::Zero;
-        DoIPGID GID = DoIPGID::Zero;
+        DoIpVin matchingVIN = DoIpVin("MatchingVin_12345");
+        DoIpVin shortVIN = DoIpVin("shortVin");
+        DoIpVin shortVINPadded = DoIpVin("shortVin000000000");
+        DoIpEid EID = DoIpEid::Zero;
+        DoIpGid GID = DoIpGid::Zero;
         DoIPFurtherAction furtherActionRequired = DoIPFurtherAction::NoFurtherAction;
         DoIPFurtherAction far_cs = DoIPFurtherAction::RoutingActivationForCentralSecurity;
 

@@ -56,6 +56,8 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+    client.printVehicleInformationResponse();
+
     // Send Vehicle Identification Request to configured address
     if (client.sendVehicleIdentificationRequest(serverAddress.c_str()) > 0) {
         LOG_DOIP_INFO("Vehicle Identification Request sent successfully");

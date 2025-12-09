@@ -137,6 +137,49 @@ TEST_SUITE("DoIPMessage") {
         }
     }
 
+    TEST_CASE("Message factory - makeVehicleIdentificationRequest") {
+        DoIPMessage msg = message::makeVehicleIdentificationRequest();
+
+        CHECK(msg.getPayloadSize() == 0);
+        CHECK(msg.getMessageSize() == 8);
+        CHECK(msg.getPayloadType() == DoIPPayloadType::VehicleIdentificationRequest);
+    }
+
+    TEST_CASE("Message factory - makeVehicleIdentificationResponse") {
+        DoIpVin vin = DoIpVin("1HGCM82633A123456");
+        DoIPAddress logicalAddress = DoIPAddress(1234);
+        DoIpEid entityType = DoIpEid("EID123");
+        DoIpGid groupId = DoIpGid("GID456");
+        DoIPFurtherAction furtherAction = DoIPFurtherAction::RoutingActivationForCentralSecurity;
+        DoIPMessage msg = message::makeVehicleIdentificationResponse(vin, logicalAddress, entityType, groupId, furtherAction);
+
+        INFO(msg, "\n", logicalAddress);
+        CHECK(msg.getPayloadSize() >= 31); // 17 + 2 + 6 + 6 + 1 (+ 1 optional byte for sync status)
+        CHECK(msg.getMessageSize() >= 40);
+        CHECK(msg.getPayloadType() == DoIPPayloadType::VehicleIdentificationResponse);
+
+        // Example:
+        // VIN: 45.58.41.4D.50.4C.45.53.45.52.56.45.52.30.30.30.30.00.
+        // LA: 28.00.
+        // EID: 00.00.00.00.00.00
+        // GID: 00.00.00.00.00.00
+        // FAR: 00
+        // (sync status: optional)
+
+
+        CHECK(msg.getVin().has_value());
+        CHECK(msg.getVin().value().toString() == vin.toString());
+        CHECK(msg.getLogicalAddress().has_value());
+        CHECK(msg.getLogicalAddress().value().toUint16() == logicalAddress.toUint16());
+        CHECK(msg.getEid().has_value());
+        CHECK(msg.getEid().value().toString() == entityType.toString());
+        CHECK(msg.getGid().has_value());
+        CHECK(msg.getGid().value().toString() == groupId.toString());
+        CHECK(msg.getFurtherActionRequest().has_value());
+        CHECK(msg.getFurtherActionRequest().value() == furtherAction);
+    }
+
+
     TEST_CASE("Init from raw bytes - invalid args") {
         const uint8_t short_msg[] = {PROTOCOL_VERSION, PROTOCOL_VERSION_INV, 0x80, 0x01};
         const uint8_t inv_protocol[] = {PROTOCOL_VERSION - 1, PROTOCOL_VERSION_INV + 1, 0x80, 0x01};

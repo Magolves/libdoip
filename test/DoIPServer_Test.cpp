@@ -29,7 +29,7 @@ TEST_SUITE("DoIPServer Tests") {
     TEST_CASE_FIXTURE(DoIPServerFixture, "Set VIN Test") {
         std::string testVIN = "TESTVIN1234567890";
         server.setVin(testVIN);
-        DoIPMessage msg = message::makeVehicleIdentificationResponse(server.getVin(), DoIPAddress::ZeroAddress, server.getEid(), DoIPGID::Zero, DoIPFurtherAction::NoFurtherAction);
+        DoIPMessage msg = message::makeVehicleIdentificationResponse(server.getVin(), DoIPAddress::ZeroAddress, server.getEid(), DoIpGid::Zero, DoIPFurtherAction::NoFurtherAction);
         ByteArrayRef payload = msg.getPayload();
 
         // Check that the VIN in the payload matches the set VIN
@@ -41,7 +41,7 @@ TEST_SUITE("DoIPServer Tests") {
     TEST_CASE_FIXTURE(DoIPServerFixture, "Set EID Test") {
         uint64_t testEID = 0x123456789ABC;
         server.setEid(testEID);
-        DoIPMessage msg = message::makeVehicleIdentificationResponse(server.getVin(), DoIPAddress::ZeroAddress, server.getEid(), DoIPGID::Zero, DoIPFurtherAction::NoFurtherAction);
+        DoIPMessage msg = message::makeVehicleIdentificationResponse(server.getVin(), DoIPAddress::ZeroAddress, server.getEid(), DoIpGid::Zero, DoIPFurtherAction::NoFurtherAction);
         ByteArrayRef payload = msg.getPayload();
 
         // Check that the EID in the payload matches the set EID
@@ -54,7 +54,7 @@ TEST_SUITE("DoIPServer Tests") {
         bool result = server.setDefaultEid();
         CHECK(result == true);
 
-        DoIPMessage msg = message::makeVehicleIdentificationResponse(server.getVin(), DoIPAddress::ZeroAddress, server.getEid(), DoIPGID::Zero, DoIPFurtherAction::NoFurtherAction);
+        DoIPMessage msg = message::makeVehicleIdentificationResponse(server.getVin(), DoIPAddress::ZeroAddress, server.getEid(), DoIpGid::Zero, DoIPFurtherAction::NoFurtherAction);
         ByteArrayRef payload = msg.getPayload();
 
         std::cerr << "EID set to: " << server.getEid().toHexString() << '\n';

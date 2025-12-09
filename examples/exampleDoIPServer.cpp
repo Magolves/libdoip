@@ -99,9 +99,9 @@ int main(int argc, char *argv[]) {
     cfg.loopback = useLoopback;
     cfg.daemonize = daemonize;
     // TODO: Use CLI11 or similar for argument parsing
-    if (!vin_str.empty()) cfg.vin = DoIPVIN(vin_str);
-    if (!eid_str.empty()) cfg.eid = DoIPEID(eid_str);
-    if (!gid_str.empty()) cfg.gid = DoIPGID(gid_str);
+    if (!vin_str.empty()) cfg.vin = DoIpVin(vin_str);
+    if (!eid_str.empty()) cfg.eid = DoIpEid(eid_str);
+    if (!gid_str.empty()) cfg.gid = DoIpGid(gid_str);
     if (!logical_addr_str.empty()) {
         // parse hex (0x...) or decimal
         try {
