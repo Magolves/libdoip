@@ -93,13 +93,12 @@ class DoIPServer {
      */
     bool setupTcpSocket();
 
-    template <typename Model = DefaultDoIPServerModel>
     /**
      * @brief Block until a TCP client connects and create a DoIP connection.
-     * @tparam Model Server model type used by the connection (default `DefaultDoIPServerModel`).
+     * @param model Server model instance used by the connection.
      * @return Unique pointer to established `DoIPConnection`, or nullptr on failure.
      */
-    std::unique_ptr<DoIPConnection> waitForTcpConnection();
+    std::unique_ptr<DoIPConnection> waitForTcpConnection(UniqueServerModelPtr model);
 
     [[nodiscard]]
     /**
@@ -238,8 +237,11 @@ class DoIPServer {
 
     ssize_t sendNegativeUdpAck(DoIPNegativeAck ackCode);
 
-    template <typename Model>
-    void tcpListenerThread();
+    /**
+     * @brief Background TCP listener that accepts connections and spawns handlers.
+     * @param modelFactory Factory callable that returns a `UniqueServerModelPtr` per connection.
+     */
+    void tcpListenerThread(std::function<UniqueServerModelPtr()> modelFactory);
 
     void connectionHandlerThread(std::unique_ptr<DoIPConnection> connection);
 
@@ -250,50 +252,6 @@ class DoIPServer {
     ssize_t sendUdpResponse(DoIPMessage msg);
 };
 
-// Template implementation must be in header for external linkage
-template <typename Model>
-std::unique_ptr<DoIPConnection> DoIPServer::waitForTcpConnection() {
-    static_assert(std::is_default_constructible<Model>::value,
-                  "Model must be default-constructible");
-
-    // waits till client approach to make connection
-    if (listen(m_tcp_sock, 5) < 0) {
-        return nullptr;
-    }
-
-    int tcpSocket = accept(m_tcp_sock, nullptr, nullptr);
-    if (tcpSocket < 0) {
-        return nullptr;
-    }
-
-    return std::unique_ptr<DoIPConnection>(new DoIPConnection(tcpSocket, std::make_unique<Model>()));
-}
-
-/*
- * Background thread: TCP connection acceptor
- */
-template <typename Model>
-void DoIPServer::tcpListenerThread() {
-    LOG_DOIP_INFO("TCP listener thread started");
-
-    while (m_running.load()) {
-        auto connection = waitForTcpConnection<Model>();
-
-        if (!connection) {
-            if (m_running.load()) {
-                LOG_TCP_DEBUG("Failed to accept connection, retrying...");
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            }
-            continue;
-        }
-
-        // Spawn a dedicated thread for this connection
-        // Note: We detach because the connection thread manages its own lifecycle
-        std::thread(&DoIPServer::connectionHandlerThread, this, std::move(connection)).detach();
-    }
-
-    LOG_DOIP_INFO("TCP listener thread stopped");
-}
 
 } // namespace doip
 

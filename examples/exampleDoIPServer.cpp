@@ -30,7 +30,7 @@ void listenTcp() {
     LOG_UDP_INFO("TCP listener thread started");
 
     while (true) {
-        tcpConnection = server->waitForTcpConnection<ExampleDoIPServerModel>();
+        tcpConnection = server->waitForTcpConnection(std::make_unique<ExampleDoIPServerModel>());
 
         while (tcpConnection->isSocketActive()) {
             tcpConnection->receiveTcpMessage();

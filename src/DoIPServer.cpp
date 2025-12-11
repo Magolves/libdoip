@@ -220,7 +220,7 @@ bool DoIPServer::setupUdpSocket() {
     m_workerThreads.emplace_back([this]() { udpListenerThread(); });
     m_workerThreads.emplace_back([this]() { udpAnnouncementThread(); });
     // Also start TCP acceptor thread so TCP 13400 enters LISTEN state and accepts connections
-    m_workerThreads.emplace_back([this]() { tcpListenerThread<DefaultDoIPServerModel>(); });
+    m_workerThreads.emplace_back([this]() { tcpListenerThread([](){ return std::make_unique<DefaultDoIPServerModel>(); }); });
 
     return true;
 }
@@ -447,4 +447,41 @@ ssize_t DoIPServer::sendUdpResponse(DoIPMessage msg) {
         LOG_DOIP_ERROR("Failed to send message: {}", strerror(errno));
     }
     return sentBytes;
+}
+
+std::unique_ptr<DoIPConnection> DoIPServer::waitForTcpConnection(UniqueServerModelPtr model) {
+    // waits till client approach to make connection
+    if (listen(m_tcp_sock, 5) < 0) {
+        return nullptr;
+    }
+
+    int tcpSocket = accept(m_tcp_sock, nullptr, nullptr);
+    if (tcpSocket < 0) {
+        return nullptr;
+    }
+
+    return std::unique_ptr<DoIPConnection>(new DoIPConnection(tcpSocket, std::move(model)));
+}
+
+void DoIPServer::tcpListenerThread(std::function<UniqueServerModelPtr()> modelFactory) {
+    LOG_DOIP_INFO("TCP listener thread started");
+
+    while (m_running.load()) {
+        auto model = modelFactory ? modelFactory() : std::make_unique<DefaultDoIPServerModel>();
+        auto connection = waitForTcpConnection(std::move(model));
+
+        if (!connection) {
+            if (m_running.load()) {
+                LOG_TCP_DEBUG("Failed to accept connection, retrying...");
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+            continue;
+        }
+
+        // Spawn a dedicated thread for this connection
+        // Note: We detach because the connection thread manages its own lifecycle
+        std::thread(&DoIPServer::connectionHandlerThread, this, std::move(connection)).detach();
+    }
+
+    LOG_DOIP_INFO("TCP listener thread stopped");
 }
