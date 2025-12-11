@@ -8,7 +8,7 @@ TEST_SUITE("DoIPMessage") {
     TEST_CASE("Message assembly") {
         DoIPMessage msg(DoIPPayloadType::AliveCheckRequest, {0x01, 0x02});
         ByteArray expected{
-            0x04, 0xfb,             // protocol version + inv
+            0x03, 0xfc,             // protocol version + inv
             0x00, 0x07,             // payload type
             0x00, 0x00, 0x00, 0x02, // payload length
             0x01, 0x02              // payload
@@ -28,7 +28,7 @@ TEST_SUITE("DoIPMessage") {
     TEST_CASE("Message factory - makeNegativeAckMessage") {
         DoIPMessage msg = message::makeNegativeAckMessage(DoIPNegativeAck::InvalidPayloadLength);
         ByteArray expected{
-            0x04, 0xfb,             // protocol version + inv
+            0x03, 0xfc,             // protocol version + inv
             0x00, 0x00,             // payload type
             0x00, 0x00, 0x00, 0x01, // payload length
             0x04                    // payload
@@ -42,7 +42,7 @@ TEST_SUITE("DoIPMessage") {
     TEST_CASE("Message factory - makeDiagnosticMessage") {
         DoIPMessage msg = message::makeDiagnosticMessage(DoIPAddress(0xcafe), DoIPAddress(0xbabe), {0xde, 0xad, 0xbe, 0xef});
         ByteArray expected{
-            0x04, 0xfb,             // protocol version + inv
+            0x03, 0xfc,             // protocol version + inv
             0x80, 0x01,             // payload type
             0x00, 0x00, 0x00, 0x08, // payload length
             0xca, 0xfe,             // sa
@@ -63,7 +63,7 @@ TEST_SUITE("DoIPMessage") {
     TEST_CASE("Message factory - makeDiagnosticPositiveResponse") {
         DoIPMessage msg = message::makeDiagnosticPositiveResponse(DoIPAddress(0xcafe), DoIPAddress(0xbabe), {0xde, 0xad, 0xbe, 0xef});
         ByteArray expected{
-            0x04, 0xfb,             // protocol version + inv
+            0x03, 0xfc,             // protocol version + inv
             0x80, 0x02,             // payload tyByteArray raw = message::makeAliveCheckResponse(DoIPAddress(0xa0b0));pe
             0x00, 0x00, 0x00, 0x09, // payload length
             0xca, 0xfe,             // sa
@@ -90,7 +90,7 @@ TEST_SUITE("DoIPMessage") {
             {0xde, 0xad, 0xbe, 0xef});
 
         ByteArray expected{
-            0x04, 0xfb, // protocol version + inv
+            0x03, 0xfc, // protocol version + inv
             0x80, 0x03,                      // payload type
             0x00, 0x00, 0x00, 0x09,          // payload length
             0xca, 0xfe,                      // sa
@@ -120,7 +120,7 @@ TEST_SUITE("DoIPMessage") {
     TEST_CASE("Message factory - makeAliveCheckResponse") {
         DoIPMessage msg = message::makeAliveCheckResponse(DoIPAddress(0xa0b0));
         ByteArray expected{
-            0x04, 0xfb, // protocol version + inv
+            0x03, 0xfc, // protocol version + inv
             0x00, 0x08,                      // payload type
             0x00, 0x00, 0x00, 0x02,          // payload length
             0xa0, 0xb0,                      // sa

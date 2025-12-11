@@ -43,8 +43,8 @@ constexpr uint8_t ISO_13400_2025 = 4;
 /**
  * @brief Current protocol version (table 16)
  */
-constexpr uint8_t PROTOCOL_VERSION = ISO_13400_2025;
-constexpr uint8_t PROTOCOL_VERSION_INV = static_cast<uint8_t>(~ISO_13400_2025);
+constexpr uint8_t PROTOCOL_VERSION = ISO_13400_2019;
+constexpr uint8_t PROTOCOL_VERSION_INV = static_cast<uint8_t>(~PROTOCOL_VERSION);
 
 /**
  * @brief Positive ack for diagnostic message (table 24)
