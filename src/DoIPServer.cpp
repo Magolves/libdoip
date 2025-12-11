@@ -154,7 +154,13 @@ bool DoIPServer::setupTcpSocket() {
         return false;
     }
 
-    LOG_TCP_INFO("TCP socket successfully bound to port {}", DOIP_SERVER_TCP_PORT);
+    // Put the socket into listening state so the OS reports LISTEN and accept() can proceed
+    if (listen(m_tcp_sock, 5) < 0) {
+        LOG_TCP_ERROR("Failed to listen on TCP socket: {}", strerror(errno));
+        return false;
+    }
+
+    LOG_TCP_INFO("TCP socket bound and listening on port {}", DOIP_SERVER_TCP_PORT);
     return true;
 }
 
@@ -213,6 +219,8 @@ bool DoIPServer::setupUdpSocket() {
     m_running.store(true);
     m_workerThreads.emplace_back([this]() { udpListenerThread(); });
     m_workerThreads.emplace_back([this]() { udpAnnouncementThread(); });
+    // Also start TCP acceptor thread so TCP 13400 enters LISTEN state and accepts connections
+    m_workerThreads.emplace_back([this]() { tcpListenerThread<DefaultDoIPServerModel>(); });
 
     return true;
 }
