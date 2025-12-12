@@ -12,6 +12,7 @@ foreach(example_source ${EXAMPLE_SOURCES})
     target_link_libraries(${example_name}
         PRIVATE
         ${DOIP_NAME}
+        CLI11::CLI11
         Threads::Threads
     )
 

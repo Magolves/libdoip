@@ -56,6 +56,20 @@ else()
     message(STATUS "spdlog found")
 endif()
 
+# Find or fetch CLI11 (CLI parsing)
+find_package(CLI11 QUIET CONFIG)
+if(NOT CLI11_FOUND)
+    include(FetchContent)
+    FetchContent_Declare(
+        CLI11
+        GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git
+        GIT_TAG        v2.4.2
+    )
+    FetchContent_MakeAvailable(CLI11)
+else()
+    message(STATUS "CLI11 found")
+endif()
+
 # Configuration options
 set(DOIP_ALIVE_CHECK_RETRIES "1" CACHE STRING "Number of retries for DoIP alive check messages")
 set(DOIP_MAXIMUM_MTU "4095" CACHE STRING "Maximum Transmission Unit (MTU) size for DoIP messages")
@@ -84,6 +98,7 @@ set(SOURCES
     src/Logger.cpp
     src/MacAddress.cpp
     src/DoIPDefaultConnection.cpp
+    src/cli/ServerConfigCLI.cpp
     src/uds/UdsMock.cpp
 )
 
@@ -114,6 +129,7 @@ target_include_directories(${DOIP_NAME}
 target_link_libraries(${DOIP_NAME}
     PUBLIC
         spdlog::spdlog
+        CLI11::CLI11
     PRIVATE
         Threads::Threads
 )

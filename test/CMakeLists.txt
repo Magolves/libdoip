@@ -7,6 +7,7 @@ add_executable(${DOIP_NAME}_tests
     Identifiers_Test.cpp
     MacAddress_Test.cpp
     Main_Test.cpp
+    cli/ServerConfigCLI_Test.cpp
     ThreadSafeQueue_Test.cpp
     TimerManager_Test.cpp
     VehicleIdentification_Test.cpp
