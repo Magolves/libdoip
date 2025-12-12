@@ -514,3 +514,536 @@ You now have:
 	•	Automotive CI pipelines
 
 This is exactly the kind of architectural edge that other DoIP libs lack.
+
+---
+
+Great questions — and you’re right: ISO 13400 (DoIP) does not define any way to tell the tester which downstream subnets exist.
+So both points require architectural choices outside the DoIP standard.
+Below is the most widely accepted practice in the automotive domain.
+
+⸻
+
+✅ 1) How to represent a CAN network in a config file (TOML/YAML)
+
+A reasonable and flexible configuration must capture:
+
+✔ Physical interfaces
+
+(e.g. socketcan: can0, vcan1)
+
+✔ UDS functional addressing
+
+(Request IDs, Response IDs)
+
+✔ Routing rules
+
+(Which CAN IDs belong to which logical ECU or subnet)
+
+✔ Timing
+
+(Timeouts, P2/P2*, ISO-TP separation times)
+
+✔ Optional: simulation behavior
+
+(Mock/Restbus definitions)
+
+Below is a practical TOML layout (recommended because TOML is easy to parse and human-friendly):
+
+⸻
+
+📌 Example: networks.toml
+
+# === Global CAN timing defaults ===
+[defaults]
+  timeout_ms = 2000
+  block_size = 8
+  st_min_ms = 3
+
+# === Subnet 1: Powertrain CAN ===
+[[subnet]]
+  name = "PT"
+  type = "can"
+  interface = "can0"
+  baudrate = 500000
+  description = "Powertrain network (ECM, TCM)"
+
+  # Logical ECUs reachable via this subnet
+  [[subnet.ecu]]
+    name = "ECM"
+    request_id  = "0x7E0"
+    response_id = "0x7E8"
+
+  [[subnet.ecu]]
+    name = "TCM"
+    request_id  = "0x7E1"
+    response_id = "0x7E9"
+
+# === Subnet 2: Body CAN ===
+[[subnet]]
+  name = "BCM"
+  type = "can"
+  interface = "can1"
+  baudrate = 250000
+  description = "Body network (BCM, IPC, HVAC)"
+
+  [[subnet.ecu]]
+    name = "BCM"
+    request_id  = "0x743"
+    response_id = "0x743"
+
+  [[subnet.ecu]]
+    name = "HVAC"
+    request_id  = "0x744"
+    response_id = "0x744"
+
+# === Optional: virtual ECUs using the UDS Mock ===
+[[subnet]]
+  name = "SIM"
+  type = "uds_mock"
+  description = "Simulation of missing ECUs"
+
+  [[subnet.ecu]]
+    name = "MockABS"
+    uds_services = ["0x10", "0x22", "0x2E", "0x31"]
+
+
+⸻
+
+Why this structure works
+
+👍 Mirrors typical real OEM data structures
+
+Many OEM gateway configs look similar (JSON/XML/TOML).
+
+👍 Maps directly to your DownstreamProvider
+
+Each [[subnet]] becomes a provider instance.
+
+👍 Extensible
+
+Later you can add:
+
+protocol = "isotp"
+p2_ms = 150
+p2star_ms = 5000
+
+or
+
+dbc = "./pt.dbc"
+
+👍 Supports both real CAN and UDS mocks
+
+type = "can" → SocketCANProvider
+type = "uds_mock" → UdsMockProvider
+
+⸻
+
+🔧 Parsing this into providers
+
+During startup, DoIPServerModel would:
+	•	Read networks.toml
+	•	For each [[subnet]], instantiate a provider
+	•	Register them in a table:
+
+providers["PT"]
+providers["BCM"]
+providers["SIM"]
+
+
+	•	Use routing rules to select the right provider for each request
+(requestID-based, ECU name, etc.)
+
+This makes your DoIP router fully data-driven.
+
+⸻
+
+✅ 2) How to tell the client about existing subnets
+
+Short answer: You can’t. ISO 13400 has no mechanism for this.
+
+DoIP only defines:
+	•	Vehicle identification
+	•	Entity status
+	•	Routing activation
+	•	Diagnostic messages pass-through
+
+There is no command to enumerate downstream networks.
+This is by design: the DoIP node is considered an opaque gateway.
+
+⸻
+
+🔍 So how do OEMs handle it in practice?
+
+✔ Method 1: Proprietary UDS services
+
+OEMs often expose:
+	•	Manufacturer-specific DID (0xF1xx)
+	•	Data records that list:
+	•	Available ECUs
+	•	Available subnets
+	•	Versions
+	•	Bus loads
+	•	Routing tables
+
+Example (not standard, but common):
+
+ReadDataByIdentifier(0xF190) → “PT, BCM, SIM”
+ReadDataByIdentifier(0xF191) → ECU list with Request/Response IDs
+ReadDataByIdentifier(0xF192) → Supported protocols/subnets
+
+You can pick one DID (e.g. 0xF195) and return a structured payload.
+
+⸻
+
+✔ Method 2: External metadata file (preferred for diagnostic tools)
+
+Tools like:
+	•	ODIS
+	•	ISTA
+	•	DTS Monaco
+	•	CANoe/CANdela
+	•	Eclipse SUMO
+	•	OEM Engineering Tools
+
+use an ODX or proprietary XML describing the gateway.
+
+Your DoIP server would not advertise subnets itself.
+Instead, the user loads the metadata file.
+
+➡ This is cleaner, stable, and aligns with industry practice.
+
+⸻
+
+✔ Method 3: Discovery via functional addressing
+
+The client tests:
+	•	broadcast 0x7DF → see who responds
+	•	targeted requests → see which ECUs exist
+
+This is what many tools do automatically.
+
+Not elegant, but works regardless of DoIP vs CAN.
+
+⸻
+
+📌 Recommendation for YOUR libdoip
+
+You want a feature other DoIP libs don’t offer, and this is one of them:
+
+🎯 Provide a standard, vendor-neutral metadata endpoint
+
+For example:
+	•	A file: doip_gateway.json
+	•	A REST endpoint (optional)
+	•	A vendor-specific UDS DID (recommended)
+
+Minimal DID example:
+
+Return this as a simple TLV:
+
+| SubnetCount = 3 |
+| SubnetInfo = [ "PT", "BCM", "SIM" ] |
+
+Or structured:
+
+[
+  { "name": "PT",  "type": "can",      "ecus": [ "ECM", "TCM" ] },
+  { "name": "BCM", "type": "can",      "ecus": [ "BCM", "HVAC" ] },
+  { "name": "SIM", "type": "uds_mock", "ecus": [ "MockABS" ] }
+]
+
+This makes your DoIP gateway truly introspectable.
+
+⸻
+
+🎉 Summary
+
+✔ Represent CAN networks in TOML/YAML:
+
+Use structure:
+
+[[subnet]]
+  name
+  type (can/uds_mock/etc)
+  interface
+  baudrate
+  [[subnet.ecu]]
+    name
+    request_id
+    response_id
+
+✔ Telling the client about existing subnets:
+
+ISO 13400 does not provide a mechanism.
+But you can add one through:
+
+Best options:
+	1.	Vendor-specific UDS DID (recommended)
+	2.	Metadata file (ODX/TOML/etc.)
+	3.	Functional discovery
+
+This is a value-add capability no other libdoip currently implements.
+-------
+
+Great — here are (1) a ready-to-use CAN network parser in C++ for your TOML configuration, and (4) a vendor-specific UDS DID implementation that reports the subnet topology.
+
+Both are designed to integrate cleanly into your existing DoIPServerModel and provider design.
+
+⸻
+
+✅ 1) CAN Network Config Parser (TOML → C++ providers)
+
+✔ Input: networks.toml
+
+Example from earlier:
+
+[defaults]
+  timeout_ms = 2000
+  block_size = 8
+  st_min_ms = 3
+
+[[subnet]]
+  name = "PT"
+  type = "can"
+  interface = "can0"
+  baudrate = 500000
+
+  [[subnet.ecu]]
+    name = "ECM"
+    request_id  = "0x7E0"
+    response_id = "0x7E8"
+
+  [[subnet.ecu]]
+    name = "TCM"
+    request_id  = "0x7E1"
+    response_id = "0x7E9"
+
+[[subnet]]
+  name = "SIM"
+  type = "uds_mock"
+
+  [[subnet.ecu]]
+    name = "MockABS"
+    uds_services = ["0x10", "0x22"]
+
+
+⸻
+
+✔ C++ Data Model
+
+struct EcuConfig {
+    std::string name;
+    uint32_t requestId;
+    uint32_t responseId;
+    std::vector<uint8_t> udsServices;
+};
+
+struct SubnetConfig {
+    std::string name;
+    std::string type;  // "can", "uds_mock"
+    std::string interface;
+    uint32_t baudrate = 0;
+    std::vector<EcuConfig> ecus;
+};
+
+struct NetworkConfig {
+    uint32_t timeoutMs = 2000;
+    uint8_t blockSize = 8;
+    uint8_t stMinMs = 3;
+    std::vector<SubnetConfig> subnets;
+};
+
+
+⸻
+
+✔ TOML Parser Implementation (using toml++)
+
+#include <toml++/toml.h>
+
+static uint32_t parse_hex_uint(const std::string &s) {
+    return std::stoul(s, nullptr, 16);
+}
+
+NetworkConfig loadNetworkConfig(const std::string &path) {
+    NetworkConfig cfg;
+    toml::table tbl = toml::parse_file(path);
+
+    if (auto defaults = tbl["defaults"].as_table()) {
+        cfg.timeoutMs = defaults->get("timeout_ms").value_or(2000);
+        cfg.blockSize = defaults->get("block_size").value_or(8);
+        cfg.stMinMs   = defaults->get("st_min_ms").value_or(3);
+    }
+
+    for (auto &sub : *tbl["subnet"].as_array()) {
+        SubnetConfig s;
+
+        auto &t = *sub.as_table();
+        s.name     = t["name"].value_or("");
+        s.type     = t["type"].value_or("");
+        s.interface= t["interface"].value_or("");
+        s.baudrate = t["baudrate"].value_or(0);
+
+        if (auto ecuArr = t["ecu"].as_array()) {
+            for (auto &ecuNode : *ecuArr) {
+                EcuConfig ecu;
+                auto &e = *ecuNode.as_table();
+
+                ecu.name = e["name"].value_or("");
+
+                if (auto req = e["request_id"].value<std::string>())
+                    ecu.requestId = parse_hex_uint(*req);
+
+                if (auto rsp = e["response_id"].value<std::string>())
+                    ecu.responseId = parse_hex_uint(*rsp);
+
+                // decode UDS services (optional)
+                if (auto services = e["uds_services"].as_array()) {
+                    for (auto &svc : *services) {
+                        auto sVal = svc.value<std::string>();
+                        if (sVal)
+                            ecu.udsServices.push_back(parse_hex_uint(*sVal));
+                    }
+                }
+
+                s.ecus.push_back(ecu);
+            }
+        }
+
+        cfg.subnets.push_back(s);
+    }
+
+    return cfg;
+}
+
+
+⸻
+
+✔ Integrating this into your DoIP server
+
+void buildSubnets(const NetworkConfig& cfg,
+                  std::vector<std::unique_ptr<DownstreamProvider>>& out)
+{
+    for (auto& sub : cfg.subnets) {
+        if (sub.type == "can") {
+            out.push_back(std::make_unique<CanDownstreamProvider>(
+                sub.interface, sub.baudrate, sub.ecus));
+        }
+        else if (sub.type == "uds_mock") {
+            out.push_back(std::make_unique<UdsMockProvider>(
+                sub.name, sub.ecus));
+        }
+    }
+}
+
+
+⸻
+
+🎉 This gives you a fully data-driven DoIP gateway.
+
+⸻
+
+✅ 4) Vendor-Specific UDS DID for Subnet Discovery
+
+Since ISO 13400 offers no discovery mechanism, we create one.
+
+✔ Select a vendor DID: 0xF195
+
+Response format suggestion (TLV-like)
+
+# ECUs:
+Count (1 byte)
+Repeated:
+  SubnetNameLen (1 byte)
+  SubnetName (N bytes)
+  EcuNameLen (1 byte)
+  EcuName (M bytes)
+  RequestID (2 bytes)
+  ResponseID (2 bytes)
+
+This is:
+	•	Human-readable
+	•	Extensible
+	•	Compact
+	•	Easy for diagnostic tools
+
+⸻
+
+✔ Implementation (hook into your UDS mock or real UDS stack)
+
+void registerSubnetTopologyDid(const NetworkConfig& cfg, uds::UdsMock& uds)
+{
+    uds.registerReadDataByIdentifierHandler(0xF195,
+        [cfg](uint16_t did) -> std::pair<uds::UdsResponseCode, ByteArray>
+    {
+        ByteArray out;
+
+        uint8_t ecuCount = 0;
+        for (auto& s : cfg.subnets)
+            ecuCount += s.ecus.size();
+
+        out.push(ecuCount);
+
+        for (auto& s : cfg.subnets) {
+            for (auto& e : s.ecus) {
+
+                out.push((uint8_t)s.name.size());
+                out.insert(out.end(), s.name.begin(), s.name.end());
+
+                out.push((uint8_t)e.name.size());
+                out.insert(out.end(), e.name.begin(), e.name.end());
+
+                out.writeU16BE(e.requestId);
+                out.writeU16BE(e.responseId);
+            }
+        }
+
+        return { uds::UdsResponseCode::PositiveResponse, out };
+    });
+}
+
+
+⸻
+
+✔ Example Response on the wire
+
+If you configured:
+	•	Subnet PT → ECM, TCM
+	•	Subnet SIM → MockABS
+
+Client reads:
+
+22 F1 95
+
+Response:
+
+62 F1 95
+03                     # number of ECUs
+02 50 54               # "PT"
+03 45 43 4D            # "ECM"
+07 E0 07 E8            # IDs
+
+02 50 54
+03 54 43 4D
+07 E1 07 E9
+
+03 53 49 4D
+07 4D 6F 63 6B 41 42 53
+00 00 00 00            # mocks may not need IDs
+
+A diagnostic tool now knows the entire topology.
+
+⸻
+
+🎯 Summary
+
+✔ Part 1: CAN network config
+	•	Provided TOML format
+	•	Provided full C++ parser
+	•	Automatically maps to DownstreamProvider instances
+
+✔ Part 4: UDS DID for subnet discovery
+	•	DID 0xF195
+	•	TLV-like encoding
+	•	Simple, portable, tool-friendly
+	•	Works with real or mock UDS
+
