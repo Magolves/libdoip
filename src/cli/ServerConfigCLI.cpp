@@ -38,9 +38,12 @@ CLI::App &ServerConfigCLI::app() { return m_app; }
 
 bool ServerConfigCLI::parseHexBytes12(const std::string &s, std::array<uint8_t, 6> &out) {
     if (s.size() != 12) return false;
-    for (char c : s) {
-        if (!std::isxdigit(static_cast<unsigned char>(c))) return false;
-    }
+    auto isHex = std::all_of(s.begin(), s.end(), [](char c) {
+        return std::isxdigit(static_cast<unsigned char>(c));
+    });
+
+    if (!isHex) return false;
+
     for (size_t i = 0; i < 6; ++i) {
         auto byte = std::stoul(s.substr(i * 2, 2), nullptr, 16);
         out[i] = static_cast<uint8_t>(byte & 0xFF);
@@ -90,10 +93,11 @@ ServerConfig ServerConfigCLI::parse_and_build(int argc, char **argv) {
         if (hex.empty()) {
             throw std::runtime_error("Invalid logical-address: empty hex after 0x");
         }
-        for (char c : hex) {
-            if (!std::isxdigit(static_cast<unsigned char>(c))) {
-                throw std::runtime_error("Invalid logical-address: non-hex digit present");
-            }
+        auto isHex = std::all_of(hex.begin(), hex.end(), [](char c) {
+            return std::isxdigit(static_cast<unsigned char>(c));
+        });
+        if (!isHex) {
+            throw std::runtime_error("Invalid logical-address: non-hex digit present");
         }
         char *end = nullptr;
         la = std::strtoul(hex.c_str(), &end, 16);
@@ -107,7 +111,7 @@ ServerConfig ServerConfigCLI::parse_and_build(int argc, char **argv) {
             throw std::runtime_error("Invalid logical-address: partial parse");
         }
     }
-    cfg.logicalAddress = DoIPAddress(static_cast<uint16_t>(la & 0xFFFF));
+    cfg.logicalAddress = DoIPAddress(la & 0xFFFF);
 
     return cfg;
 }
