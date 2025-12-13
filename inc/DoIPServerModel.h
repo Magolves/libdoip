@@ -63,6 +63,8 @@ using ServerModelDownstreamHandler = std::function<DoIPDownstreamResult(IConnect
  * the protocol logic (in DoIPServerStateMachine) from the application logic.
  */
 struct DoIPServerModel {
+    virtual ~DoIPServerModel() = default;
+
     /// Called when the connection is being opened
     ServerModelOpenHandler onOpenConnection;
 

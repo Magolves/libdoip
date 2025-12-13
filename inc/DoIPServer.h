@@ -89,9 +89,9 @@ class DoIPServer {
     [[nodiscard]]
     /**
      * @brief Initialize and bind the TCP socket for DoIP.
-     * @return true on success, false otherwise.
+     * @param modelFactory model factory callable to create a server model per connection
      */
-    bool setupTcpSocket();
+    bool setupTcpSocket(std::function<UniqueServerModelPtr()> modelFactory = nullptr);
 
     /**
      * @brief Block until a TCP client connects and create a DoIP connection.
@@ -103,6 +103,7 @@ class DoIPServer {
     [[nodiscard]]
     /**
      * @brief Initialize and bind the UDP socket for announcements and UDP messages.
+
      * @return true on success, false otherwise.
      */
     bool setupUdpSocket();

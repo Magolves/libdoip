@@ -129,7 +129,7 @@ void DoIPServer::connectionHandlerThread(std::unique_ptr<DoIPConnection> connect
 /*
  * Set up a tcp socket, so the socket is ready to accept a connection
  */
-bool DoIPServer::setupTcpSocket() {
+bool DoIPServer::setupTcpSocket(std::function<UniqueServerModelPtr()> modelFactory) {
     LOG_DOIP_DEBUG("Setting up TCP socket on port {}", DOIP_SERVER_TCP_PORT);
 
     m_tcp_sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -159,6 +159,9 @@ bool DoIPServer::setupTcpSocket() {
         LOG_TCP_ERROR("Failed to listen on TCP socket: {}", strerror(errno));
         return false;
     }
+
+    // Also start TCP acceptor thread so TCP 13400 enters LISTEN state and accepts connections
+    m_workerThreads.emplace_back([this, modelFactory]() { tcpListenerThread(modelFactory); });
 
     LOG_TCP_INFO("TCP socket bound and listening on port {}", DOIP_SERVER_TCP_PORT);
     return true;
@@ -219,8 +222,6 @@ bool DoIPServer::setupUdpSocket() {
     m_running.store(true);
     m_workerThreads.emplace_back([this]() { udpListenerThread(); });
     m_workerThreads.emplace_back([this]() { udpAnnouncementThread(); });
-    // Also start TCP acceptor thread so TCP 13400 enters LISTEN state and accepts connections
-    m_workerThreads.emplace_back([this]() { tcpListenerThread([](){ return std::make_unique<DefaultDoIPServerModel>(); }); });
 
     return true;
 }

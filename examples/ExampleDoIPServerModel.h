@@ -147,7 +147,9 @@ class ExampleDoIPServerModel : public DoIPServerModel {
             // simulate some latency
             std::this_thread::sleep_for(50ms);
             // simulate receive
-            m_rx.push(m_uds.handleDiagnosticRequest(req));
+            auto msg = m_uds.handleDiagnosticRequest(req);
+            m_log->info("Simulate UDS response {}", fmt::streamed(msg));
+            m_rx.push(msg);
         }
 
         if (m_rx.size()) {

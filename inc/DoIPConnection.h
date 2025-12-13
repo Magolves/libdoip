@@ -111,7 +111,6 @@ class DoIPConnection : public DoIPDefaultConnection {
 
     int reactOnReceivedTcpMessage(const DoIPMessage &message);
 
-    void handleMessage(const DoIPMessage &message);
     ssize_t sendMessage(const uint8_t *message, size_t messageLength);
 };
 

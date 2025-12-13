@@ -25,7 +25,7 @@ std::unique_ptr<DoIPConnection> tcpConnection(nullptr);
 void listenTcp();
 
 /*
- * Check permantly if tcp message was received
+ * Check permanently if tcp message was received
  */
 void listenTcp() {
     LOG_UDP_INFO("TCP listener thread started");
@@ -35,6 +35,7 @@ void listenTcp() {
 
         while (tcpConnection->isSocketActive()) {
             tcpConnection->receiveTcpMessage();
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
     }
 }
@@ -65,7 +66,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    if (!server->setupTcpSocket()) {
+    if (!server->setupTcpSocket([](){ return std::make_unique<ExampleDoIPServerModel>(); })) {
         LOG_DOIP_CRITICAL("Failed to set up TCP socket");
         return 1;
     }
