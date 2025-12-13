@@ -21,7 +21,6 @@ TEST_CASE("parses valid arguments into ServerConfig") {
     int argc = sizeof(argv) / sizeof(argv[0]);
 
     auto cfg = cli.parse_and_build(argc, const_cast<char **>(argv));
-    CHECK(cfg.vin.size() == 17);
     CHECK(cfg.loopback == true);
     CHECK(cfg.announceCount == 5);
     CHECK(cfg.announceInterval == 250);

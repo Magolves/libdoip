@@ -254,6 +254,9 @@ void DoIPServer::setVin(const std::string &VINString) {
 }
 
 void DoIPServer::setVin(const DoIpVin &vin) {
+    if (!isValidVin(vin)) {
+        LOG_DOIP_WARN("Invalid VIN provided {}", fmt::streamed(vin));
+    }
     m_config.vin = vin;
 }
 

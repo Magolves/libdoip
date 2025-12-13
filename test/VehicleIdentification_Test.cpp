@@ -34,8 +34,8 @@ TEST_SUITE("VehicleIdentificationHandler") {
         DoIPMessage msg = message::makeVehicleIdentificationResponse(matchingVIN, ZERO_ADDRESS, EID, GID, furtherActionRequired);
         ByteArrayRef payload = msg.getPayload();
         ByteArray expected{
-            // VIN (17 bytes)
-            'M', 'a', 't', 'c', 'h', 'i', 'n', 'g', 'V', 'i', 'n', '_', '1', '2', '3', '4', '5',
+            // VIN (17 bytes) - now uppercase due to DoIpVin normalization
+            'M', 'A', 'T', 'C', 'H', 'I', 'N', 'G', 'V', 'I', 'N', '_', '1', '2', '3', '4', '5',
             // Logical Address (2 bytes)
             0x00, 0x00,
             // Entity Type (6 bytes)
@@ -61,8 +61,8 @@ TEST_SUITE("VehicleIdentificationHandler") {
         DoIPMessage msg = message::makeVehicleIdentificationResponse(shortVIN, ZERO_ADDRESS, EID, GID, far_cs);
         ByteArrayRef payload = msg.getPayload();
         ByteArray expected{
-            // VIN (17 bytes)
-            's', 'h', 'o', 'r', 't', 'V', 'i', 'n', '0', '0', '0', '0', '0', '0', '0', '0', '0',
+            // VIN (17 bytes) - now uppercase due to DoIpVin normalization
+            'S', 'H', 'O', 'R', 'T', 'V', 'I', 'N', '0', '0', '0', '0', '0', '0', '0', '0', '0',
             // Logical Address (2 bytes)
             0x00, 0x00,
             // Entity Type (6 bytes)

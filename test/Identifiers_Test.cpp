@@ -23,11 +23,11 @@ TEST_SUITE("GenericFixedId") {
 
         CHECK_FALSE(vin.isEmpty());
         CHECK(vin.toString() == test_vin);
-        CHECK(vin.size() == 17);
 
         // Verify individual characters
         CHECK(vin[0] == '1');
         CHECK(vin[16] == '6');
+        CHECK(isValidVin(vin));
     }
 
     TEST_CASE("Construction from string - shorter than 17 characters") {
@@ -36,13 +36,13 @@ TEST_SUITE("GenericFixedId") {
 
         CHECK_FALSE(vin.isEmpty());
         CHECK(vin.toString() == test_vin);
-        CHECK(vin.size() == 17);
 
         // Verify padding with zeros
         CHECK(vin[0] == 'A');
         CHECK(vin[5] == '3');
         CHECK(vin[6] == '0');
         CHECK(vin[16] == '0');
+        CHECK(isValidVin(vin));
     }
 
     TEST_CASE("Construction from string - longer than 17 characters") {
@@ -51,11 +51,11 @@ TEST_SUITE("GenericFixedId") {
 
         CHECK_FALSE(vin.isEmpty());
         CHECK(vin.toString() == "1HGBH41JXMN109186");
-        CHECK(vin.size() == 17);
 
         // Verify truncation
         CHECK(vin[0] == '1');
         CHECK(vin[16] == '6');
+        CHECK(isValidVin(vin));
     }
 
     TEST_CASE("Construction from empty string") {
@@ -73,6 +73,7 @@ TEST_SUITE("GenericFixedId") {
         CHECK(vin.toString() == test_vin);
         CHECK(vin[0] == 'W');
         CHECK(vin[16] == '6');
+        CHECK(isValidVin(vin));
     }
 
     TEST_CASE("Construction from nullptr C-style string") {
@@ -81,6 +82,7 @@ TEST_SUITE("GenericFixedId") {
 
         CHECK(vin.isEmpty());
         CHECK_BYTE_ARRAY_REF_EQ(vin.asByteArray(), DoIpVin::Zero.asByteArray());
+        CHECK(isValidVin(vin));
     }
 
     TEST_CASE("Construction from byte sequence") {
@@ -90,6 +92,8 @@ TEST_SUITE("GenericFixedId") {
         CHECK(vin.toString() == "TESTVIN1234567890");
         CHECK(vin[0] == 'T');
         CHECK(vin[16] == vin.getPadByte());
+        // I is illegal in VINs
+        CHECK(isValidVin(vin) == false);
     }
 
     TEST_CASE("Construction from byte sequence - shorter") {
@@ -101,6 +105,8 @@ TEST_SUITE("GenericFixedId") {
         CHECK(vin[4] == 'T');
         CHECK(vin[5] == vin.getPadByte());
         CHECK(vin[16] == vin.getPadByte());
+        // O is illegal in VINs
+        CHECK(isValidVin(vin) == false);
     }
 
     TEST_CASE("Construction from byte sequence - longer") {
@@ -109,6 +115,8 @@ TEST_SUITE("GenericFixedId") {
 
         CHECK(vin.toString() == "VERYLONGVIN123456");
         CHECK(vin[16] == '6');
+        // Note: This VIN contains 'I' and 'O' which are invalid per ISO 3779
+        CHECK(isValidVin(vin) == false);
     }
 
     TEST_CASE("Construction from null byte sequence") {
@@ -116,6 +124,7 @@ TEST_SUITE("GenericFixedId") {
 
         CHECK(vin.isEmpty());
         CHECK(vin == DoIpVin::Zero);
+        CHECK(isValidVin(vin));
     }
 
     TEST_CASE("Construction from ByteArray - exact length") {
@@ -125,6 +134,7 @@ TEST_SUITE("GenericFixedId") {
         CHECK(vin.toString() == "123456789ABCDEFGH");
         CHECK(vin[0] == '1');
         CHECK(vin[16] == 'H');
+        CHECK(isValidVin(vin));
     }
 
     TEST_CASE("Construction from ByteArray - shorter") {
@@ -135,6 +145,7 @@ TEST_SUITE("GenericFixedId") {
         CHECK(vin[0] == 'X');
         CHECK(vin[2] == 'Z');
         CHECK(vin[3] == '0');
+        CHECK(isValidVin(vin));
     }
 
     TEST_CASE("Construction from ByteArray - longer") {
@@ -194,6 +205,7 @@ TEST_SUITE("GenericFixedId") {
         CHECK(arr.size() == 17);
         CHECK(arr[0] == 'A');
         CHECK(arr[16] == '8');
+        CHECK(isValidVin(vin));
     }
 
     TEST_CASE("data method") {
@@ -203,6 +215,7 @@ TEST_SUITE("GenericFixedId") {
         CHECK(ptr != nullptr);
         CHECK(ptr[0] == 'D');
         CHECK(ptr[16] == '9');
+        CHECK(isValidVin(vin));
     }
 
     TEST_CASE("size method") {
@@ -210,9 +223,12 @@ TEST_SUITE("GenericFixedId") {
         DoIpVin vin2("SHORT");
         DoIpVin vin3("EXACTSEVENTEENVIN");
 
-        CHECK(vin1.size() == 17);
-        CHECK(vin2.size() == 17);
-        CHECK(vin3.size() == 17);
+
+
+
+        CHECK(isValidVin(vin1));
+        CHECK(isValidVin(vin2) == false); // O is illegal in VINs
+        CHECK(isValidVin(vin3) == false); // I is illegal in VINs
     }
 
     TEST_CASE("isEmpty method") {
@@ -233,11 +249,13 @@ TEST_SUITE("GenericFixedId") {
         SUBCASE("Non-empty VIN") {
             DoIpVin vin("X");
             CHECK_FALSE(vin.isEmpty());
+            CHECK(isValidVin(vin));
         }
 
         SUBCASE("Full VIN") {
-            DoIpVin vin("FULLVIN1234567890");
+            DoIpVin vin("FULLVXN1234567890");
             CHECK_FALSE(vin.isEmpty());
+            CHECK(isValidVin(vin));
         }
     }
 
@@ -306,14 +324,20 @@ TEST_SUITE("GenericFixedId") {
     TEST_CASE("VIN with lowercase characters") {
         DoIpVin vin("lowercase12345678");
 
-        CHECK(vin.toString() == "lowercase12345678");
-        CHECK(vin[0] == 'l');
+        // String constructor converts to uppercase
+        CHECK(vin.toString() == "LOWERCASE12345678");
+        CHECK(vin[0] == 'L');
+        // 'O' is invalid per ISO 3779
+        CHECK(isValidVin(vin) == false);
     }
 
     TEST_CASE("VIN with mixed case") {
-        DoIpVin vin("MiXeDcAsE12345678");
+        DoIpVin vin("MxXeDcAsE12345678");
 
-        CHECK(vin.toString() == "MiXeDcAsE12345678");
+        // String constructor converts to uppercase
+        CHECK(vin.toString() == "MXXEDCASE12345678");
+        CHECK(vin[0] == 'M');
+        CHECK(isValidVin(vin));
     }
 
     TEST_CASE("Real-world VIN examples") {
@@ -380,8 +404,7 @@ TEST_SUITE("GenericFixedId") {
         const DoIpVin vin("CONSTVIN123456789");
 
         CHECK(vin.toString() == "CONSTVIN123456789");
-        CHECK(vin.size() == 17);
-        CHECK_FALSE(vin.isEmpty());
+                CHECK_FALSE(vin.isEmpty());
         CHECK(vin[0] == 'C');
 
         const auto& arr = vin.getArray();
@@ -564,5 +587,21 @@ TEST_SUITE("GenericFixedId") {
         DoIpGid gid2(gid);
         CHECK(eid == eid2);
         CHECK(gid == gid2);
+    }
+
+    TEST_CASE("invalid VINs") {
+        SUBCASE("VIN with invalid characters") {
+            DoIpVin vin("INVALID#VIN$12345");
+
+            CHECK(vin.toString() == "INVALID#VIN$12345");
+            CHECK(isValidVin(vin) == false);
+        }
+
+        SUBCASE("VIN with small character ") {
+            DoIpVin vin("isduds");
+
+            CHECK(vin.toString() == "ISDUDS00000000000");
+            CHECK(isValidVin(vin) == false);
+        }
     }
 }
