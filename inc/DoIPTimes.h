@@ -59,21 +59,13 @@ constexpr uint8_t VehicleAnnouncementNumber = 3;
  * routing activation request is received within this period, the socket shall be closed
  * @note tT_TCP_Initial_Inactivity
  */
-#ifndef NDEBUG
-constexpr std::chrono::milliseconds InitialInactivityTimeout(200);
-#else
 constexpr std::chrono::milliseconds InitialInactivityTimeout(2000);
-#endif
 
 /**
  * @brief Maximum inactivity time in ms after a TCP message was sent or received.
  * @note tT_TCP_General_Inactivity
  */
-#ifndef NDEBUG
-constexpr std::chrono::milliseconds GeneralInactivityTimeout(500);
-#else
 constexpr std::chrono::milliseconds GeneralInactivityTimeout(300000);
-#endif
 
 /**
  * @brief Time in ms to wait for a alive check response.
