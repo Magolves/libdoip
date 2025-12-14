@@ -75,4 +75,40 @@ void UdsMock::registerTesterPresentHandler(std::function<UdsResponse(uint8_t)> h
     });
 }
 
+// Start download (0x34): handler(memoryAddress, length)
+void UdsMock::registerRequestDownloadHandler(std::function<UdsResponse(uint32_t memoryAddress, uint32_t length)> handler)
+{
+    registerService(UdsService::RequestDownload, [handler = std::move(handler)](const ByteArray &req) -> UdsResponse {
+        // For simplicity, assume memory address and length are 4 bytes each, big-endian
+        if (req.size() < 10) { // SID(1) + Addr(4) + Length(4) + at least 1 byte of data
+            return {UdsResponseCode::IncorrectMessageLengthOrInvalidFormat, {}};
+        }
+        uint32_t memoryAddress = (static_cast<uint32_t>(req[1]) << 24) |
+                                 (static_cast<uint32_t>(req[2]) << 16) |
+                                 (static_cast<uint32_t>(req[3]) << 8) |
+                                 req[4];
+        uint32_t length = (static_cast<uint32_t>(req[5]) << 24) |
+                          (static_cast<uint32_t>(req[6]) << 16) |
+                          (static_cast<uint32_t>(req[7]) << 8) |
+                          req[8];
+        return handler(memoryAddress, length);
+    });
+}
+
+// Transfer Data (0x36): handler(blockSequenceCounter, data)
+void UdsMock::registerTransferDataHandler(std::function<UdsResponse(uint8_t blockSequenceCounter, const ByteArray &data)> handler) {
+    registerService(UdsService::TransferData, [handler = std::move(handler)](const ByteArray &req) -> UdsResponse {
+        uint8_t blockSequenceCounter = req[1];
+        return handler(blockSequenceCounter, ByteArray(req.data() + 2, req.size() - 2));
+    });
+}
+
+//End dowlnload (0x37): handler()
+void UdsMock::registerRequestTransferExitHandler(std::function<UdsResponse()> handler) {
+    registerService(UdsService::RequestTransferExit, [handler = std::move(handler)](const ByteArray &req) -> UdsResponse {
+        (void)req;
+        return handler();
+    });
+}
+
 } // namespace doip::uds

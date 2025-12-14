@@ -56,6 +56,14 @@ class UdsMock {
     // Tester Present (0x3E): handler(subFunction)
     void registerTesterPresentHandler(std::function<UdsResponse(uint8_t subFunction)> handler);
 
+    // Start download (0x34): handler(memoryAddress, length)
+    void registerRequestDownloadHandler(std::function<UdsResponse(uint32_t memoryAddress, uint32_t length)> handler);
+
+    // Transfer Data (0x36): handler(blockSequenceCounter, data)
+    void registerTransferDataHandler(std::function<UdsResponse(uint8_t blockSequenceCounter, const ByteArray &data)> handler);
+
+    //End dowlnload (0x37): handler()
+    void registerRequestTransferExitHandler(std::function<UdsResponse()> handler);
 
     ByteArray handleDiagnosticRequest(const ByteArray &request) const;
 

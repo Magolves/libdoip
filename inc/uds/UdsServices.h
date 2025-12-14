@@ -29,6 +29,9 @@ enum class UdsService : uint8_t {
     WriteMemoryByAddress = 0x3D,
     ClearDiagnosticInformation = 0x14,
     ReadDTCInformation = 0x19,
+    RequestDownload = 0x34,
+    TransferData = 0x36,
+    RequestTransferExit = 0x37,
 };
 
 using uds_length = uint16_t;
@@ -42,7 +45,7 @@ struct UdsServiceDescriptor {
 
 constexpr uds_length MAX_UDS_MESSAGE_LENGTH = 4095;
 
-constexpr std::array<UdsServiceDescriptor, 19> UDS_SERVICE_DESCRIPTORS = {{
+constexpr std::array<UdsServiceDescriptor, 22> UDS_SERVICE_DESCRIPTORS = {{
     { UdsService::DiagnosticSessionControl, 2, 2, 6, 6 },
     { UdsService::ECUReset, 2, 2, 2, 2 },
     { UdsService::SecurityAccess, 2, MAX_UDS_MESSAGE_LENGTH, 3, MAX_UDS_MESSAGE_LENGTH },
@@ -61,7 +64,10 @@ constexpr std::array<UdsServiceDescriptor, 19> UDS_SERVICE_DESCRIPTORS = {{
     { UdsService::WriteDataByIdentifier, 4, MAX_UDS_MESSAGE_LENGTH, 3, MAX_UDS_MESSAGE_LENGTH },
     { UdsService::WriteMemoryByAddress, 4, MAX_UDS_MESSAGE_LENGTH, 3, MAX_UDS_MESSAGE_LENGTH },
     { UdsService::ClearDiagnosticInformation, 3, MAX_UDS_MESSAGE_LENGTH, 3, MAX_UDS_MESSAGE_LENGTH },
-    { UdsService::ReadDTCInformation, 2, MAX_UDS_MESSAGE_LENGTH, 3, MAX_UDS_MESSAGE_LENGTH }
+    { UdsService::ReadDTCInformation, 2, MAX_UDS_MESSAGE_LENGTH, 3, MAX_UDS_MESSAGE_LENGTH },
+    { UdsService::RequestDownload, 6, MAX_UDS_MESSAGE_LENGTH, 5, MAX_UDS_MESSAGE_LENGTH },
+    { UdsService::TransferData, 3, MAX_UDS_MESSAGE_LENGTH, 3, MAX_UDS_MESSAGE_LENGTH },
+    { UdsService::RequestTransferExit, 2, 2, 2, 2 }
 }};
 
 /**
