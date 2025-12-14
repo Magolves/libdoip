@@ -6,6 +6,7 @@
 
 #include "../doctest_aux.h"
 #include "uds/UdsMock.h"
+#include "uds/UdsMockProvider.h"
 
 using namespace doip;
 using namespace doip::uds;
@@ -78,4 +79,10 @@ TEST_SUITE("UdsMock") {
         INFO(response);
         CHECK_BYTE_ARRAY_EQ(response, expectedResponse);
     }
+
+     TEST_CASE("UdsMock custom RDBI handler returns positive response focus") {
+        UdsMockProvider udsProvider;
+        // TODO: implement test cases for UdsMockProvider
+
+     }
 }
