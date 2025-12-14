@@ -90,3 +90,49 @@ The **Diagnostic Power Mode** message in DoIP does **not** directly map to a sin
 - If you need to control the ECU's power state **via UDS**, you would typically use **ECU Reset (0x11)** or vendor-specific extensions.
 
 ---
+
+The **DoIP Diagnostic Power Mode message** and the **UDS Diagnostic Session Control (SID 0x10)** serve **related but distinct purposes**. They are **not redundant**; here’s why:
+
+---
+
+### **1. UDS Diagnostic Session Control (SID 0x10)**
+- **Purpose**: Establishes a diagnostic session (e.g., default, programming, or extended diagnostic session).
+- **Scope**: Defines the **type of diagnostic access** (e.g., read/write parameters, flashing).
+- **Effect on ECU**: May wake up the ECU or change its behavior, but **does not explicitly guarantee power state management**.
+- **Protocol Layer**: Application layer (UDS).
+
+---
+
+### **2. DoIP Diagnostic Power Mode Message**
+- **Purpose**: Explicitly requests the ECU to **enter or maintain a specific power state** (e.g., stay awake for diagnostics).
+- **Scope**: Ensures the ECU **remains powered** during the diagnostic session, even if the vehicle is in a low-power state (e.g., ignition off).
+- **Protocol Layer**: Transport layer (DoIP).
+- **Why It’s Needed**:
+  - UDS `0x10` does **not** guarantee the ECU will stay powered if the vehicle tries to enter sleep mode.
+  - DoIP’s power mode message **explicitly prevents the ECU from powering down** during critical operations (e.g., flashing).
+
+---
+
+### **Key Differences**
+| Feature                     | UDS `0x10` (Diagnostic Session Control) | DoIP Diagnostic Power Mode |
+|-----------------------------|----------------------------------------|----------------------------|
+| **Primary Role**            | Sets the diagnostic session type      | Ensures ECU power state    |
+| **Power Management**        | Indirect (session may wake ECU)        | **Direct control**         |
+| **Use Case**                | Session setup (e.g., programming mode) | Prevents ECU sleep         |
+| **Layer**                   | Application (UDS)                     | Transport (DoIP)           |
+
+---
+
+### **Why Both Are Needed**
+- **UDS `0x10`** tells the ECU *what* to do (e.g., "enter programming mode").
+- **DoIP Power Mode** tells the ECU *how* to stay powered (e.g., "don’t sleep during flashing").
+- **Example**: During a firmware update, `0x10` starts the session, while the DoIP power mode message **keeps the ECU awake** for the entire process.
+
+---
+
+### **Is It Redundant?**
+No. They **complement each other**:
+- UDS `0x10` is about **session permissions**.
+- DoIP Power Mode is about **hardware power state**.
+
+Without the DoIP message, the ECU might lose power mid-operation, even if the UDS session is active. This is especially critical in **automotive networks**, where ECUs often enter low-power states to save energy.
