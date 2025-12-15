@@ -59,13 +59,13 @@ private:
         while (m_running) {
             DownstreamTask task;
             if (m_tasks.pop(task)) {
-                auto start = std::chrono::steady_clock::now();
+                auto start_ts = std::chrono::steady_clock::now();
 
                 // Synchronous UDS processing
                 ByteArray rsp = m_uds.handleDiagnosticRequest(task.request);
 
-                auto end = std::chrono::steady_clock::now();
-                auto latency = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+                auto end_ts = std::chrono::steady_clock::now();
+                auto latency = std::chrono::duration_cast<std::chrono::milliseconds>(end_ts - start_ts);
 
                 DownstreamResponse dr;
                 dr.payload = rsp;
