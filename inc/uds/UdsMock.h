@@ -45,7 +45,7 @@ class UdsMock {
     void registerDiagnosticSessionControlHandler(std::function<UdsResponse(uint8_t sessionType)> handler);
 
     // ECU Reset (0x11): handler(resetType)
-    void registerECUResetHandler(std::function<UdsResponse(uint8_t resetType)> handler);
+    void registerEcuResetHandler(std::function<UdsResponse(uint8_t resetType)> handler);
 
     // Read Data By Identifier (0x22): handler(did, params)
     void registerReadDataByIdentifierHandler(std::function<UdsResponse(uint16_t did)> handler);

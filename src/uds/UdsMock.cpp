@@ -47,7 +47,7 @@ void UdsMock::registerDiagnosticSessionControlHandler(std::function<UdsResponse(
     });
 }
 
-void UdsMock::registerECUResetHandler(std::function<UdsResponse(uint8_t)> handler) {
+void UdsMock::registerEcuResetHandler(std::function<UdsResponse(uint8_t)> handler) {
     registerService(UdsService::ECUReset, [handler = std::move(handler)](const ByteArray &req) -> UdsResponse {
         uint8_t resetType = req[1];
         return handler(resetType);

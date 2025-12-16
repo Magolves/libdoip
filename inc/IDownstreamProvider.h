@@ -7,6 +7,8 @@
 
 #include "ByteArray.h"
 
+namespace doip {
+
 /**
  * Result of a downstream request.
  */
@@ -43,6 +45,7 @@ class IDownstreamProvider {
      * @param request The raw request payload to send downstream
      * @param cb The callback to invoke when the response is received
      */
+
     virtual void sendRequest(const ByteArray request, DownstreamCallback cb) = 0;
 
     /**
@@ -55,3 +58,5 @@ class IDownstreamProvider {
      */
     virtual void stop() {}
 };
+
+} // namespace doip
