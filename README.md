@@ -3,9 +3,7 @@
 **CAUTION** This repo is no longer active and will be deleted in the next weeks.
 
 Since the code changed significantly and the fork evolved into a different direction than originally anticipated, the work
-is continued in repo [doip-server](<https://github.com/Magolves/doip-server>).
-
-, focusing on **server-side DoIP implementation** rather than client functionality.
+is continued in repo [doip-server](<https://github.com/Magolves/doip-server>), focusing on **server-side DoIP implementation** rather than client functionality.
 
 ## Current Status
 
