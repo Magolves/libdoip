@@ -21,8 +21,9 @@ jobs:
     - name: Setup dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y ninja-build libspdlog-dev gcc-11 g++-11 lcov python3-pip
+        sudo apt-get install -y ninja-build libspdlog-dev gcc-11 g++-11 lcov python3-pip jq
         python3 -m pip install --user anybadge
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
 
     - name: Set up CMake
       uses: jwlawson/actions-setup-cmake@v1.14
@@ -53,10 +54,8 @@ jobs:
         echo "CODE_COVERAGE=$PCT" >> $GITHUB_ENV
 
     - name: Generate coverage badge
-      env:
-        PATH: ${{ env.HOME }}/.local/bin:${{ env.PATH }}
       run: |
-        anybadge --value=${CODE_COVERAGE} --file=coverage.svg --label="coverage" --suffix="%" \
+        python3 -m anybadge --value=${CODE_COVERAGE} --file=coverage.svg --label="coverage" --suffix="%" \
           0=red 50=orange 70=yellow 80=yellowgreen 90=green
 
     - name: Upload coverage badge artifact
