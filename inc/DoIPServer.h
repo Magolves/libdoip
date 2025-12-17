@@ -39,7 +39,7 @@ struct ServerConfig {
     // VIN as fixed identifier (17 bytes). Default: zeros.
     DoIpVin vin = DoIpVin::Zero;
 
-    // Logical/server address (default 0x0E00)
+    // Logical/server address (default 0x0028)
     DoIPAddress logicalAddress = DoIPAddress(0x0028);
 
     // Use loopback announcements instead of broadcast
@@ -139,6 +139,14 @@ class DoIPServer {
      */
     void closeUdpSocket();
 
+    /**
+     * @brief Get the logical gateway address of the server
+     *
+     * @return DoIPAddress Logical gateway address
+     */
+    DoIPAddress getLogicalGatewayAddress() const {
+        return m_config.logicalAddress;
+    }
     /**
      * @brief Set the logical DoIP gateway address.
      * @param logicalAddress Logical address value.

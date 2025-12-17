@@ -16,6 +16,13 @@ TEST_SUITE("DoIPServer Tests") {
 
         DoIPServerFixture() {
             // Setup code here if needed
+            CHECK(server.isRunning() == false);
+            CHECK(server.getVin() == DoIpVin::Zero);
+            CHECK(server.getEid() == DoIpEid::Zero);
+            CHECK(server.getGid() == DoIpGid::Zero);
+            CHECK(server.getLogicalGatewayAddress() == DoIPAddress(0x0028));
+            CHECK(server.getClientIp() == "");
+            CHECK(server.getClientPort() == 0);
         }
 
         ~DoIPServerFixture() {

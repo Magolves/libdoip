@@ -25,6 +25,9 @@ inline std::ostream &operator<<(std::ostream &os, DoIPDownstreamResult result) {
         case DoIPDownstreamResult::Error:
             os << ansi::red << "Error" << ansi::reset;
             break;
+        default:
+            os << ansi::red << "Unknown value for DoIPDownstreamResult: " << static_cast<int>(result) << ansi::reset;
+            break;
     }
     return os;
 }

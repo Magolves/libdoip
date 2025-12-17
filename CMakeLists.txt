@@ -13,6 +13,7 @@ set(MAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Build options
 option(WITH_UNIT_TEST "Build unit tests" OFF)
+option(WITH_TEST_COV "Enable test coverage reporting " OFF)
 option(WITH_EXAMPLES "Build examples" ON)
 option(ENABLE_SANITIZERS "Enable address and undefined behavior sanitizers in Debug builds" OFF)
 option(ENABLE_STATIC_ANALYSIS "Enable static analysis tools" OFF)
@@ -136,6 +137,12 @@ target_link_libraries(${DOIP_NAME}
 
 # Disable switch-default warning for this target since spdlog headers trigger it
 target_compile_options(${DOIP_NAME} PRIVATE -Wno-switch-default)
+if(WITH_TEST_COV)
+    # Instrument library for coverage
+    message(STATUS "Instrumenting ${DOIP_NAME} for test coverage")
+    target_compile_options(${DOIP_NAME} PRIVATE --coverage)
+    target_link_options(${DOIP_NAME} PRIVATE --coverage)
+endif()
 
 # Install configuration
 include(GNUInstallDirs)

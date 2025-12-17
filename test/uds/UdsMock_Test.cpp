@@ -12,10 +12,30 @@ using namespace doip;
 using namespace doip::uds;
 
 TEST_SUITE("UdsMock") {
-
-    TEST_CASE("UdsMock default behavior returns ServiceNotSupported focus") {
+    struct UdsFixture {
         UdsMock udsMock;
 
+        UdsFixture() {
+            // Setup code here if needed
+        }
+
+        ~UdsFixture() {
+            // Cleanup code here if needed
+        }
+    };
+
+    TEST_CASE_FIXTURE(UdsFixture, "UdsMock handles invalid service id") {
+        ByteArray request = {0x00, 0x00}; // Invalid UDS service ID
+        ByteArray response = udsMock.handleDiagnosticRequest(request);
+
+        ByteArray expectedResponse = {0x7F, 0x00, 0x11};
+
+        INFO(response);
+        CHECK(response == expectedResponse);
+    }
+
+
+    TEST_CASE_FIXTURE(UdsFixture, "UdsMock default behavior returns ServiceNotSupported") {
         ByteArray request = {0x10, 0x01}; // Example UDS request (Diagnostic Session Control)
         ByteArray response = udsMock.handleDiagnosticRequest(request);
 
@@ -26,9 +46,7 @@ TEST_SUITE("UdsMock") {
         CHECK(response == expectedResponse);
     }
 
-    TEST_CASE("UdsMock custom handler returns positive response") {
-        UdsMock udsMock;
-
+    TEST_CASE_FIXTURE(UdsFixture, "UdsMock custom handler returns positive response") {
         udsMock.registerService(uds::UdsService::DiagnosticSessionControl,
                                 [](const ByteArray &request) {
                                     // Custom handler that returns positive response
@@ -45,9 +63,7 @@ TEST_SUITE("UdsMock") {
         CHECK(response == expectedResponse);
     }
 
-    TEST_CASE("UdsMock custom RDBI handler returns positive response focus") {
-        UdsMock udsMock;
-
+    TEST_CASE_FIXTURE(UdsFixture, "UdsMock custom RDBI handler returns positive response") {
         udsMock.registerService(UdsService::ReadDataByIdentifier,
                                 [](const ByteArray &request) {
                                     // Extract DID from request
@@ -80,7 +96,7 @@ TEST_SUITE("UdsMock") {
         CHECK_BYTE_ARRAY_EQ(response, expectedResponse);
     }
 
-     TEST_CASE("UdsMock custom RDBI handler returns positive response focus") {
+     TEST_CASE_FIXTURE(UdsFixture, "UdsMock custom RDBI handler returns positive response") {
         UdsMockProvider udsProvider;
         // TODO: implement test cases for UdsMockProvider
 

@@ -44,3 +44,4 @@ docs/
 # Individual files
 inc/gen/DoIPConfig.h
 *.log
+test/reports/*

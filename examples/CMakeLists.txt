@@ -25,6 +25,12 @@ foreach(example_source ${EXAMPLE_SOURCES})
 
     # Disable switch-default warning for examples using spdlog
     target_compile_options(${example_name} PRIVATE -Wno-switch-default)
+    if(WITH_TEST_COV)
+        # Instrument library for coverage
+        message(STATUS "Instrumenting ${example_name} for test coverage")
+        target_compile_options(${example_name} PRIVATE --coverage)
+        target_link_options(${example_name} PRIVATE --coverage)
+    endif()
 
     # Install examples (optional)
     install(TARGETS ${example_name}
