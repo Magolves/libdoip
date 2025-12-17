@@ -1,0 +1,6 @@
+<map id="doip::DoIPMessage" name="doip::DoIPMessage">
+<area shape="rect" id="node1" title="Represents a complete DoIP message with internal ByteArray representation." alt="" coords="5,260,152,287"/>
+<area shape="rect" id="node2" href="$structdoip_1_1ByteArray.html" title="A dynamic array of bytes with utility methods for network protocol handling." alt="" coords="17,171,140,197"/>
+<area shape="rect" id="node3" title=" " alt="" coords="14,95,143,121"/>
+<area shape="rect" id="node4" title=" " alt="" coords="59,5,98,32"/>
+</map>
