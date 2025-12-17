@@ -2,6 +2,7 @@
 
 [![CI/CD Pipeline](https://github.com/Magolves/libdoip/actions/workflows/ci.yml/badge.svg)](https://github.com/Magolves/libdoip/actions/workflows/ci.yml)
 [![Release](https://github.com/Magolves/libdoip/actions/workflows/release.yml/badge.svg)](https://github.com/Magolves/libdoip/actions/workflows/release.yml)
+[![Coverage](https://magolves.github.io/libdoip/badges/coverage.svg)](https://magolves.github.io/libdoip/)
 [![License](https://img.shields.io/github/license/Magolves/libdoip)](LICENSE)
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://isocpp.org/std/the-standard)
 [![CMake](https://img.shields.io/badge/CMake-3.15+-blue.svg)](https://cmake.org/)
