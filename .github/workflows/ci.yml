@@ -187,7 +187,36 @@ jobs:
     - name: Install Doxygen
       run: |
         sudo apt-get update
-        sudo apt-get install -y doxygen graphviz plantuml default-jre
+        sudo apt-get install -y doxygen graphviz plantuml default-jre \
+          ninja-build libspdlog-dev gcc-11 g++-11 lcov python3-pip
+        python3 -m pip install --user anybadge
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+    - name: Set up CMake
+      uses: jwlawson/actions-setup-cmake@v1.14
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Build and test with coverage
+      run: |
+        cmake -B build -G Ninja \
+          -DCMAKE_C_COMPILER=gcc-11 \
+          -DCMAKE_CXX_COMPILER=g++-11 \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DWITH_UNIT_TEST=ON \
+          -DCMAKE_CXX_FLAGS="--coverage" \
+          -DCMAKE_C_FLAGS="--coverage"
+        cmake --build build --parallel 4
+        ctest --output-on-failure --test-dir build
+
+    - name: Generate coverage badge
+      run: |
+        lcov --capture --directory build --output-file coverage.docs.info
+        lcov --remove coverage.docs.info '/usr/*' '*/test/*' '*/build/*' --output-file coverage.docs.info
+        PCT=$(lcov --summary coverage.docs.info | awk '/lines/ {gsub("%","", $2); print $2}')
+        echo "Coverage: ${PCT}%"
+        python3 -m anybadge --value=${PCT} --file=coverage.svg --label="coverage" --suffix="%" \
+          0=red 50=orange 70=yellow 80=yellowgreen 90=green
 
     - name: Generate documentation
       run: |
@@ -200,6 +229,10 @@ jobs:
         done
         doxygen Doxyfile
       working-directory: ${{ github.workspace }}
+    - name: Add coverage badge to docs
+      run: |
+        mkdir -p docs/html/badges
+        cp coverage.svg docs/html/badges/coverage.svg
     - name: List generated docs
       run: ls -lR docs/html || echo "docs/html does not exist"
     - name: Deploy to GitHub Pages
